@@ -1,15 +1,9 @@
-
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { aiPathRecommendation, AiPathRecommendationOutput } from '@/ai/flows/ai-path-recommendation';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Sparkles } from 'lucide-react';
 
 const programs = [
   {
@@ -30,11 +24,6 @@ const programs = [
 ];
 
 export default function Programs() {
-  const [academicStage, setAcademicStage] = useState('');
-  const [leadershipGoals, setLeadershipGoals] = useState('');
-  const [recommendation, setRecommendation] = useState<AiPathRecommendationOutput | null>(null);
-  const [loading, setLoading] = useState(false);
-
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -45,19 +34,6 @@ export default function Programs() {
     document.querySelectorAll('.reveal-on-scroll').forEach(el => observer.observe(el));
     return () => observer.disconnect();
   }, []);
-
-  const handleGetRecommendation = async () => {
-    if (!academicStage || !leadershipGoals) return;
-    setLoading(true);
-    try {
-      const result = await aiPathRecommendation({ academicStage, leadershipGoals });
-      setRecommendation(result);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="bg-elf-green-dark min-h-screen pt-32 pb-24 text-white">
@@ -86,88 +62,17 @@ export default function Programs() {
           ))}
         </div>
 
-        {/* AI Path Recommendation Tool */}
+        {/* Community Section Replacement */}
         <section className="bg-white/5 rounded-3xl p-8 md:p-16 border border-white/10 reveal-on-scroll">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-            <div className="space-y-6">
-              <div className="inline-flex items-center gap-2 text-elf-gold bg-elf-gold/10 px-4 py-2 rounded-full mb-4">
-                <Sparkles size={18} />
-                <span className="text-xs font-bold uppercase tracking-widest">AI Path Advisor</span>
-              </div>
-              <h2 className="text-4xl font-headline font-bold">Not sure where to start?</h2>
-              <p className="text-white/60 leading-relaxed">
-                Tell us about your current academic journey and leadership aspirations. Our AI advisor will recommend the perfect ELF programs and mentorship paths for you.
-              </p>
-              
-              <div className="space-y-6 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="stage" className="text-white/80">Current Academic Stage</Label>
-                  <Input 
-                    id="stage"
-                    placeholder="e.g. Pre-clinical, 2nd Year" 
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/20 h-12"
-                    value={academicStage}
-                    onChange={(e) => setAcademicStage(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="goals" className="text-white/80">Leadership Aspirations</Label>
-                  <Textarea 
-                    id="goals"
-                    placeholder="What kind of leader do you want to become?" 
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/20 min-h-[120px]"
-                    value={leadershipGoals}
-                    onChange={(e) => setLeadershipGoals(e.target.value)}
-                  />
-                </div>
-                <Button 
-                  onClick={handleGetRecommendation}
-                  disabled={loading || !academicStage || !leadershipGoals}
-                  className="w-full bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark h-14 rounded-full font-bold text-lg"
-                >
-                  {loading ? <Loader2 className="animate-spin mr-2" /> : <Sparkles className="mr-2" />}
-                  Get Recommendation
-                </Button>
-              </div>
-            </div>
-
-            <div className="bg-elf-green-dark/50 border border-white/10 rounded-2xl p-8 min-h-[400px] flex flex-col justify-center">
-              {recommendation ? (
-                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                  <div>
-                    <h4 className="text-elf-gold uppercase tracking-widest text-xs font-bold mb-3">Recommended Pillars</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {recommendation.recommendedPillars.map((p, i) => (
-                        <span key={i} className="bg-elf-gold/20 text-elf-gold px-3 py-1 rounded-full text-sm font-medium border border-elf-gold/30">{p}</span>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="text-elf-gold uppercase tracking-widest text-xs font-bold mb-3">Targeted Programs</h4>
-                    <ul className="space-y-2 text-white/90">
-                      {recommendation.recommendedPrograms.map((p, i) => (
-                        <li key={i} className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-elf-gold" />
-                          {p}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <h4 className="text-elf-gold uppercase tracking-widest text-xs font-bold mb-3">Your Mentorship Focus</h4>
-                    <p className="text-white/80 leading-relaxed italic border-l-2 border-elf-gold pl-4">
-                      "{recommendation.mentorshipPath}"
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center space-y-4 opacity-40">
-                  <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto">
-                    <Sparkles size={32} />
-                  </div>
-                  <p className="font-headline text-xl italic">Waiting for your journey details...</p>
-                </div>
-              )}
+          <div className="max-w-3xl mx-auto text-center space-y-8">
+            <h2 className="text-4xl font-headline font-bold">Find Your Place in ELF</h2>
+            <p className="text-white/60 leading-relaxed text-lg">
+              Whether you're looking to ace your preclinical exams, develop leadership skills, or find a mentor who has walked the path before you, we have a program tailored for your growth.
+            </p>
+            <div className="pt-4">
+              <Button asChild className="bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark h-14 px-10 rounded-full font-bold text-lg">
+                <Link href="/join-us">Get Started Today</Link>
+              </Button>
             </div>
           </div>
         </section>
