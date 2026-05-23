@@ -83,15 +83,10 @@ export function Navbar() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="bg-elf-green-dark border-elf-gold/20 text-white w-[300px] sm:w-[350px]">
-              <SheetHeader className="mb-8 border-b border-white/10 pb-4">
-                <SheetTitle className="text-elf-gold font-headline text-2xl flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-elf-gold flex items-center justify-center text-elf-green-dark font-bold text-sm">
-                    ELF
-                  </div>
-                  Navigation
-                </SheetTitle>
+              <SheetHeader className="sr-only">
+                <SheetTitle>Navigation Menu</SheetTitle>
               </SheetHeader>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 pt-10">
                 {navLinks.map((link) => (
                   <Link 
                     key={link.name} 
