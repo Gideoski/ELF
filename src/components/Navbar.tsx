@@ -4,9 +4,16 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 const navLinks = [
   { name: 'Home', href: '/' },
@@ -20,8 +27,8 @@ const navLinks = [
 
 export function Navbar() {
   const pathname = usePathname();
-  const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -67,36 +74,46 @@ export function Navbar() {
           </Button>
         </div>
 
-        {/* Mobile Menu Toggle */}
-        <button 
-          className="lg:hidden text-elf-gold"
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          {isOpen ? <X size={28} /> : <Menu size={28} />}
-        </button>
-      </div>
-
-      {/* Mobile Nav Overlay */}
-      <div className={cn(
-        "fixed inset-0 top-[72px] bg-elf-green-dark z-40 lg:hidden flex flex-col items-center gap-8 pt-12 transition-transform duration-300 ease-in-out",
-        isOpen ? "translate-x-0" : "translate-x-full"
-      )}>
-        {navLinks.map((link) => (
-          <Link 
-            key={link.name} 
-            href={link.href}
-            onClick={() => setIsOpen(false)}
-            className={cn(
-              "text-2xl font-headline tracking-wide transition-colors hover:text-elf-gold",
-              pathname === link.href ? "text-elf-gold" : "text-white"
-            )}
-          >
-            {link.name}
-          </Link>
-        ))}
-        <Button asChild className="bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark rounded-full px-10 py-6 text-xl font-bold mt-4" onClick={() => setIsOpen(false)}>
-          <Link href="/join-us">Join Us</Link>
-        </Button>
+        {/* Mobile Menu */}
+        <div className="lg:hidden">
+          <Sheet open={isOpen} onOpenChange={setIsOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-elf-gold hover:bg-white/10 hover:text-elf-gold">
+                <Menu size={28} />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="bg-elf-green-dark border-elf-gold/20 text-white w-[300px] sm:w-[350px]">
+              <SheetHeader className="mb-8 border-b border-white/10 pb-4">
+                <SheetTitle className="text-elf-gold font-headline text-2xl flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-elf-gold flex items-center justify-center text-elf-green-dark font-bold text-sm">
+                    ELF
+                  </div>
+                  Navigation
+                </SheetTitle>
+              </SheetHeader>
+              <div className="flex flex-col gap-2">
+                {navLinks.map((link) => (
+                  <Link 
+                    key={link.name} 
+                    href={link.href}
+                    onClick={() => setIsOpen(false)}
+                    className={cn(
+                      "text-xl font-headline py-3 transition-colors hover:text-elf-gold border-b border-white/5",
+                      pathname === link.href ? "text-elf-gold" : "text-white"
+                    )}
+                  >
+                    {link.name}
+                  </Link>
+                ))}
+                <div className="mt-8">
+                  <Button asChild className="w-full bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark rounded-full py-6 text-lg font-bold" onClick={() => setIsOpen(false)}>
+                    <Link href="/join-us">Join Us</Link>
+                  </Button>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
     </nav>
   );
