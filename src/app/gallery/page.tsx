@@ -1,10 +1,9 @@
-
 "use client";
 
 import React, { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { Button } from '@/components/ui/button';
 
 const categories = ["All", "The Gauntlet", "Workshops", "Community", "Leadership"];
 
@@ -76,7 +75,7 @@ export default function Gallery() {
 
         <div className="mt-20 text-center reveal-on-scroll">
           <p className="text-white/40 italic mb-8">View the complete archive on our official Google Drive</p>
-          <Button asChild variant="outline" className="border-elf-gold text-elf-gold hover:bg-elf-gold hover:text-elf-green-dark h-14 px-10 rounded-full">
+          <Button asChild variant="outline" className="bg-transparent border-elf-gold text-elf-gold hover:bg-elf-gold hover:text-elf-green-dark h-14 px-10 rounded-full">
             <a href="https://drive.google.com/drive/folders/10qeiKr0kqtX_iRZK-u60V4dRBGZ9kA8b" target="_blank" rel="noopener noreferrer">
               Complete Archive →
             </a>
