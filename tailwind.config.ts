@@ -1,3 +1,4 @@
+
 import type {Config} from 'tailwindcss';
 
 export default {
@@ -10,8 +11,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['Inter', 'sans-serif'],
-        headline: ['Inter', 'sans-serif'],
+        body: ['DM Sans', 'sans-serif'],
+        headline: ['Cormorant Garamond', 'serif'],
         code: ['monospace'],
       },
       colors: {
@@ -48,6 +49,29 @@ export default {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
+        elf: {
+          green: {
+            dark: '#0d2b1a',
+            mid: '#1a4a2e',
+            light: '#1f6b3e',
+            pale: '#2d8653',
+          },
+          gold: {
+            DEFAULT: '#c89b3c',
+            bright: '#d4a843',
+            pale: '#e8c270',
+          },
+          cream: {
+            DEFAULT: '#faf7f0',
+            dark: '#f0ebe0',
+          },
+          teal: '#1a9a82',
+          text: {
+            dark: '#0d1f15',
+            mid: '#2c4a35',
+            light: '#6b8c75',
+          }
+        },
         chart: {
           '1': 'hsl(var(--chart-1))',
           '2': 'hsl(var(--chart-2))',
@@ -88,10 +112,20 @@ export default {
             height: '0',
           },
         },
+        'fade-in-up': {
+          '0%': { opacity: '0', transform: 'translateY(20px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'pulse-dot': {
+          '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+          '50%': { opacity: '0.5', transform: 'scale(1.2)' },
+        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'fade-in-up': 'fade-in-up 0.6s ease-out forwards',
+        'pulse-dot': 'pulse-dot 2s infinite',
       },
     },
   },
