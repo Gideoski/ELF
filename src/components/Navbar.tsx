@@ -14,6 +14,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const navLinks = [
   { name: 'Home', href: '/' },
@@ -87,45 +88,49 @@ export function Navbar() {
                 <Menu size={28} />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="bg-elf-green-dark border-elf-gold/20 text-white w-[300px] sm:w-[350px]">
-              <SheetHeader className="mb-8 pt-6">
-                <div className="flex flex-col items-center gap-4">
-                  <div className="relative w-20 h-20 overflow-hidden rounded-full border-4 border-elf-gold/20 shadow-xl">
-                    <Image 
-                      src="/images/elf logo.jpeg" 
-                      alt="NiMSA-AMSA ELF Logo" 
-                      fill 
-                      className="object-cover"
-                    />
+            <SheetContent side="right" className="bg-elf-green-dark border-elf-gold/20 text-white w-[300px] sm:w-[350px] p-0">
+              <ScrollArea className="h-full w-full">
+                <div className="p-6">
+                  <SheetHeader className="mb-8 pt-6">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="relative w-20 h-20 overflow-hidden rounded-full border-4 border-elf-gold/20 shadow-xl">
+                        <Image 
+                          src="/images/elf logo.jpeg" 
+                          alt="NiMSA-AMSA ELF Logo" 
+                          fill 
+                          className="object-cover"
+                        />
+                      </div>
+                      <SheetTitle className="text-elf-gold font-headline text-2xl italic tracking-tight">
+                        NiMSA-AMSA ELF
+                      </SheetTitle>
+                    </div>
+                  </SheetHeader>
+                  <div className="flex flex-col gap-2">
+                    {navLinks.map((link) => (
+                      <Link 
+                        key={link.name} 
+                        href={link.href}
+                        onClick={() => setIsOpen(false)}
+                        className={cn(
+                          "text-xl font-headline py-3 transition-colors hover:text-elf-gold border-b border-white/5",
+                          pathname === link.href ? "text-elf-gold" : "text-white"
+                        )}
+                      >
+                        {link.name}
+                      </Link>
+                    ))}
+                    <div className="mt-8">
+                      <Button asChild className="w-full bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark rounded-full py-6 text-lg font-bold" onClick={() => setIsOpen(false)}>
+                        <Link href="/join-us">Join Us Today</Link>
+                      </Button>
+                    </div>
+                    <div className="mt-8 pt-10 text-center">
+                      <p className="text-elf-gold/50 font-headline italic text-sm">Investing in Visionaries</p>
+                    </div>
                   </div>
-                  <SheetTitle className="text-elf-gold font-headline text-2xl italic tracking-tight">
-                    NiMSA-AMSA ELF
-                  </SheetTitle>
                 </div>
-              </SheetHeader>
-              <div className="flex flex-col gap-2">
-                {navLinks.map((link) => (
-                  <Link 
-                    key={link.name} 
-                    href={link.href}
-                    onClick={() => setIsOpen(false)}
-                    className={cn(
-                      "text-xl font-headline py-3 transition-colors hover:text-elf-gold border-b border-white/5",
-                      pathname === link.href ? "text-elf-gold" : "text-white"
-                    )}
-                  >
-                    {link.name}
-                  </Link>
-                ))}
-                <div className="mt-8">
-                  <Button asChild className="w-full bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark rounded-full py-6 text-lg font-bold" onClick={() => setIsOpen(false)}>
-                    <Link href="/join-us">Join Us Today</Link>
-                  </Button>
-                </div>
-                <div className="mt-auto pt-10 text-center">
-                  <p className="text-elf-gold/50 font-headline italic text-sm">Investing in Visionaries</p>
-                </div>
-              </div>
+              </ScrollArea>
             </SheetContent>
           </Sheet>
         </div>
