@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
-import { useAuth, useUser, useFirestore, useCollection } from '@/firebase';
+import React, { useState, useMemo } from 'react';
+import { useAuth, useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
@@ -20,14 +20,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Image as ImageIcon, LogOut, ShieldAlert, Trash2, Plus, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { FileText, Image as ImageIcon, LogOut, ShieldAlert, Trash2, Plus, Eye, EyeOff, Loader2, Lock } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function AdminPage() {
   const auth = useAuth();
   const firestore = useFirestore();
   const { user, loading: authLoading } = useUser();
+  
+  // Role checking
+  const userProfileRef = useMemo(() => (firestore && user) ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
+  const { data: profile, loading: profileLoading } = useDoc(userProfileRef);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -41,9 +48,9 @@ export default function AdminPage() {
   const [galleryUrl, setGalleryUrl] = useState('');
   const [galleryCat, setGalleryCat] = useState('Workshops');
 
-  // Fetch Data for list
-  const docsQuery = React.useMemo(() => firestore ? query(collection(firestore, 'documents'), orderBy('uploadedAt', 'desc')) : null, [firestore]);
-  const galleryQuery = React.useMemo(() => firestore ? query(collection(firestore, 'gallery'), orderBy('createdAt', 'desc')) : null, [firestore]);
+  // Queries
+  const docsQuery = useMemo(() => firestore ? query(collection(firestore, 'documents'), orderBy('uploadedAt', 'desc')) : null, [firestore]);
+  const galleryQuery = useMemo(() => firestore ? query(collection(firestore, 'gallery'), orderBy('createdAt', 'desc')) : null, [firestore]);
   
   const { data: documents } = useCollection(docsQuery);
   const { data: galleryItems } = useCollection(galleryQuery);
@@ -58,19 +65,26 @@ export default function AdminPage() {
       } else {
         const res = await createUserWithEmailAndPassword(auth, email, password);
         if (firestore) {
-          // New users are created with 'user' role by default for security
-          await setDoc(doc(firestore, 'users', res.user.uid), {
+          const userData = {
             email: res.user.email,
-            role: 'user',
+            role: 'user', // Default role for safety
             displayName: email.split('@')[0]
-          });
+          };
+          setDoc(doc(firestore, 'users', res.user.uid), userData)
+            .catch(async () => {
+              errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: `users/${res.user.uid}`,
+                operation: 'create',
+                requestResourceData: userData
+              }));
+            });
         }
       }
       toast({ title: isLogin ? "Access Granted" : "Account Created Successfully" });
     } catch (error: any) {
       toast({ 
         variant: "destructive", 
-        title: "Login Error", 
+        title: "Authentication Failed", 
         description: getErrorMessage(error) 
       });
     } finally {
@@ -78,71 +92,79 @@ export default function AdminPage() {
     }
   };
 
-  const addDocument = async () => {
+  const addDocument = () => {
     if (!firestore || !docTitle || !docUrl) return;
-    try {
-      await addDoc(collection(firestore, 'documents'), {
-        title: docTitle,
-        fileUrl: docUrl,
-        uploadedAt: new Date().toISOString()
+    const data = {
+      title: docTitle,
+      fileUrl: docUrl,
+      uploadedAt: new Date().toISOString()
+    };
+    const ref = collection(firestore, 'documents');
+    addDoc(ref, data)
+      .then(() => {
+        setDocTitle(''); 
+        setDocUrl('');
+        toast({ title: "Resource published successfully" });
+      })
+      .catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: 'documents',
+          operation: 'create',
+          requestResourceData: data
+        }));
       });
-      setDocTitle(''); 
-      setDocUrl('');
-      toast({ title: "Resource published successfully" });
-    } catch (error: any) {
-      toast({ 
-        variant: "destructive", 
-        title: "Publishing Error", 
-        description: getErrorMessage(error) 
-      });
-    }
   };
 
-  const addGalleryImage = async () => {
+  const addGalleryImage = () => {
     if (!firestore || !galleryTitle || !galleryUrl) return;
-    try {
-      await addDoc(collection(firestore, 'gallery'), {
-        title: galleryTitle,
-        imageUrl: galleryUrl,
-        category: galleryCat,
-        createdAt: new Date().toISOString()
+    const data = {
+      title: galleryTitle,
+      imageUrl: galleryUrl,
+      category: galleryCat,
+      createdAt: new Date().toISOString()
+    };
+    const ref = collection(firestore, 'gallery');
+    addDoc(ref, data)
+      .then(() => {
+        setGalleryTitle(''); 
+        setGalleryUrl('');
+        toast({ title: "Gallery updated successfully" });
+      })
+      .catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: 'gallery',
+          operation: 'create',
+          requestResourceData: data
+        }));
       });
-      setGalleryTitle(''); 
-      setGalleryUrl('');
-      toast({ title: "Gallery updated successfully" });
-    } catch (error: any) {
-      toast({ 
-        variant: "destructive", 
-        title: "Update Error", 
-        description: getErrorMessage(error) 
-      });
-    }
   };
 
-  const deleteItem = async (col: string, id: string) => {
+  const deleteItem = (col: string, id: string) => {
     if (!firestore) return;
-    try {
-      await deleteDoc(doc(firestore, col, id));
-      toast({ title: "Item removed from system" });
-    } catch (error: any) {
-      toast({ 
-        variant: "destructive", 
-        title: "Deletion Error", 
-        description: getErrorMessage(error) 
+    const itemRef = doc(firestore, col, id);
+    deleteDoc(itemRef)
+      .then(() => {
+        toast({ title: "Item removed from system" });
+      })
+      .catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: `${col}/${id}`,
+          operation: 'delete'
+        }));
       });
-    }
   };
 
-  if (authLoading) return (
+  if (authLoading || (user && profileLoading)) return (
     <div className="min-h-screen flex items-center justify-center bg-elf-cream">
       <Loader2 className="animate-spin text-elf-gold" size={48} />
     </div>
   );
 
+  // Login View
   if (!user) {
     return (
       <div className="min-h-screen bg-elf-green-dark flex items-center justify-center p-6">
-        <Card className="w-full max-w-md bg-white shadow-2xl rounded-2xl overflow-hidden">
+        <Card className="w-full max-w-md bg-white shadow-2xl rounded-2xl overflow-hidden border-none">
           <CardHeader className="text-center pb-2 bg-elf-cream/30 border-b border-elf-gold/10">
             <CardTitle className="text-3xl font-headline italic text-elf-green-dark">Admin Portal</CardTitle>
             <p className="text-elf-text-light text-sm">Secure Administrative Access</p>
@@ -203,6 +225,27 @@ export default function AdminPage() {
     );
   }
 
+  // Access Denied View
+  if (profile?.role !== 'admin') {
+    return (
+      <div className="min-h-screen bg-elf-cream flex items-center justify-center p-6">
+        <Card className="max-w-md w-full text-center p-12 rounded-3xl border-elf-gold/10">
+          <div className="w-20 h-20 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto mb-6">
+            <Lock size={40} />
+          </div>
+          <h2 className="text-3xl font-headline font-bold text-elf-green-dark mb-4">Unauthorized Access</h2>
+          <p className="text-elf-text-mid mb-8 leading-relaxed">
+            Your account does not have administrative privileges. Please contact the technical lead for role elevation.
+          </p>
+          <Button variant="outline" className="rounded-full w-full" onClick={() => auth && signOut(auth)}>
+            Sign Out
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  // Admin Dashboard View
   return (
     <div className="min-h-screen bg-elf-cream pt-32 pb-20 px-6">
       <div className="max-w-6xl mx-auto">
@@ -211,7 +254,7 @@ export default function AdminPage() {
             <h1 className="text-4xl font-headline text-elf-green-dark font-bold">Dashboard</h1>
             <p className="text-elf-text-mid flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              Authenticated as {user.email}
+              Authenticated as {user.email} (Admin)
             </p>
           </div>
           <Button variant="outline" className="text-destructive border-destructive/20 hover:bg-destructive/5 rounded-full" onClick={() => auth && signOut(auth)}>
@@ -229,7 +272,7 @@ export default function AdminPage() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="archive" className="space-y-8 animate-in fade-in slide-in-from-bottom-2">
+          <TabsContent value="archive" className="space-y-8">
             <Card className="border-elf-gold/10 shadow-sm overflow-hidden rounded-2xl">
               <CardHeader className="bg-white/50 border-b border-elf-gold/5">
                 <CardTitle className="text-lg font-bold text-elf-green-dark">Upload New Resource</CardTitle>
@@ -268,15 +311,10 @@ export default function AdminPage() {
                   </Button>
                 </div>
               ))}
-              {documents?.length === 0 && (
-                <div className="text-center py-20 bg-white/50 rounded-2xl border border-dashed border-elf-gold/20 italic text-elf-text-light">
-                  The archive is currently empty.
-                </div>
-              )}
             </div>
           </TabsContent>
 
-          <TabsContent value="gallery" className="space-y-8 animate-in fade-in slide-in-from-bottom-2">
+          <TabsContent value="gallery" className="space-y-8">
              <Card className="border-elf-gold/10 shadow-sm overflow-hidden rounded-2xl">
               <CardHeader className="bg-white/50 border-b border-elf-gold/5">
                 <CardTitle className="text-lg font-bold text-elf-green-dark">Add Gallery Content</CardTitle>
