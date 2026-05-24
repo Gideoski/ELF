@@ -11,17 +11,17 @@ import {
 import { 
   doc, 
   setDoc, 
-  addDoc, 
   collection, 
   query, 
   orderBy, 
-  deleteDoc 
+  deleteDoc,
+  addDoc
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Image as ImageIcon, LogOut, Trash2, Plus, Eye, EyeOff, Loader2, Lock, UserPlus, LogIn, AlertCircle, ExternalLink } from 'lucide-react';
+import { FileText, Image as ImageIcon, LogOut, Trash2, Plus, Eye, EyeOff, Loader2, Lock, UserPlus, LogIn, AlertCircle, ExternalLink, RefreshCcw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -76,19 +76,13 @@ export default function AdminPage() {
             displayName: email.split('@')[0],
             createdAt: new Date().toISOString()
           };
-          setDoc(doc(firestore, 'users', res.user.uid), userData)
-            .catch(async () => {
-              errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: `users/${res.user.uid}`,
-                operation: 'create',
-                requestResourceData: userData
-              }));
-            });
+          // This creates the collection and document automatically
+          await setDoc(doc(firestore, 'users', res.user.uid), userData);
         }
-        toast({ title: "Account created", description: "Please contact the head admin to elevate your role." });
+        toast({ title: "Account created", description: "Profile initialized. Please elevate your role in the console." });
       }
     } catch (error: any) {
-      console.error("Auth Error Code:", error.code);
+      console.error("Auth Error:", error.code, error.message);
       const friendlyMessage = getErrorMessage(error);
       setAuthError(friendlyMessage);
       toast({ 
@@ -108,14 +102,13 @@ export default function AdminPage() {
       fileUrl: docUrl,
       uploadedAt: new Date().toISOString()
     };
-    const ref = collection(firestore, 'documents');
-    addDoc(ref, data)
+    addDoc(collection(firestore, 'documents'), data)
       .then(() => {
         setDocTitle(''); 
         setDocUrl('');
         toast({ title: "Resource published successfully" });
       })
-      .catch(async () => {
+      .catch((err) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: 'documents',
           operation: 'create',
@@ -132,14 +125,13 @@ export default function AdminPage() {
       category: galleryCat,
       createdAt: new Date().toISOString()
     };
-    const ref = collection(firestore, 'gallery');
-    addDoc(ref, data)
+    addDoc(collection(firestore, 'gallery'), data)
       .then(() => {
         setGalleryTitle(''); 
         setGalleryUrl('');
         toast({ title: "Gallery updated successfully" });
       })
-      .catch(async () => {
+      .catch(() => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: 'gallery',
           operation: 'create',
@@ -150,12 +142,11 @@ export default function AdminPage() {
 
   const deleteItem = (col: string, id: string) => {
     if (!firestore) return;
-    const itemRef = doc(firestore, col, id);
-    deleteDoc(itemRef)
+    deleteDoc(doc(firestore, col, id))
       .then(() => {
         toast({ title: "Item removed from system" });
       })
-      .catch(async () => {
+      .catch(() => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: `${col}/${id}`,
           operation: 'delete'
@@ -172,7 +163,6 @@ export default function AdminPage() {
     </div>
   );
 
-  // Login/Register View
   if (!user) {
     return (
       <div className="min-h-screen bg-elf-green-dark flex flex-col items-center justify-center p-6 pt-32 pb-20 relative">
@@ -182,8 +172,8 @@ export default function AdminPage() {
             <CardTitle className="text-4xl font-headline italic text-elf-green-dark">
               {isLogin ? 'Admin Portal' : 'Register Admin'}
             </CardTitle>
-            <p className="text-elf-text-light text-sm mt-2 tracking-wide uppercase font-bold text-[10px]">
-              {isLogin ? 'Secure Administrative Access' : 'Create a New Administrative Account'}
+            <p className="text-elf-text-light text-[10px] mt-2 tracking-widest uppercase font-bold">
+              {isLogin ? 'Secure Administrative Access' : 'Create your initial profile'}
             </p>
           </CardHeader>
           <CardContent className="pt-8 px-8 pb-10">
@@ -220,7 +210,7 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-elf-text-light hover:text-elf-green-dark transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-elf-text-light"
                   >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
@@ -243,13 +233,16 @@ export default function AdminPage() {
               <div className="text-center pt-4">
                 <button 
                   type="button"
-                  className="text-sm text-elf-text-light hover:text-elf-gold underline-offset-4 hover:underline transition-all flex items-center justify-center gap-2 mx-auto"
-                  onClick={() => setIsLogin(!isLogin)}
+                  className="text-sm text-elf-text-light hover:text-elf-gold underline-offset-4 hover:underline transition-all"
+                  onClick={() => {
+                    setIsLogin(!isLogin);
+                    setAuthError(null);
+                  }}
                 >
                   {isLogin ? (
-                    <>Need an account? <span className="font-bold">Register</span></>
+                    <>New here? <span className="font-bold">Register an account</span></>
                   ) : (
-                    <>Already have an account? <span className="font-bold">Sign In</span></>
+                    <>Already registered? <span className="font-bold">Sign in here</span></>
                   )}
                 </button>
               </div>
@@ -260,7 +253,6 @@ export default function AdminPage() {
     );
   }
 
-  // Access Denied View
   if (profile?.role !== 'admin') {
     return (
       <div className="min-h-screen bg-elf-cream flex flex-col items-center justify-center p-6 pt-32 pb-20">
@@ -268,46 +260,51 @@ export default function AdminPage() {
           <div className="w-20 h-20 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto mb-6">
             <Lock size={40} />
           </div>
-          <h2 className="text-3xl md:text-4xl font-headline font-bold text-elf-green-dark mb-4">Account Pending Promotion</h2>
+          <h2 className="text-3xl md:text-4xl font-headline font-bold text-elf-green-dark mb-4">Awaiting Promotion</h2>
           <p className="text-elf-text-mid mb-8 leading-relaxed">
-            Your account is currently registered with a <strong className="text-elf-gold">user</strong> role. To access the dashboard, you must elevate your role to <strong className="text-elf-gold">admin</strong> in the Firebase Console.
+            Your account was successfully created! However, you are currently a <strong className="text-elf-gold">user</strong>. To manage the site, your role must be elevated to <strong className="text-elf-gold">admin</strong>.
           </p>
           
           <div className="text-left bg-elf-cream/50 p-6 rounded-2xl border border-elf-gold/10 mb-8 space-y-4">
             <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">1. Go to Firebase Console</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">1. Open Firestore in Console</p>
               <a 
                 href="https://console.firebase.google.com/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-elf-gold text-xs flex items-center gap-1 hover:underline"
               >
-                Open Firestore Database <ExternalLink size={12} />
+                Go to Database <ExternalLink size={12} />
               </a>
             </div>
             
             <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">2. Find this User Document</p>
-              <div className="bg-white px-3 py-2 rounded-lg border border-elf-gold/5 text-[10px] font-mono break-all select-all">
-                Collection: <span className="text-elf-gold">users</span> / ID: <span className="text-elf-green-dark font-bold">{user.uid}</span>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">2. Locate Your Document</p>
+              <div className="bg-white px-3 py-2 rounded-lg border border-elf-gold/5 text-[10px] font-mono break-all select-all flex justify-between items-center">
+                <span>ID: {user.uid}</span>
               </div>
+              <p className="text-[10px] text-elf-text-light italic mt-1">* The 'users' collection appeared automatically when you registered.</p>
             </div>
 
             <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">3. Change Role Field</p>
-              <p className="text-xs text-elf-text-mid italic">Change "user" to <span className="text-elf-gold font-bold">"admin"</span> and click Update.</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">3. Update "role" field</p>
+              <p className="text-xs text-elf-text-mid">Change <span className="line-through opacity-50">"user"</span> to <span className="text-elf-gold font-bold">"admin"</span> and save.</p>
             </div>
           </div>
 
-          <Button variant="outline" className="rounded-full w-full h-12 border-elf-gold text-elf-gold hover:bg-elf-gold hover:text-white transition-all font-bold" onClick={() => auth && signOut(auth)}>
-            <LogOut size={18} className="mr-2" /> Sign Out & Try Again
-          </Button>
+          <div className="flex flex-col gap-3">
+            <Button className="rounded-full w-full h-12 bg-elf-green-dark text-white font-bold" onClick={() => window.location.reload()}>
+              <RefreshCcw size={18} className="mr-2" /> I've updated my role, refresh
+            </Button>
+            <Button variant="ghost" className="text-elf-text-light" onClick={() => auth && signOut(auth)}>
+              <LogOut size={16} className="mr-2" /> Sign out
+            </Button>
+          </div>
         </Card>
       </div>
     );
   }
 
-  // Admin Dashboard View
   return (
     <div className="min-h-screen bg-elf-cream pt-32 pb-20 px-6">
       <div className="max-w-6xl mx-auto">
@@ -316,7 +313,7 @@ export default function AdminPage() {
             <h1 className="text-4xl font-headline text-elf-green-dark font-bold">Admin Dashboard</h1>
             <p className="text-elf-text-mid flex items-center gap-2 mt-1">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              Authenticated as <span className="font-bold">{user.email}</span>
+              Logged in as <span className="font-bold">{user.email}</span>
             </p>
           </div>
           <Button variant="outline" className="text-destructive border-destructive/20 hover:bg-destructive/5 rounded-full px-6 h-11" onClick={() => auth && signOut(auth)}>
@@ -326,30 +323,30 @@ export default function AdminPage() {
 
         <Tabs defaultValue="archive" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-8 h-14 bg-white border border-elf-gold/10 p-1 rounded-full overflow-hidden shadow-sm">
-            <TabsTrigger value="archive" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white data-[state=active]:shadow-lg font-bold transition-all">
-              <FileText size={18} className="mr-2" /> Archive Management
+            <TabsTrigger value="archive" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold">
+              <FileText size={18} className="mr-2" /> Archive
             </TabsTrigger>
-            <TabsTrigger value="gallery" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white data-[state=active]:shadow-lg font-bold transition-all">
-              <ImageIcon size={18} className="mr-2" /> Gallery Management
+            <TabsTrigger value="gallery" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold">
+              <ImageIcon size={18} className="mr-2" /> Gallery
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="archive" className="space-y-8 animate-fade-in-up">
             <Card className="border-elf-gold/10 shadow-sm overflow-hidden rounded-2xl">
               <CardHeader className="bg-white/50 border-b border-elf-gold/5 p-6">
-                <CardTitle className="text-lg font-bold text-elf-green-dark">Upload New Resource</CardTitle>
+                <CardTitle className="text-lg font-bold text-elf-green-dark">Publish New Resource</CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-8 px-6 pb-8">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light ml-1">Document Title</label>
-                  <Input placeholder="e.g. Preclinical Guide Vol 1" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} className="rounded-xl border-elf-gold/20" />
+                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Title</label>
+                  <Input placeholder="e.g. Preclinical Guide" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} className="rounded-xl" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light ml-1">Direct PDF Link</label>
-                  <Input placeholder="URL from Cloud Storage" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl border-elf-gold/20" />
+                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">PDF URL</label>
+                  <Input placeholder="Direct download link" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl" />
                 </div>
                 <div className="flex items-end">
-                  <Button onClick={addDocument} className="w-full bg-elf-gold text-elf-green-dark font-bold h-10 rounded-full shadow-md hover:scale-[1.02] transition-transform">
+                  <Button onClick={addDocument} className="w-full bg-elf-gold text-elf-green-dark font-bold h-10 rounded-full">
                     <Plus size={18} className="mr-2"/> Add to Archive
                   </Button>
                 </div>
@@ -357,24 +354,16 @@ export default function AdminPage() {
             </Card>
 
             <div className="grid grid-cols-1 gap-4">
-              {documents?.length === 0 && (
-                <div className="text-center py-20 bg-white/50 rounded-3xl border border-dashed border-elf-gold/20">
-                  <FileText className="mx-auto text-elf-gold/20 mb-4" size={48} />
-                  <p className="text-elf-text-light italic">No documents found in the archive.</p>
-                </div>
-              )}
               {documents?.map(d => (
-                <div key={d.id} className="bg-white p-6 rounded-2xl shadow-sm border border-elf-gold/5 flex justify-between items-center group hover:border-elf-gold/20 hover:shadow-md transition-all">
+                <div key={d.id} className="bg-white p-6 rounded-2xl shadow-sm border border-elf-gold/5 flex justify-between items-center group">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-elf-gold/5 flex items-center justify-center text-elf-gold">
-                      <FileText size={20} />
-                    </div>
+                    <FileText className="text-elf-gold" size={24} />
                     <div>
                       <p className="font-bold text-elf-green-dark">{d.title}</p>
-                      <p className="text-xs text-elf-text-light uppercase tracking-widest">Published on {new Date(d.uploadedAt).toLocaleDateString()}</p>
+                      <p className="text-xs text-elf-text-light uppercase tracking-widest">Added {new Date(d.uploadedAt).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => deleteItem('documents', d.id)} className="text-destructive opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/5 rounded-full">
+                  <Button variant="ghost" size="icon" onClick={() => deleteItem('documents', d.id)} className="text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
                     <Trash2 size={18} />
                   </Button>
                 </div>
@@ -385,20 +374,20 @@ export default function AdminPage() {
           <TabsContent value="gallery" className="space-y-8 animate-fade-in-up">
              <Card className="border-elf-gold/10 shadow-sm overflow-hidden rounded-2xl">
               <CardHeader className="bg-white/50 border-b border-elf-gold/5 p-6">
-                <CardTitle className="text-lg font-bold text-elf-green-dark">Add Gallery Content</CardTitle>
+                <CardTitle className="text-lg font-bold text-elf-green-dark">Upload to Gallery</CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-8 px-6 pb-8">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light ml-1">Image Title</label>
-                  <Input placeholder="e.g. Workshop Highlights" value={galleryTitle} onChange={(e) => setGalleryTitle(e.target.value)} className="rounded-xl border-elf-gold/20" />
+                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Image Title</label>
+                  <Input placeholder="e.g. Workshop" value={galleryTitle} onChange={(e) => setGalleryTitle(e.target.value)} className="rounded-xl" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light ml-1">Image Link</label>
-                  <Input placeholder="Public Image URL" value={galleryUrl} onChange={(e) => setGalleryUrl(e.target.value)} className="rounded-xl border-elf-gold/20" />
+                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Image URL</label>
+                  <Input placeholder="Direct image link" value={galleryUrl} onChange={(e) => setGalleryUrl(e.target.value)} className="rounded-xl" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light ml-1">Category</label>
-                  <select className="flex h-10 w-full rounded-xl border border-elf-gold/20 bg-background px-3 py-2 text-sm ring-offset-background outline-none focus:ring-2 focus:ring-elf-gold" value={galleryCat} onChange={(e) => setGalleryCat(e.target.value)}>
+                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Category</label>
+                  <select className="flex h-10 w-full rounded-xl border border-elf-gold/20 bg-background px-3 py-2 text-sm outline-none" value={galleryCat} onChange={(e) => setGalleryCat(e.target.value)}>
                     <option value="Workshops">Workshops</option>
                     <option value="The Gauntlet">The Gauntlet</option>
                     <option value="Community">Community</option>
@@ -406,27 +395,21 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div className="flex items-end">
-                  <Button onClick={addGalleryImage} className="w-full bg-elf-gold text-elf-green-dark font-bold h-10 rounded-full shadow-md hover:scale-[1.02] transition-transform">
-                    <Plus size={18} className="mr-2"/> Post to Gallery
+                  <Button onClick={addGalleryImage} className="w-full bg-elf-gold text-elf-green-dark font-bold h-10 rounded-full">
+                    <Plus size={18} className="mr-2"/> Post Image
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
-               {galleryItems?.length === 0 && (
-                <div className="col-span-full text-center py-20 bg-white/50 rounded-3xl border border-dashed border-elf-gold/20">
-                  <ImageIcon className="mx-auto text-elf-gold/20 mb-4" size={48} />
-                  <p className="text-elf-text-light italic">No images found in the gallery.</p>
-                </div>
-              )}
               {galleryItems?.map(g => (
-                <div key={g.id} className="relative group rounded-2xl overflow-hidden aspect-square shadow-md border border-elf-gold/10 transition-transform hover:scale-[1.02]">
+                <div key={g.id} className="relative group rounded-2xl overflow-hidden aspect-square border border-elf-gold/10">
                   <img src={g.imageUrl} className="w-full h-full object-cover" alt={g.title} />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity p-4">
-                    <p className="text-white text-[10px] uppercase tracking-widest font-bold mb-4 text-center line-clamp-2">{g.title}</p>
-                    <Button variant="ghost" size="icon" onClick={() => deleteItem('gallery', g.id)} className="text-white hover:text-destructive scale-90 group-hover:scale-100 transition-transform bg-black/20 hover:bg-white rounded-full">
-                      <Trash2 size={20} />
+                    <p className="text-white text-[10px] uppercase font-bold text-center line-clamp-1 mb-2">{g.title}</p>
+                    <Button variant="ghost" size="icon" onClick={() => deleteItem('gallery', g.id)} className="text-white hover:text-destructive bg-black/20 rounded-full">
+                      <Trash2 size={18} />
                     </Button>
                   </div>
                 </div>
