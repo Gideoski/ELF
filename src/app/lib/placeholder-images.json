@@ -42,6 +42,12 @@
       "description": "Medical networking",
       "imageUrl": "https://picsum.photos/seed/gallery4/800/600",
       "imageHint": "networking event"
+    },
+    {
+      "id": "executives",
+      "description": "NiMSA-AMSA ELF Executive Team",
+      "imageUrl": "/images/Executives.png",
+      "imageHint": "medical executives"
     }
   ]
 }
