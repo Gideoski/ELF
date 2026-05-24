@@ -69,6 +69,9 @@ export default function AdminPage() {
         await signInWithEmailAndPassword(auth, email, password);
         toast({ title: "Welcome back", description: "Access granted to admin services." });
       } else {
+        if (password.length < 6) {
+          throw { code: 'auth/weak-password' };
+        }
         const res = await createUserWithEmailAndPassword(auth, email, password);
         if (firestore) {
           const userData = {
@@ -101,25 +104,6 @@ export default function AdminPage() {
     }
   };
 
-  const retryProfileCreation = () => {
-    if (!firestore || !user) return;
-    const userData = {
-      email: user.email,
-      role: 'user',
-      displayName: user.email?.split('@')[0],
-      createdAt: new Date().toISOString()
-    };
-    setDoc(doc(firestore, 'users', user.uid), userData)
-      .then(() => toast({ title: "Profile creation initiated" }))
-      .catch((err) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: `users/${user.uid}`,
-          operation: 'create',
-          requestResourceData: userData
-        }));
-      });
-  };
-
   const addDocument = () => {
     if (!firestore || !docTitle || !docUrl) return;
     const data = {
@@ -128,6 +112,11 @@ export default function AdminPage() {
       uploadedAt: new Date().toISOString()
     };
     addDoc(collection(firestore, 'documents'), data)
+      .then(() => {
+        setDocTitle('');
+        setDocUrl('');
+        toast({ title: "Resource published" });
+      })
       .catch((err) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: 'documents',
@@ -137,9 +126,33 @@ export default function AdminPage() {
       });
   };
 
+  const addGalleryImage = () => {
+    if (!firestore || !galleryTitle || !galleryUrl) return;
+    const data = {
+      title: galleryTitle,
+      imageUrl: galleryUrl,
+      category: galleryCat,
+      createdAt: new Date().toISOString()
+    };
+    addDoc(collection(firestore, 'gallery'), data)
+      .then(() => {
+        setGalleryTitle('');
+        setGalleryUrl('');
+        toast({ title: "Image posted to gallery" });
+      })
+      .catch((err) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: 'gallery',
+          operation: 'create',
+          requestResourceData: data
+        }));
+      });
+  };
+
   const deleteItem = (col: string, id: string) => {
     if (!firestore) return;
     deleteDoc(doc(firestore, col, id))
+      .then(() => toast({ title: "Item removed" }))
       .catch(() => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: `${col}/${id}`,
@@ -262,7 +275,7 @@ export default function AdminPage() {
             <Lock size={40} />
           </div>
           <h2 className="text-3xl md:text-4xl font-headline font-bold text-elf-green-dark mb-4">
-            {!profile ? 'Profile Not Found' : 'Awaiting Promotion'}
+            {!profile ? 'Profile Not Found' : 'Access Restricted'}
           </h2>
           
           {profileError && (
@@ -277,8 +290,8 @@ export default function AdminPage() {
 
           <p className="text-elf-text-mid mb-8 leading-relaxed">
             {!profile 
-              ? "Your account is authenticated, but your Firestore profile is missing or blocked by Security Rules."
-              : "Your profile is active, but you are currently a user. An existing admin must elevate your role to 'admin'."
+              ? "Authentication successful, but we couldn't find your profile document. This usually means the 'users' collection or your document needs to be created in Firestore."
+              : "Your profile is active, but you are currently a 'user'. An existing admin must elevate your role to 'admin' in the database."
             }
           </p>
           
@@ -297,15 +310,19 @@ export default function AdminPage() {
             <div className="space-y-1">
               <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">2. Firestore Setup</p>
               <p className="text-xs text-elf-text-mid">
-                In the Firebase Console, go to **Firestore**. Create a document in the <code className="bg-elf-gold/10 px-1 rounded text-elf-gold font-bold">users</code> collection with the ID above. Add a field <code className="bg-elf-gold/10 px-1 rounded text-elf-gold font-bold">role: "admin"</code>.
+                In the Firebase Console, go to <strong>Firestore</strong>. Ensure there is a collection named <code className="bg-elf-gold/10 px-1 rounded text-elf-gold font-bold">users</code>. Create a document with the ID above and add:
               </p>
+              <div className="bg-elf-green-dark/5 p-3 rounded-lg font-mono text-[10px] space-y-1 border border-elf-gold/10 mt-2">
+                <p>role: "admin"</p>
+                <p>email: "{user.email}"</p>
+              </div>
               <a 
                 href="https://console.firebase.google.com/" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-elf-gold text-xs flex items-center gap-1 hover:underline mt-2"
+                className="text-elf-gold text-xs flex items-center gap-1 hover:underline mt-2 font-bold"
               >
-                Go to Database Console <ExternalLink size={12} />
+                Open Firebase Console <ExternalLink size={12} />
               </a>
             </div>
           </div>
@@ -341,11 +358,11 @@ export default function AdminPage() {
 
         <Tabs defaultValue="archive" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-8 h-14 bg-white border border-elf-gold/10 p-1 rounded-full overflow-hidden shadow-sm">
-            <TabsTrigger value="archive" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold">
-              <FileText size={18} className="mr-2" /> Archive
+            <TabsTrigger value="archive" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold transition-all">
+              <FileText size={18} className="mr-2" /> Resource Archive
             </TabsTrigger>
-            <TabsTrigger value="gallery" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold">
-              <ImageIcon size={18} className="mr-2" /> Gallery
+            <TabsTrigger value="gallery" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold transition-all">
+              <ImageIcon size={18} className="mr-2" /> Event Gallery
             </TabsTrigger>
           </TabsList>
 
