@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Image as ImageIcon, LogOut, ShieldAlert, Trash2, Plus, Eye, EyeOff, Loader2, Lock } from 'lucide-react';
+import { FileText, Image as ImageIcon, LogOut, ShieldAlert, Trash2, Plus, Eye, EyeOff, Loader2, Lock, UserPlus, LogIn } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -63,15 +63,16 @@ export default function AdminPage() {
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
+        toast({ title: "Welcome back", description: "Access granted to admin services." });
       } else {
         const res = await createUserWithEmailAndPassword(auth, email, password);
         if (firestore) {
           const userData = {
             email: res.user.email,
-            role: 'user', // Default role for safety
-            displayName: email.split('@')[0]
+            role: 'user',
+            displayName: email.split('@')[0],
+            createdAt: new Date().toISOString()
           };
-          // Explicitly set the document
           setDoc(doc(firestore, 'users', res.user.uid), userData)
             .catch(async () => {
               errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -81,8 +82,8 @@ export default function AdminPage() {
               }));
             });
         }
+        toast({ title: "Account created", description: "Please contact the head admin to elevate your role." });
       }
-      toast({ title: isLogin ? "Access Granted" : "Account Created Successfully" });
     } catch (error: any) {
       toast({ 
         variant: "destructive", 
@@ -158,20 +159,28 @@ export default function AdminPage() {
 
   if (authLoading || (user && profileLoading)) return (
     <div className="min-h-screen flex items-center justify-center bg-elf-cream">
-      <Loader2 className="animate-spin text-elf-gold" size={48} />
+      <div className="flex flex-col items-center gap-4">
+        <Loader2 className="animate-spin text-elf-gold" size={48} />
+        <p className="text-elf-text-light font-headline italic">Verifying credentials...</p>
+      </div>
     </div>
   );
 
-  // Login View
+  // Login/Register View
   if (!user) {
     return (
-      <div className="min-h-screen bg-elf-green-dark flex flex-col items-center justify-center p-6 pt-32 pb-20">
-        <Card className="w-full max-w-md bg-white shadow-2xl rounded-2xl overflow-hidden border-none animate-fade-in-up">
-          <CardHeader className="text-center pb-6 bg-elf-cream/30 border-b border-elf-gold/10 pt-8">
-            <CardTitle className="text-3xl font-headline italic text-elf-green-dark">Admin Portal</CardTitle>
-            <p className="text-elf-text-light text-sm mt-2">Secure Administrative Access</p>
+      <div className="min-h-screen bg-elf-green-dark flex flex-col items-center justify-center p-6 pt-32 pb-20 relative">
+        <div className="absolute inset-0 elf-diagonal-pattern opacity-5" />
+        <Card className="w-full max-w-md bg-white shadow-2xl rounded-3xl overflow-hidden border-none animate-fade-in-up relative z-10">
+          <CardHeader className="text-center pb-6 bg-elf-cream/30 border-b border-elf-gold/10 pt-10">
+            <CardTitle className="text-4xl font-headline italic text-elf-green-dark">
+              {isLogin ? 'Admin Portal' : 'Register Admin'}
+            </CardTitle>
+            <p className="text-elf-text-light text-sm mt-2 tracking-wide uppercase font-bold text-[10px]">
+              {isLogin ? 'Secure Administrative Access' : 'Create a New Administrative Account'}
+            </p>
           </CardHeader>
-          <CardContent className="pt-8 px-8">
+          <CardContent className="pt-8 px-8 pb-10">
             <form onSubmit={handleAuth} className="space-y-6">
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light ml-1">Email Address</label>
@@ -181,7 +190,7 @@ export default function AdminPage() {
                   value={email} 
                   onChange={(e) => setEmail(e.target.value)} 
                   required 
-                  className="h-12 border-elf-gold/20 focus:ring-elf-gold rounded-xl"
+                  className="h-12 border-elf-gold/20 focus:ring-elf-gold rounded-xl bg-elf-cream/10"
                 />
               </div>
               <div className="relative space-y-2">
@@ -193,7 +202,7 @@ export default function AdminPage() {
                     value={password} 
                     onChange={(e) => setPassword(e.target.value)} 
                     required 
-                    className="pr-12 h-12 border-elf-gold/20 focus:ring-elf-gold rounded-xl"
+                    className="pr-12 h-12 border-elf-gold/20 focus:ring-elf-gold rounded-xl bg-elf-cream/10"
                   />
                   <button
                     type="button"
@@ -207,17 +216,28 @@ export default function AdminPage() {
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="w-full bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark h-12 font-bold transition-all rounded-full shadow-lg"
+                className="w-full bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark h-14 font-bold transition-all rounded-full shadow-lg text-lg"
               >
-                {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : (isLogin ? 'Sign In' : 'Create Admin Account')}
+                {isSubmitting ? (
+                  <Loader2 className="animate-spin" size={24} />
+                ) : (
+                  <span className="flex items-center gap-2">
+                    {isLogin ? <LogIn size={20} /> : <UserPlus size={20} />}
+                    {isLogin ? 'Sign In' : 'Create Account'}
+                  </span>
+                )}
               </Button>
-              <div className="text-center pt-2">
+              <div className="text-center pt-4">
                 <button 
                   type="button"
-                  className="text-sm text-elf-text-light hover:text-elf-gold underline-offset-4 hover:underline transition-all"
+                  className="text-sm text-elf-text-light hover:text-elf-gold underline-offset-4 hover:underline transition-all flex items-center justify-center gap-2 mx-auto"
                   onClick={() => setIsLogin(!isLogin)}
                 >
-                  {isLogin ? "Need an account? Register" : "Already have an account? Sign In"}
+                  {isLogin ? (
+                    <>Need an account? <span className="font-bold">Register</span></>
+                  ) : (
+                    <>Already have an account? <span className="font-bold">Sign In</span></>
+                  )}
                 </button>
               </div>
             </form>
@@ -230,21 +250,21 @@ export default function AdminPage() {
   // Access Denied View
   if (profile?.role !== 'admin') {
     return (
-      <div className="min-h-screen bg-elf-cream flex flex-col items-center justify-center p-6 pt-32">
+      <div className="min-h-screen bg-elf-cream flex flex-col items-center justify-center p-6 pt-32 pb-20">
         <Card className="max-w-md w-full text-center p-12 rounded-3xl border-elf-gold/10 shadow-xl bg-white animate-fade-in-up">
           <div className="w-20 h-20 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto mb-6">
             <Lock size={40} />
           </div>
           <h2 className="text-3xl font-headline font-bold text-elf-green-dark mb-4">Unauthorized Access</h2>
           <p className="text-elf-text-mid mb-8 leading-relaxed">
-            Your account is currently registered with a <strong>'user'</strong> role. To access these tools, your account must be manually elevated to <strong>'admin'</strong> by the system administrator.
+            Your account is currently registered with a <strong className="text-elf-gold">user</strong> role. To access these tools, your account must be manually elevated to <strong className="text-elf-gold">admin</strong> in the Firebase Console.
           </p>
           <div className="bg-elf-cream/50 p-6 rounded-2xl border border-elf-gold/10 text-xs text-elf-text-light mb-8">
             <p className="font-bold mb-2 uppercase tracking-widest">Your Unique Identifier (UID):</p>
-            <code className="bg-white px-3 py-2 rounded-lg block truncate font-mono text-elf-green-dark border border-elf-gold/5">{user.uid}</code>
+            <code className="bg-white px-3 py-2 rounded-lg block truncate font-mono text-elf-green-dark border border-elf-gold/5 select-all">{user.uid}</code>
           </div>
           <Button variant="outline" className="rounded-full w-full h-12 border-elf-gold text-elf-gold hover:bg-elf-gold hover:text-white transition-all font-bold" onClick={() => auth && signOut(auth)}>
-            Sign Out
+            <LogOut size={18} className="mr-2" /> Sign Out
           </Button>
         </Card>
       </div>
@@ -301,6 +321,12 @@ export default function AdminPage() {
             </Card>
 
             <div className="grid grid-cols-1 gap-4">
+              {documents?.length === 0 && (
+                <div className="text-center py-20 bg-white/50 rounded-3xl border border-dashed border-elf-gold/20">
+                  <FileText className="mx-auto text-elf-gold/20 mb-4" size={48} />
+                  <p className="text-elf-text-light italic">No documents found in the archive.</p>
+                </div>
+              )}
               {documents?.map(d => (
                 <div key={d.id} className="bg-white p-6 rounded-2xl shadow-sm border border-elf-gold/5 flex justify-between items-center group hover:border-elf-gold/20 hover:shadow-md transition-all">
                   <div className="flex items-center gap-4">
@@ -352,11 +378,17 @@ export default function AdminPage() {
             </Card>
 
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+               {galleryItems?.length === 0 && (
+                <div className="col-span-full text-center py-20 bg-white/50 rounded-3xl border border-dashed border-elf-gold/20">
+                  <ImageIcon className="mx-auto text-elf-gold/20 mb-4" size={48} />
+                  <p className="text-elf-text-light italic">No images found in the gallery.</p>
+                </div>
+              )}
               {galleryItems?.map(g => (
                 <div key={g.id} className="relative group rounded-2xl overflow-hidden aspect-square shadow-md border border-elf-gold/10 transition-transform hover:scale-[1.02]">
                   <img src={g.imageUrl} className="w-full h-full object-cover" alt={g.title} />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity p-4">
-                    <p className="text-white text-[10px] uppercase tracking-widest font-bold mb-4 text-center">{g.title}</p>
+                    <p className="text-white text-[10px] uppercase tracking-widest font-bold mb-4 text-center line-clamp-2">{g.title}</p>
                     <Button variant="ghost" size="icon" onClick={() => deleteItem('gallery', g.id)} className="text-white hover:text-destructive scale-90 group-hover:scale-100 transition-transform bg-black/20 hover:bg-white rounded-full">
                       <Trash2 size={20} />
                     </Button>
