@@ -3,6 +3,7 @@ import './globals.css';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Toaster } from '@/components/ui/toaster';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
   title: 'NiMSA-AMSA ELF | Investing in Visionaries',
@@ -22,12 +23,14 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-grow">
-          {children}
-        </main>
-        <Footer />
-        <Toaster />
+        <FirebaseClientProvider>
+          <Navbar />
+          <main className="flex-grow">
+            {children}
+          </main>
+          <Footer />
+          <Toaster />
+        </FirebaseClientProvider>
       </body>
     </html>
   );
