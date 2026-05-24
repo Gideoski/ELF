@@ -2,24 +2,21 @@
 "use client";
 
 import React from 'react';
-import Image from 'next/image';
 
 export default function Community() {
   return (
-    <div className="bg-white min-h-screen pt-32 pb-24 px-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-16">
+    <div className="bg-white min-h-screen pt-32 pb-24 px-4 md:px-8">
+      <div className="max-w-[1400px] mx-auto">
+        <div className="text-center mb-12">
           <span className="font-headline italic text-elf-gold text-xl block mb-4">Our Community</span>
           <h1 className="text-5xl md:text-7xl font-headline text-elf-green-dark leading-tight">Meet the Team.</h1>
         </div>
         
-        <div className="relative w-full aspect-[16/10] md:aspect-[16/9] rounded-3xl overflow-hidden shadow-2xl border border-elf-gold/10">
-          <Image 
+        <div className="rounded-3xl overflow-hidden shadow-2xl border border-elf-gold/10 bg-elf-cream flex justify-center">
+          <img 
             src="/images/Executives.png" 
             alt="NiMSA-AMSA ELF Executives" 
-            fill 
-            className="object-contain bg-elf-cream"
-            priority
+            className="w-full h-auto object-contain"
           />
         </div>
         
