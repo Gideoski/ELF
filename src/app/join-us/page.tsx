@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { Instagram, Twitter } from 'lucide-react';
+import { Instagram } from 'lucide-react';
 
 const formSchema = z.object({
   fullName: z.string().min(2, "Name is too short"),
@@ -165,27 +165,32 @@ export default function JoinUs() {
           </Form>
         </div>
 
-        {/* Removed reveal-on-scroll to ensure immediate visibility */}
         <div className="mt-24 text-center space-y-8">
           <p className="text-white/60 tracking-widest uppercase text-sm font-bold">Connect With Us</p>
           <div className="flex justify-center gap-12">
             <a 
-              href="https://www.instagram.com/laumsa_elf" 
+              href="https://www.instagram.com/nimsaamsaelf?igsh=c28xa2libWd2d3l5" 
               target="_blank" 
               rel="noopener noreferrer" 
               className="text-white/40 hover:text-elf-gold transition-colors flex flex-col items-center gap-2"
             >
               <Instagram size={32} />
-              <span className="text-xs">laumsa_elf</span>
+              <span className="text-xs">nimsaamsaelf</span>
             </a>
             <a 
-              href="https://x.com/elflaumsa" 
+              href="https://x.com/NimsaAmsaElf" 
               target="_blank" 
               rel="noopener noreferrer" 
               className="text-white/40 hover:text-elf-gold transition-colors flex flex-col items-center gap-2"
             >
-              <Twitter size={32} />
-              <span className="text-xs">@elflaumsa</span>
+              <svg 
+                viewBox="0 0 24 24" 
+                aria-hidden="true" 
+                className="h-8 w-8 fill-current"
+              >
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
+              </svg>
+              <span className="text-xs">@NimsaAmsaElf</span>
             </a>
           </div>
           <div className="pt-16 border-t border-white/10">
