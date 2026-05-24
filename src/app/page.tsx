@@ -33,12 +33,12 @@ export default function Home() {
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-elf-green-dark text-white px-6 pt-24 pb-20">
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-elf-green-dark text-white px-6 pt-32 pb-20">
         <div className="absolute inset-0 elf-diagonal-pattern opacity-10" />
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-elf-teal/20 blur-[150px] -translate-y-1/2 translate-x-1/3" />
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-elf-gold/10 blur-[180px] translate-y-1/3 -translate-x-1/4" />
         
-        <div className="relative z-10 max-w-5xl text-center space-y-8">
+        <div className="relative z-10 max-w-5xl text-center space-y-10">
           <div className="inline-flex items-center gap-3 bg-white/5 border border-white/10 px-4 py-2 rounded-full mb-4 reveal-on-scroll">
             <span className="w-2 h-2 rounded-full bg-elf-gold animate-pulse-dot" />
             <span className="text-xs font-bold tracking-widest uppercase text-elf-gold/80">
@@ -46,9 +46,9 @@ export default function Home() {
             </span>
           </div>
           
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="reveal-on-scroll">
-              <p className="text-sm md:text-base tracking-[0.25em] uppercase text-white/50 font-medium max-w-3xl mx-auto leading-relaxed px-4">
+              <p className="text-sm md:text-lg tracking-[0.25em] uppercase text-white/60 font-medium max-w-3xl mx-auto leading-relaxed px-4">
                 Nigerian Medical Students' Association — African Medical Students' Association
               </p>
             </div>
@@ -62,10 +62,10 @@ export default function Home() {
           </p>
           
           <div className="flex flex-wrap justify-center gap-6 pt-8 reveal-on-scroll">
-            <Button asChild size="lg" className="bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark rounded-full px-10 h-14 text-lg font-bold">
+            <Button asChild size="lg" className="bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark rounded-full px-10 h-14 text-lg font-bold shadow-xl transition-transform hover:scale-105">
               <Link href="/join-us">Join the Forum</Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="bg-transparent border-white/30 text-white hover:bg-white/10 hover:border-white rounded-full px-10 h-14 text-lg border-2">
+            <Button asChild variant="outline" size="lg" className="bg-transparent border-elf-gold text-elf-gold hover:bg-elf-gold hover:text-elf-green-dark rounded-full px-10 h-14 text-lg border-2 transition-all">
               <Link href="/programs">Explore Programs</Link>
             </Button>
           </div>
