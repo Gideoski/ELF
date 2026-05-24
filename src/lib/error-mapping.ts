@@ -17,11 +17,17 @@ export const getErrorMessage = (error: any): string => {
     if (code.includes('weak-password')) {
       return 'Password is too weak. Please use at least 6 characters.';
     }
+    if (code.includes('invalid-email')) {
+      return 'The email address you entered is not valid.';
+    }
     if (code.includes('too-many-requests')) {
       return 'Too many failed login attempts. Please try again later for security reasons.';
     }
     if (code.includes('network-request-failed')) {
       return 'A network error occurred. Please check your internet connection.';
+    }
+    if (code.includes('operation-not-allowed')) {
+      return 'This sign-in method is currently disabled. Please enable Email/Password in the Firebase Console.';
     }
     return 'Authentication failed. Please try again or contact the administrator.';
   }

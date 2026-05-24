@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -21,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Image as ImageIcon, LogOut, ShieldAlert, Trash2, Plus, Eye, EyeOff, Loader2, Lock, UserPlus, LogIn } from 'lucide-react';
+import { FileText, Image as ImageIcon, LogOut, Trash2, Plus, Eye, EyeOff, Loader2, Lock, UserPlus, LogIn } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -73,6 +72,7 @@ export default function AdminPage() {
             displayName: email.split('@')[0],
             createdAt: new Date().toISOString()
           };
+          // Initialize user profile in background
           setDoc(doc(firestore, 'users', res.user.uid), userData)
             .catch(async () => {
               errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -85,6 +85,7 @@ export default function AdminPage() {
         toast({ title: "Account created", description: "Please contact the head admin to elevate your role." });
       }
     } catch (error: any) {
+      console.error("Auth Error Code:", error.code); // Helpful for debugging
       toast({ 
         variant: "destructive", 
         title: "Authentication Failed", 
