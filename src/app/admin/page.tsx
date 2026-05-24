@@ -14,15 +14,15 @@ import {
   collection, 
   query, 
   orderBy, 
-  deleteDoc, 
-  serverTimestamp 
+  deleteDoc 
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Image as ImageIcon, LogOut, ShieldAlert, Trash2, Plus, Eye, EyeOff } from 'lucide-react';
+import { FileText, Image as ImageIcon, LogOut, ShieldAlert, Trash2, Plus, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { getErrorMessage } from '@/lib/error-mapping';
 
 export default function AdminPage() {
   const auth = useAuth();
@@ -32,6 +32,7 @@ export default function AdminPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Form States
   const [docTitle, setDocTitle] = useState('');
@@ -50,96 +51,146 @@ export default function AdminPage() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth) return;
+    setIsSubmitting(true);
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
         const res = await createUserWithEmailAndPassword(auth, email, password);
-        // Default role is 'user' for safety. Admin must be set manually in Firestore initially.
         if (firestore) {
           await setDoc(doc(firestore, 'users', res.user.uid), {
             email: res.user.email,
-            role: 'user', // Change to 'admin' in Firestore console for the first user
+            role: 'user',
             displayName: email.split('@')[0]
           });
         }
       }
-      toast({ title: isLogin ? "Logged in" : "Account created" });
+      toast({ title: isLogin ? "Welcome back" : "Account successfully created" });
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
+      toast({ 
+        variant: "destructive", 
+        title: "Authentication Failed", 
+        description: getErrorMessage(error) 
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const addDocument = async () => {
     if (!firestore || !docTitle || !docUrl) return;
-    addDoc(collection(firestore, 'documents'), {
-      title: docTitle,
-      fileUrl: docUrl,
-      uploadedAt: new Date().toISOString()
-    });
-    setDocTitle(''); setDocUrl('');
-    toast({ title: "Document added" });
+    try {
+      await addDoc(collection(firestore, 'documents'), {
+        title: docTitle,
+        fileUrl: docUrl,
+        uploadedAt: new Date().toISOString()
+      });
+      setDocTitle(''); 
+      setDocUrl('');
+      toast({ title: "Resource added to archive" });
+    } catch (error: any) {
+      toast({ 
+        variant: "destructive", 
+        title: "Upload Failed", 
+        description: getErrorMessage(error) 
+      });
+    }
   };
 
   const addGalleryImage = async () => {
     if (!firestore || !galleryTitle || !galleryUrl) return;
-    addDoc(collection(firestore, 'gallery'), {
-      title: galleryTitle,
-      imageUrl: galleryUrl,
-      category: galleryCat,
-      createdAt: new Date().toISOString()
-    });
-    setGalleryTitle(''); setGalleryUrl('');
-    toast({ title: "Image added to gallery" });
+    try {
+      await addDoc(collection(firestore, 'gallery'), {
+        title: galleryTitle,
+        imageUrl: galleryUrl,
+        category: galleryCat,
+        createdAt: new Date().toISOString()
+      });
+      setGalleryTitle(''); 
+      setGalleryUrl('');
+      toast({ title: "Image successfully added to gallery" });
+    } catch (error: any) {
+      toast({ 
+        variant: "destructive", 
+        title: "Operation Failed", 
+        description: getErrorMessage(error) 
+      });
+    }
   };
 
   const deleteItem = async (col: string, id: string) => {
     if (!firestore) return;
-    deleteDoc(doc(firestore, col, id));
-    toast({ title: "Item deleted" });
+    try {
+      await deleteDoc(doc(firestore, col, id));
+      toast({ title: "Item removed successfully" });
+    } catch (error: any) {
+      toast({ 
+        variant: "destructive", 
+        title: "Action Restricted", 
+        description: getErrorMessage(error) 
+      });
+    }
   };
 
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (authLoading) return (
+    <div className="min-h-screen flex items-center justify-center bg-elf-cream">
+      <Loader2 className="animate-spin text-elf-gold" size={48} />
+    </div>
+  );
 
   if (!user) {
     return (
       <div className="min-h-screen bg-elf-green-dark flex items-center justify-center p-6">
-        <Card className="w-full max-w-md bg-white">
-          <CardHeader className="text-center">
-            <CardTitle className="text-3xl font-headline italic text-elf-green-dark">Admin Access</CardTitle>
+        <Card className="w-full max-w-md bg-white shadow-2xl">
+          <CardHeader className="text-center pb-2">
+            <CardTitle className="text-3xl font-headline italic text-elf-green-dark">Admin Portal</CardTitle>
+            <p className="text-elf-text-light text-sm">Secure access for NiMSA-AMSA ELF Administrators</p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <form onSubmit={handleAuth} className="space-y-4">
-              <Input 
-                placeholder="Email" 
-                type="email" 
-                value={email} 
-                onChange={(e) => setEmail(e.target.value)} 
-                required 
-              />
-              <div className="relative">
+              <div className="space-y-2">
                 <Input 
-                  placeholder="Password" 
+                  placeholder="Email Address" 
+                  type="email" 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)} 
+                  required 
+                  className="h-12 border-elf-gold/20 focus:ring-elf-gold"
+                />
+              </div>
+              <div className="relative space-y-2">
+                <Input 
+                  placeholder="Access Password" 
                   type={showPassword ? "text" : "password"} 
                   value={password} 
                   onChange={(e) => setPassword(e.target.value)} 
                   required 
-                  className="pr-10"
+                  className="pr-12 h-12 border-elf-gold/20 focus:ring-elf-gold"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-elf-text-light hover:text-elf-green-dark transition-colors"
+                  className="absolute right-4 top-[10px] text-elf-text-light hover:text-elf-green-dark transition-colors"
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
-              <Button type="submit" className="w-full bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark">
-                {isLogin ? 'Login' : 'Sign Up'}
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="w-full bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark h-12 font-bold transition-all"
+              >
+                {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : (isLogin ? 'Sign In' : 'Register Account')}
               </Button>
-              <p className="text-center text-sm text-elf-text-light cursor-pointer" onClick={() => setIsLogin(!isLogin)}>
-                {isLogin ? "Need an account? Sign up" : "Already have an account? Login"}
-              </p>
+              <div className="text-center pt-2">
+                <button 
+                  type="button"
+                  className="text-sm text-elf-text-light hover:text-elf-gold underline-offset-4 hover:underline transition-all"
+                  onClick={() => setIsLogin(!isLogin)}
+                >
+                  {isLogin ? "Require an account? Register" : "Already registered? Sign In"}
+                </button>
+              </div>
             </form>
           </CardContent>
         </Card>
@@ -150,74 +201,115 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-elf-cream pt-32 pb-20 px-6">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-12">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
           <div>
-            <h1 className="text-4xl font-headline text-elf-green-dark">Admin Dashboard</h1>
-            <p className="text-elf-text-mid">Logged in as: {user.email}</p>
+            <h1 className="text-4xl font-headline text-elf-green-dark font-bold">Admin Dashboard</h1>
+            <p className="text-elf-text-mid flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              Logged in as {user.email}
+            </p>
           </div>
-          <Button variant="ghost" className="text-destructive" onClick={() => auth && signOut(auth)}>
-            <LogOut size={20} className="mr-2" /> Logout
+          <Button variant="outline" className="text-destructive border-destructive/20 hover:bg-destructive/5" onClick={() => auth && signOut(auth)}>
+            <LogOut size={18} className="mr-2" /> Sign Out
           </Button>
         </div>
 
         <Tabs defaultValue="archive" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8 h-12 bg-white border border-elf-gold/10">
-            <TabsTrigger value="archive" className="data-[state=active]:bg-elf-gold data-[state=active]:text-white">
+          <TabsList className="grid w-full grid-cols-2 mb-8 h-14 bg-white border border-elf-gold/10 p-1 rounded-xl">
+            <TabsTrigger value="archive" className="rounded-lg data-[state=active]:bg-elf-gold data-[state=active]:text-white">
               <FileText size={18} className="mr-2" /> Manage Archive
             </TabsTrigger>
-            <TabsTrigger value="gallery" className="data-[state=active]:bg-elf-gold data-[state=active]:text-white">
+            <TabsTrigger value="gallery" className="rounded-lg data-[state=active]:bg-elf-gold data-[state=active]:text-white">
               <ImageIcon size={18} className="mr-2" /> Manage Gallery
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="archive" className="space-y-8">
-            <Card>
-              <CardHeader><CardTitle className="text-xl">Upload New Document</CardTitle></CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Input placeholder="Document Title" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} />
-                <Input placeholder="Direct PDF URL (e.g. Google Drive Direct Link)" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} />
-                <Button onClick={addDocument} className="bg-elf-gold text-elf-green-dark"><Plus size={18} className="mr-2"/> Add to Archive</Button>
+          <TabsContent value="archive" className="space-y-8 animate-in fade-in slide-in-from-bottom-2">
+            <Card className="border-elf-gold/10 shadow-sm overflow-hidden">
+              <CardHeader className="bg-white/50 border-b border-elf-gold/5">
+                <CardTitle className="text-lg font-bold text-elf-green-dark">Upload New Resource</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Document Title</label>
+                  <Input placeholder="e.g. Preclinical Guide Vol 1" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Direct PDF Link</label>
+                  <Input placeholder="URL from Cloud Storage" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} />
+                </div>
+                <div className="flex items-end">
+                  <Button onClick={addDocument} className="w-full bg-elf-gold text-elf-green-dark font-bold h-10">
+                    <Plus size={18} className="mr-2"/> Add to Archive
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 
             <div className="grid grid-cols-1 gap-4">
               {documents?.map(d => (
-                <div key={d.id} className="bg-white p-4 rounded-lg shadow-sm border flex justify-between items-center">
+                <div key={d.id} className="bg-white p-6 rounded-xl shadow-sm border border-elf-gold/5 flex justify-between items-center group hover:border-elf-gold/20 transition-all">
                   <div className="flex items-center gap-4">
-                    <FileText className="text-elf-gold" />
+                    <div className="w-12 h-12 rounded-lg bg-elf-gold/5 flex items-center justify-center text-elf-gold">
+                      <FileText size={20} />
+                    </div>
                     <div>
                       <p className="font-bold text-elf-green-dark">{d.title}</p>
-                      <p className="text-xs text-elf-text-light">{new Date(d.uploadedAt).toLocaleDateString()}</p>
+                      <p className="text-xs text-elf-text-light">Uploaded on {new Date(d.uploadedAt).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => deleteItem('documents', d.id)} className="text-destructive"><Trash2 size={18} /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => deleteItem('documents', d.id)} className="text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Trash2 size={18} />
+                  </Button>
                 </div>
               ))}
+              {documents?.length === 0 && (
+                <div className="text-center py-20 bg-white/50 rounded-2xl border border-dashed border-elf-gold/20 italic text-elf-text-light">
+                  No documents found in the archive.
+                </div>
+              )}
             </div>
           </TabsContent>
 
-          <TabsContent value="gallery" className="space-y-8">
-             <Card>
-              <CardHeader><CardTitle className="text-xl">Add Gallery Image</CardTitle></CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Input placeholder="Image Title" value={galleryTitle} onChange={(e) => setGalleryTitle(e.target.value)} />
-                <Input placeholder="Image URL" value={galleryUrl} onChange={(e) => setGalleryUrl(e.target.value)} />
-                <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={galleryCat} onChange={(e) => setGalleryCat(e.target.value)}>
-                   <option value="Workshops">Workshops</option>
-                   <option value="The Gauntlet">The Gauntlet</option>
-                   <option value="Community">Community</option>
-                   <option value="Leadership">Leadership</option>
-                </select>
-                <Button onClick={addGalleryImage} className="bg-elf-gold text-elf-green-dark"><Plus size={18} className="mr-2"/> Add to Gallery</Button>
+          <TabsContent value="gallery" className="space-y-8 animate-in fade-in slide-in-from-bottom-2">
+             <Card className="border-elf-gold/10 shadow-sm overflow-hidden">
+              <CardHeader className="bg-white/50 border-b border-elf-gold/5">
+                <CardTitle className="text-lg font-bold text-elf-green-dark">Add Gallery Content</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Image Title</label>
+                  <Input placeholder="e.g. Workshop Highlights" value={galleryTitle} onChange={(e) => setGalleryTitle(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Image Link</label>
+                  <Input placeholder="Public Image URL" value={galleryUrl} onChange={(e) => setGalleryUrl(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Event Category</label>
+                  <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background" value={galleryCat} onChange={(e) => setGalleryCat(e.target.value)}>
+                    <option value="Workshops">Workshops</option>
+                    <option value="The Gauntlet">The Gauntlet</option>
+                    <option value="Community">Community</option>
+                    <option value="Leadership">Leadership</option>
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <Button onClick={addGalleryImage} className="w-full bg-elf-gold text-elf-green-dark font-bold h-10">
+                    <Plus size={18} className="mr-2"/> Post to Gallery
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {galleryItems?.map(g => (
-                <div key={g.id} className="relative group rounded-lg overflow-hidden h-32">
-                  <img src={g.imageUrl} className="w-full h-full object-cover" />
+                <div key={g.id} className="relative group rounded-xl overflow-hidden aspect-square shadow-sm border border-elf-gold/10">
+                  <img src={g.imageUrl} className="w-full h-full object-cover" alt={g.title} />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                    <Button variant="ghost" size="icon" onClick={() => deleteItem('gallery', g.id)} className="text-white hover:text-destructive"><Trash2 size={20} /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => deleteItem('gallery', g.id)} className="text-white hover:text-destructive scale-90 group-hover:scale-100 transition-transform">
+                      <Trash2 size={24} />
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -225,11 +317,15 @@ export default function AdminPage() {
           </TabsContent>
         </Tabs>
 
-        <div className="mt-20 p-6 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-4">
-          <ShieldAlert className="text-red-600 mt-1" size={24} />
-          <div>
-            <h4 className="font-bold text-red-900">Security Notice</h4>
-            <p className="text-red-700 text-sm">After signing up, ensure your UID is added to the <code>admins</code> verification logic in Firestore Security Rules to enable full write access.</p>
+        <div className="mt-20 p-8 bg-red-50 border border-red-100 rounded-3xl flex items-start gap-6">
+          <div className="bg-red-100 p-3 rounded-2xl text-red-600">
+            <ShieldAlert size={28} />
+          </div>
+          <div className="space-y-2">
+            <h4 className="font-bold text-red-900 text-lg">Administrative Security Verification</h4>
+            <p className="text-red-700 leading-relaxed">
+              For complete administrative control, your account UID must be verified within the <code>admins</code> collection in Firestore. Contact the technical lead if you encounter permission errors during uploads.
+            </p>
           </div>
         </div>
       </div>
