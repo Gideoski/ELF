@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -22,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Image as ImageIcon, LogOut, ShieldAlert, Trash2, Plus } from 'lucide-react';
+import { FileText, Image as ImageIcon, LogOut, ShieldAlert, Trash2, Plus, Eye, EyeOff } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 export default function AdminPage() {
@@ -31,6 +30,7 @@ export default function AdminPage() {
   const { user, loading: authLoading } = useUser();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
   
   // Form States
@@ -110,8 +110,30 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleAuth} className="space-y-4">
-              <Input placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              <Input placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <Input 
+                placeholder="Email" 
+                type="email" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
+                required 
+              />
+              <div className="relative">
+                <Input 
+                  placeholder="Password" 
+                  type={showPassword ? "text" : "password"} 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  required 
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-elf-text-light hover:text-elf-green-dark transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
               <Button type="submit" className="w-full bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark">
                 {isLogin ? 'Login' : 'Sign Up'}
               </Button>
