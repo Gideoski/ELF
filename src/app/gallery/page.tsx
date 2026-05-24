@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -22,12 +23,12 @@ export default function Gallery() {
   }, []);
 
   const galleryImages = [
-    { src: "https://picsum.photos/seed/elf1/800/1000", cat: "The Gauntlet", title: "Finalists 2024" },
-    { src: "https://picsum.photos/seed/elf2/800/600", cat: "Workshops", title: "Study Hacks Session" },
-    { src: "https://picsum.photos/seed/elf3/800/1200", cat: "Community", title: "ELF Hangout" },
-    { src: "https://picsum.photos/seed/elf4/800/800", cat: "Leadership", title: "Youth Governance Lab" },
-    { src: "https://picsum.photos/seed/elf5/800/700", cat: "The Gauntlet", title: "Award Presentation" },
-    { src: "https://picsum.photos/seed/elf6/800/1100", cat: "Workshops", title: "Practical Session" },
+    { src: "/images/20260427_092908.jpg", cat: "The Gauntlet", title: "Rising Leaders" },
+    { src: "/images/20260427_093026.jpg", cat: "Workshops", title: "Core Science Review" },
+    { src: "/images/20260427_093121.jpg", cat: "Community", title: "ELF Connections" },
+    { src: "/images/20260427_093142.jpg", cat: "Leadership", title: "Strategy Session" },
+    { src: "/images/20260427_093232.jpg", cat: "The Gauntlet", title: "Academic Showdown" },
+    { src: "/images/20260427_093310.jpg", cat: "Workshops", title: "Foundation Skills" },
   ];
 
   const filtered = activeTab === "All" ? galleryImages : galleryImages.filter(img => img.cat === activeTab);
@@ -63,7 +64,7 @@ export default function Gallery() {
               <img 
                 src={img.src} 
                 alt={img.title} 
-                className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-110 grayscale group-hover:grayscale-0"
+                className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-110"
               />
               <div className="absolute inset-0 bg-elf-green-dark/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-8 bg-gradient-to-t from-elf-green-dark/80 to-transparent">
                 <span className="text-elf-gold uppercase tracking-widest text-xs font-bold mb-2">{img.cat}</span>
