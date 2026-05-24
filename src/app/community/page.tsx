@@ -10,32 +10,32 @@ import { Quote } from 'lucide-react';
 const testimonials = [
   {
     name: "Ibrahim Adekola",
-    role: "3rd Year, University of Ibadan",
+    role: "300 Level, University of Ibadan",
     text: "ELF provided me with the first real opportunity to lead a team in a professional medical context. The mentorship I received was instrumental in shaping my clinical focus."
   },
   {
     name: "Amarya Chidubem",
-    role: "2nd Year, UNN",
+    role: "200 Level, UNN",
     text: "The Preclinical Gauntlet was more than just a competition; it was a revelation of what I'm capable of when pushed. A truly transformative experience."
   },
   {
     name: "Zainab Usman",
-    role: "4th Year, Ahmadu Bello University",
+    role: "400 Level, Ahmadu Bello University",
     text: "Joining the networking lab connected me with peers across the country I wouldn't have met otherwise. We're now collaborating on a health research project."
   },
   {
     name: "David Okafor",
-    role: "3rd Year, University of Lagos",
+    role: "300 Level, University of Lagos",
     text: "The academic workshops gave me practical study frameworks that actually worked for pre-clinicals. It made the massive curriculum feel manageable."
   },
   {
     name: "Faith Johnson",
-    role: "2nd Year, University of Calabar",
+    role: "200 Level, University of Calabar",
     text: "ELF isn't just about grades; it's about the kind of person you become. The focus on extracurriculars and mental health is refreshing in med school."
   },
   {
     name: "Musa Ibrahim",
-    role: "Clinical Year, Bayero University",
+    role: "600 Level, Bayero University",
     text: "Even as I transition to clinicals, the leadership principles I learned at ELF remain my bedrock. I'm now a better communicator with my patients and seniors."
   }
 ];

@@ -17,7 +17,7 @@ const formSchema = z.object({
   fullName: z.string().min(2, "Name is too short"),
   email: z.string().email("Invalid email address"),
   medSchool: z.string().min(2, "School name is required"),
-  yearOfStudy: z.string().min(1, "Required"),
+  academicLevel: z.string().min(1, "Required"),
   areaOfInterest: z.string().min(1, "Required"),
 });
 
@@ -29,7 +29,7 @@ export default function JoinUs() {
       fullName: "",
       email: "",
       medSchool: "",
-      yearOfStudy: "",
+      academicLevel: "",
       areaOfInterest: "",
     },
   });
@@ -65,7 +65,7 @@ export default function JoinUs() {
             <span className="italic text-elf-gold">Lead the Future.</span>
           </h1>
           <p className="text-white/60 text-lg max-w-2xl mx-auto">
-            Join a community of emerging medical leaders across Nigeria. Whether you're in your first year or approaching clinicals — your place is here, in ELF.
+            Join a community of emerging medical leaders across Nigeria. Whether you're in your preclinical years or approaching clinicals — your place is here, in ELF.
           </p>
         </div>
 
@@ -114,18 +114,18 @@ export default function JoinUs() {
                 />
                 <FormField
                   control={form.control}
-                  name="yearOfStudy"
+                  name="academicLevel"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-elf-green-dark font-bold">Year of Study</FormLabel>
+                      <FormLabel className="text-elf-green-dark font-bold">Academic Level</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger className="bg-elf-cream border-transparent text-elf-green-dark h-12">
-                            <SelectValue placeholder="Select Year" />
+                            <SelectValue placeholder="Select Level" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year", "6th Year"].map(y => (
+                          {["100 Level", "200 Level", "300 Level", "400 Level", "500 Level", "600 Level"].map(y => (
                             <SelectItem key={y} value={y}>{y}</SelectItem>
                           ))}
                         </SelectContent>
@@ -176,7 +176,7 @@ export default function JoinUs() {
             ))}
           </div>
           <div className="pt-16 border-t border-white/10">
-            <h3 className="font-headline italic text-elf-gold text-3xl">— We are NiMSA-AMSA ELF.</h3>
+            <h3 className="font-headline italic text-elf-gold text-3xl">— WE ARE NiMSA-AMSA ELF!</h3>
           </div>
         </div>
       </div>
