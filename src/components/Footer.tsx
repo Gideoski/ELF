@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -27,7 +26,7 @@ export function Footer() {
             </div>
             <h3 className="font-headline text-2xl text-elf-gold italic">NiMSA-AMSA ELF</h3>
           </div>
-          <p className="text-white/60 text-xs tracking-widest uppercase">Emerging Leaders' Forum · AMSA Chapter</p>
+          <p className="text-white/60 text-xs tracking-widest uppercase">Emerging Leaders' Forum · ABUAD Medical Students' Association Chapter</p>
           <div className="flex gap-4 mt-2">
             <a href="https://www.instagram.com/laumsa_elf" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-elf-gold transition-colors">
               <Instagram size={20} />
@@ -39,6 +38,7 @@ export function Footer() {
         </div>
         
         <div className="flex flex-wrap justify-center gap-6">
+          <Link href="/home" className="text-white/60 hover:text-elf-gold text-sm transition-colors">Home</Link>
           <Link href="/about" className="text-white/60 hover:text-elf-gold text-sm transition-colors">About</Link>
           <Link href="/programs" className="text-white/60 hover:text-elf-gold text-sm transition-colors">Programs</Link>
           <Link href="/gallery" className="text-white/60 hover:text-elf-gold text-sm transition-colors">Gallery</Link>

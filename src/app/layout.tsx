@@ -1,4 +1,3 @@
-
 import type {Metadata} from 'next';
 import './globals.css';
 import { Navbar } from '@/components/Navbar';
@@ -7,7 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
   title: 'NiMSA-AMSA ELF | Investing in Visionaries',
-  description: 'Emerging Leaders Forum - The AMSA Chapter of the Nigerian Medical Students Association.',
+  description: 'Emerging Leaders Forum - The AMSA (ABUAD Medical Students Association) Chapter of the Nigerian Medical Students Association.',
 };
 
 export default function RootLayout({

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect } from 'react';
@@ -49,7 +48,7 @@ export default function Home() {
           <div className="space-y-4">
             <div className="reveal-on-scroll">
               <p className="text-sm md:text-lg tracking-[0.25em] uppercase text-white/60 font-medium max-w-3xl mx-auto leading-relaxed px-4">
-                Nigerian Medical Students' Association — African Medical Students' Association
+                Nigerian Medical Students' Association — ABUAD Medical Students' Association
               </p>
             </div>
             <h1 className="text-6xl md:text-8xl lg:text-9xl font-headline leading-tight reveal-on-scroll">
