@@ -1,8 +1,17 @@
+
+"use client";
+
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { Instagram, Twitter } from 'lucide-react';
 
 export function Footer() {
+  const pathname = usePathname();
+
+  // Hide Footer on Welcome page (root /)
+  if (pathname === '/') return null;
+
   return (
     <footer className="bg-elf-green-dark text-white py-16 border-t border-elf-gold/20">
       <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-12 items-center">

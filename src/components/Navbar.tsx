@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -17,7 +18,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const navLinks = [
-  { name: 'Home', href: '/' },
+  { name: 'Home', href: '/home' },
   { name: 'About', href: '/about' },
   { name: 'Programs', href: '/programs' },
   { name: 'The Gauntlet', href: '/the-gauntlet' },
@@ -39,6 +40,9 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Hide Navbar on Welcome page (root /)
+  if (pathname === '/') return null;
+
   return (
     <nav 
       className={cn(
@@ -47,7 +51,7 @@ export function Navbar() {
       )}
     >
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3 group">
+        <Link href="/home" className="flex items-center gap-3 group">
           <div className="relative w-10 h-10 overflow-hidden rounded-full border-2 border-elf-gold/20">
             <Image 
               src="/images/elf logo.jpeg" 
