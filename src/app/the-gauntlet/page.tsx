@@ -48,9 +48,9 @@ export default function TheGauntlet() {
           </div>
 
           <Button asChild size="lg" className="bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark h-14 px-10 rounded-full font-bold">
-            <a href="https://drive.google.com/drive/folders/10qeiKr0kqtX_iRZK-u60V4dRBGZ9kA8b" target="_blank" rel="noopener noreferrer">
+            <Link href="/gallery">
               View Gallery <ImageIcon className="ml-2" size={20} />
-            </a>
+            </Link>
           </Button>
         </div>
 
