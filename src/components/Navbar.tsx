@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -84,7 +83,7 @@ export function Navbar() {
             </SheetTrigger>
             <SheetContent side="right" className="bg-elf-green-dark border-elf-gold/20 text-white w-[300px] sm:w-[350px]">
               <SheetHeader className="sr-only">
-                <SheetTitle>Navigation Menu</SheetTitle>
+                <SheetTitle>Menu</SheetTitle>
               </SheetHeader>
               <div className="flex flex-col gap-2 pt-10">
                 {navLinks.map((link) => (

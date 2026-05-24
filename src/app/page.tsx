@@ -1,15 +1,12 @@
-
 "use client";
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowDown, GraduationCap, Trophy, Users, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
 export default function Home() {
-  const scrollRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -36,7 +33,6 @@ export default function Home() {
     <div className="flex flex-col">
       {/* Hero Section */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden bg-elf-green-dark text-white px-6">
-        {/* Background Elements */}
         <div className="absolute inset-0 elf-diagonal-pattern opacity-10" />
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-elf-teal/20 blur-[150px] -translate-y-1/2 translate-x-1/3" />
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-elf-gold/10 blur-[180px] translate-y-1/3 -translate-x-1/4" />
@@ -65,46 +61,43 @@ export default function Home() {
             <Button asChild size="lg" className="bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark rounded-full px-10 h-14 text-lg font-bold">
               <Link href="/join-us">Join the Forum</Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="bg-transparent border-white/30 text-white hover:bg-white/10 hover:text-white rounded-full px-10 h-14 text-lg">
+            <Button asChild variant="outline" size="lg" className="bg-transparent border-white text-white hover:bg-white/10 hover:text-white rounded-full px-10 h-14 text-lg border-2">
               <Link href="/programs">Our Programs ↓</Link>
             </Button>
           </div>
         </div>
 
-        {/* Scroll Indicator */}
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce opacity-50">
           <div className="w-[1px] h-12 bg-elf-gold/50" />
           <ArrowDown size={16} className="text-elf-gold" />
         </div>
       </section>
 
-      {/* Teaser Section */}
-      <section className="py-24 bg-elf-cream flex flex-col items-center px-6">
-        <div className="max-w-7xl w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {teaserCards.map((card, i) => (
-            <Link key={i} href={card.link} className="group block">
-              <Card className="h-full border-none shadow-none bg-white rounded-2xl overflow-hidden hover:translate-y-[-8px] transition-all duration-300 reveal-on-scroll">
-                <CardContent className="p-8 space-y-4">
-                  <div className="w-12 h-12 rounded-xl bg-elf-green-dark flex items-center justify-center text-elf-gold group-hover:bg-elf-gold group-hover:text-elf-green-dark transition-colors duration-300">
-                    <card.icon size={24} />
-                  </div>
-                  <h3 className="font-headline text-2xl font-bold text-elf-green-dark">{card.title}</h3>
-                  <p className="text-elf-text-mid text-sm leading-relaxed">{card.text}</p>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      </section>
-
       {/* Mission Section */}
       <section className="py-24 bg-white px-6">
-        <div className="max-w-4xl mx-auto text-center reveal-on-scroll">
-          <h2 className="text-4xl md:text-5xl font-headline text-elf-green-dark mb-8 italic">"Bridging the gap between early medical training and professional excellence."</h2>
-          <p className="text-elf-text-mid text-lg leading-relaxed mb-12">
-            NiMSA-AMSA ELF creates opportunities for students to grow through academics, leadership development, mentorship, networking, and extracurricular engagement. We help young medical students build confidence and connect with a community of future healthcare leaders across Nigeria and beyond.
-          </p>
-          <div className="w-24 h-1 bg-elf-gold mx-auto" />
+        <div className="max-w-5xl mx-auto text-center reveal-on-scroll">
+          <h2 className="text-4xl md:text-5xl font-headline text-elf-green-dark mb-12 italic">"Bridging the gap between early medical training and professional excellence."</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 text-left items-start">
+            <div className="space-y-6 text-elf-text-mid text-lg leading-relaxed">
+              <p>
+                NiMSA-AMSA ELF (Emerging Leaders’ Forum) is a platform under the Nigerian Medical Students’ Association dedicated to supporting and empowering premedical and preclinical students academically, professionally, and socially.
+              </p>
+              <p>
+                Focused on bridging the gap between the early years of medical training and future professional excellence, ELF creates opportunities for students to grow through academics, leadership development, mentorship, networking, and extracurricular engagement.
+              </p>
+            </div>
+            <div className="space-y-6 text-elf-text-mid text-lg leading-relaxed">
+              <p>
+                Through innovative programs, collaborations, and student-centered initiatives, NiMSA-AMSA ELF helps young medical students build confidence, develop relevant skills, and connect with a community of future healthcare leaders across Nigeria and beyond.
+              </p>
+              <div className="pt-6">
+                <h3 className="text-4xl font-headline italic text-elf-gold">WE ARE NiMSA-AMSA ELF!</h3>
+              </div>
+            </div>
+          </div>
+
+          <div className="w-24 h-1 bg-elf-gold mx-auto mt-16" />
         </div>
       </section>
     </div>
