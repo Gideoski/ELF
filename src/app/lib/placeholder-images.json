@@ -60,6 +60,12 @@
       "description": "NiMSA-AMSA ELF Executive Team",
       "imageUrl": "/images/Executives.png",
       "imageHint": "medical executives"
+    },
+    {
+      "id": "chiasma",
+      "description": "CHIASMA IS COMING Teaser",
+      "imageUrl": "/images/CHIASMA IS COMING.jpeg",
+      "imageHint": "medical event"
     }
   ]
 }

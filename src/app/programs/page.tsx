@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect } from 'react';
@@ -38,6 +39,20 @@ export default function Programs() {
   return (
     <div className="bg-elf-green-dark min-h-screen pt-32 pb-24 text-white">
       <div className="max-w-7xl mx-auto px-6">
+        {/* CHIASMA IS COMING Section */}
+        <section className="mb-32 text-center reveal-on-scroll">
+          <h2 className="text-6xl md:text-8xl font-headline italic text-elf-gold mb-12 tracking-tight">
+            CHIASMA IS COMING
+          </h2>
+          <div className="rounded-3xl overflow-hidden shadow-2xl border border-elf-gold/20 bg-white/5 max-w-4xl mx-auto group">
+            <img 
+              src="/images/CHIASMA IS COMING.jpeg" 
+              alt="CHIASMA IS COMING" 
+              className="w-full h-auto object-cover transition-transform duration-1000 group-hover:scale-105"
+            />
+          </div>
+        </section>
+
         <div className="mb-20 reveal-on-scroll">
           <span className="font-headline text-elf-gold text-lg italic tracking-widest uppercase mb-4 block">Programs</span>
           <h1 className="text-5xl md:text-7xl font-headline leading-tight">Empowering the Future of Medicine</h1>
