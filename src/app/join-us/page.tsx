@@ -1,38 +1,10 @@
 "use client";
 
 import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useToast } from '@/hooks/use-toast';
-import { Instagram } from 'lucide-react';
-
-const formSchema = z.object({
-  fullName: z.string().min(2, "Name is too short"),
-  email: z.string().email("Invalid email address"),
-  medSchool: z.string().min(2, "School name is required"),
-  academicLevel: z.string().min(1, "Required"),
-  areaOfInterest: z.string().min(1, "Required"),
-});
+import { Instagram, MessageCircle } from 'lucide-react';
 
 export default function JoinUs() {
-  const { toast } = useToast();
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      fullName: "",
-      email: "",
-      medSchool: "",
-      academicLevel: "",
-      areaOfInterest: "",
-    },
-  });
-
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -43,15 +15,6 @@ export default function JoinUs() {
     document.querySelectorAll('.reveal-on-scroll').forEach(el => observer.observe(el));
     return () => observer.disconnect();
   }, []);
-
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
-    toast({
-      title: "Success!",
-      description: "Thank you for your interest. We'll be in touch soon.",
-    });
-    form.reset();
-  }
 
   return (
     <div className="bg-elf-green-dark min-h-screen pt-32 pb-24 text-white relative">
@@ -68,101 +31,34 @@ export default function JoinUs() {
           </p>
         </div>
 
-        <div className="bg-white rounded-3xl p-8 md:p-12 shadow-2xl reveal-on-scroll">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <FormField
-                  control={form.control}
-                  name="fullName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-elf-green-dark font-bold">Full Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="John Doe" className="bg-elf-cream border-transparent text-elf-green-dark h-12" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-elf-green-dark font-bold">Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder="john@example.com" type="email" className="bg-elf-cream border-transparent text-elf-green-dark h-12" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="medSchool"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-elf-green-dark font-bold">Medical School</FormLabel>
-                      <FormControl>
-                        <Input placeholder="University of..." className="bg-elf-cream border-transparent text-elf-green-dark h-12" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="academicLevel"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-elf-green-dark font-bold">Academic Level</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="bg-elf-cream border-transparent text-elf-green-dark h-12">
-                            <SelectValue placeholder="Select Level" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {["100 Level", "200 Level", "300 Level", "400 Level", "500 Level", "600 Level"].map(y => (
-                            <SelectItem key={y} value={y}>{y}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+        <div className="bg-white rounded-3xl p-8 md:p-16 shadow-2xl reveal-on-scroll text-center space-y-8">
+          <div className="flex justify-center">
+            <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+              <MessageCircle size={40} />
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <h2 className="text-3xl font-headline font-bold text-elf-green-dark">Join Our Community</h2>
+            <p className="text-elf-text-mid max-w-md mx-auto">
+              Ready to connect? Click the button below to join our official WhatsApp community and stay updated with ELF initiatives.
+            </p>
+          </div>
 
-              <FormField
-                control={form.control}
-                name="areaOfInterest"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-elf-green-dark font-bold">Primary Area of Interest</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="bg-elf-cream border-transparent text-elf-green-dark h-12">
-                          <SelectValue placeholder="What inspires you?" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {["Academics", "Leadership", "Mentorship", "Networking", "Extracurriculars"].map(a => (
-                          <SelectItem key={a} value={a}>{a}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <Button type="submit" className="w-full bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark h-16 rounded-full font-bold text-xl shadow-lg transition-transform hover:scale-[1.02]">
-                Submit Interest Form
-              </Button>
-            </form>
-          </Form>
+          <Button asChild className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white h-16 rounded-full font-bold text-xl shadow-lg transition-transform hover:scale-[1.02]">
+            <a 
+              href="https://chat.whatsapp.com/CgomGXwnciG5aIoma5PIUq" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-3"
+            >
+              Join WhatsApp Group
+            </a>
+          </Button>
+          
+          <p className="text-xs text-elf-text-light italic">
+            By joining, you'll be part of the ABUAD Medical Students' Association chapter of NiMSA-AMSA ELF.
+          </p>
         </div>
 
         <div className="mt-24 text-center space-y-8">
