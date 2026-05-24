@@ -29,7 +29,7 @@ export function Footer() {
         </div>
 
         <div className="flex flex-col md:items-end gap-2 text-white/60 text-sm italic">
-          <p>© 2025 NiMSA-AMSA ELF</p>
+          <p>© 2026 NiMSA-AMSA ELF</p>
           <p className="text-elf-gold/80">Investing in Visionaries</p>
         </div>
       </div>

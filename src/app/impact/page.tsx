@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -42,7 +41,7 @@ const milestones = [
   { year: "2023", title: "ELF Founded", desc: "The vision was born under NiMSA-AMSA leadership." },
   { year: "2023", title: "First Gauntlet", desc: "A historic launch with 100+ students participating." },
   { year: "2024", title: "Regional Expansion", desc: "Expanding impact across Eastern and Western medical schools." },
-  { year: "2025", title: "The Next Era", desc: "Investing in 500+ visionaries annually." },
+  { year: "2026", title: "The Next Era", desc: "Investing in 500+ visionaries annually." },
 ];
 
 export default function Impact() {
