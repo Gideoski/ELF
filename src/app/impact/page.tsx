@@ -1,47 +1,13 @@
-"use client";
+["use client";
 
-import React, { useEffect, useState } from 'react';
-import { useInView } from 'react-intersection-observer';
+import React, { useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-
-const Counter = ({ target, duration = 2000 }: { target: number; duration?: number }) => {
-  const [count, setCount] = useState(0);
-  const { ref, inView } = useInView({ triggerOnce: true });
-
-  useEffect(() => {
-    if (inView) {
-      let start = 0;
-      const end = target;
-      if (start === end) return;
-      
-      const totalMiliseconds = duration;
-      const incrementTime = (totalMiliseconds / end);
-      
-      const timer = setInterval(() => {
-        start += 1;
-        setCount(start);
-        if (start === end) clearInterval(timer);
-      }, incrementTime);
-      
-      return () => clearInterval(timer);
-    }
-  }, [inView, target, duration]);
-
-  return <span ref={ref}>{count}</span>;
-};
-
-const stats = [
-  { label: "Students Reached", value: 500, suffix: "+" },
-  { label: "Institutions", value: 20, suffix: "+" },
-  { label: "Programs Run", value: 10, suffix: "+" },
-  { label: "Unified Mission", value: 1, prefix: "🇳🇬 " },
-];
 
 const milestones = [
   { year: "2023", title: "ELF Founded", desc: "The vision was born under NiMSA-AMSA leadership." },
-  { year: "2023", title: "First Gauntlet", desc: "A historic launch with 100+ students participating." },
+  { year: "2023", title: "First Gauntlet", desc: "A historic launch with students participating from across Nigeria." },
   { year: "2024", title: "Regional Expansion", desc: "Expanding impact across Eastern and Western medical schools." },
-  { year: "2026", title: "The Next Era", desc: "Investing in 500+ visionaries annually." },
+  { year: "2026", title: "The Next Era", desc: "Investing in visionaries through refined programs and mentorship." },
 ];
 
 export default function Impact() {
@@ -64,21 +30,8 @@ export default function Impact() {
             A growing community of future healthcare leaders.
           </h1>
           <p className="text-elf-text-mid text-lg leading-relaxed">
-            Since our inception, ELF has been at the forefront of medical student empowerment, tracking quantitative growth alongside qualitative excellence.
+            Since our inception, ELF has been at the forefront of medical student empowerment, focusing on bridging the gap between early medical training and professional excellence.
           </p>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-32">
-          {stats.map((stat, i) => (
-            <Card key={i} className="bg-white border-elf-gold/10 hover:border-elf-gold shadow-sm transition-all duration-300 reveal-on-scroll">
-              <CardContent className="p-10 flex flex-col items-center justify-center text-center">
-                <h2 className="text-4xl md:text-6xl font-headline font-bold text-elf-green-dark mb-2">
-                  {stat.prefix}<Counter target={stat.value} />{stat.suffix}
-                </h2>
-                <p className="text-elf-text-light text-xs uppercase tracking-widest font-bold">{stat.label}</p>
-              </CardContent>
-            </Card>
-          ))}
         </div>
 
         {/* Milestone Strip */}

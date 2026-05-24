@@ -1,9 +1,8 @@
-
 "use client";
 
 import React, { useEffect } from 'react';
 import Link from 'next/link';
-import { Trophy, CheckCircle, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { Trophy, CheckCircle, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -54,22 +53,6 @@ export default function TheGauntlet() {
               View Gallery <ImageIcon className="ml-2" size={20} />
             </a>
           </Button>
-        </div>
-
-        {/* Stats Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 border-y border-white/10 py-16 reveal-on-scroll">
-          <div className="text-center space-y-2">
-            <h2 className="text-5xl md:text-6xl font-headline font-bold text-elf-gold">250+</h2>
-            <p className="text-white/60 uppercase tracking-widest text-sm font-bold">Active Participants</p>
-          </div>
-          <div className="text-center space-y-2 border-x border-white/10">
-            <h2 className="text-5xl md:text-6xl font-headline font-bold text-elf-gold">12</h2>
-            <p className="text-white/60 uppercase tracking-widest text-sm font-bold">Competitive Rounds</p>
-          </div>
-          <div className="text-center space-y-2">
-            <h2 className="text-5xl md:text-6xl font-headline font-bold text-elf-gold">15+</h2>
-            <p className="text-white/60 uppercase tracking-widest text-sm font-bold">Institutions Represented</p>
-          </div>
         </div>
 
         {/* Highlights/Quotes */}
