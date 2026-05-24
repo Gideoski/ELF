@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -46,8 +47,13 @@ export function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-full bg-elf-gold border-2 border-elf-gold/20 flex items-center justify-center text-elf-green-dark font-headline font-bold text-lg">
-            ELF
+          <div className="relative w-10 h-10 overflow-hidden rounded-full border-2 border-elf-gold/20">
+            <Image 
+              src="/images/elf logo.jpeg" 
+              alt="NiMSA-AMSA ELF Logo" 
+              fill 
+              className="object-cover"
+            />
           </div>
           <span className="font-headline text-xl text-elf-gold font-semibold tracking-tight hidden sm:block">
             NiMSA-AMSA ELF

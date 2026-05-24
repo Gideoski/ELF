@@ -1,14 +1,24 @@
-
 import Link from 'next/link';
+import Image from 'next/image';
 
 export function Footer() {
   return (
     <footer className="bg-elf-green-dark text-white py-16 border-t border-elf-gold/20">
       <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-12 items-center">
-        <div className="flex flex-col gap-2">
-          <h3 className="font-headline text-2xl text-elf-gold italic">NiMSA-AMSA ELF</h3>
-          <p className="text-white/60 text-sm tracking-widest uppercase">Emerging Leaders' Forum · AMSA Chapter</p>
-          <p className="text-elf-gold font-headline text-lg mt-2 italic">WE ARE NiMSA-AMSA ELF!</p>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-3">
+            <div className="relative w-12 h-12 overflow-hidden rounded-full border-2 border-elf-gold/20">
+              <Image 
+                src="/images/elf logo.jpeg" 
+                alt="NiMSA-AMSA ELF Logo" 
+                fill 
+                className="object-cover"
+              />
+            </div>
+            <h3 className="font-headline text-2xl text-elf-gold italic">NiMSA-AMSA ELF</h3>
+          </div>
+          <p className="text-white/60 text-xs tracking-widest uppercase">Emerging Leaders' Forum · AMSA Chapter</p>
+          <p className="text-elf-gold font-headline text-lg italic">— WE ARE NiMSA-AMSA ELF!</p>
         </div>
         
         <div className="flex flex-wrap justify-center gap-6">
