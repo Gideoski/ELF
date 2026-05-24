@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { Instagram, Twitter } from 'lucide-react';
 
 export function Footer() {
   return (
@@ -18,7 +19,14 @@ export function Footer() {
             <h3 className="font-headline text-2xl text-elf-gold italic">NiMSA-AMSA ELF</h3>
           </div>
           <p className="text-white/60 text-xs tracking-widest uppercase">Emerging Leaders' Forum · AMSA Chapter</p>
-          <p className="text-elf-gold font-headline text-lg italic">— WE ARE NiMSA-AMSA ELF!</p>
+          <div className="flex gap-4 mt-2">
+            <a href="https://www.instagram.com/laumsa_elf" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-elf-gold transition-colors">
+              <Instagram size={20} />
+            </a>
+            <a href="https://x.com/elflaumsa" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-elf-gold transition-colors">
+              <Twitter size={20} />
+            </a>
+          </div>
         </div>
         
         <div className="flex flex-wrap justify-center gap-6">

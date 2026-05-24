@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect } from 'react';
@@ -166,7 +165,8 @@ export default function JoinUs() {
           </Form>
         </div>
 
-        <div className="mt-24 text-center space-y-8 reveal-on-scroll">
+        {/* Removed reveal-on-scroll to ensure immediate visibility */}
+        <div className="mt-24 text-center space-y-8">
           <p className="text-white/60 tracking-widest uppercase text-sm font-bold">Connect With Us</p>
           <div className="flex justify-center gap-12">
             <a 
