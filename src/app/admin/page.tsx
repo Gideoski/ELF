@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -70,6 +71,7 @@ export default function AdminPage() {
             role: 'user', // Default role for safety
             displayName: email.split('@')[0]
           };
+          // Explicitly set the document
           setDoc(doc(firestore, 'users', res.user.uid), userData)
             .catch(async () => {
               errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -235,8 +237,12 @@ export default function AdminPage() {
           </div>
           <h2 className="text-3xl font-headline font-bold text-elf-green-dark mb-4">Unauthorized Access</h2>
           <p className="text-elf-text-mid mb-8 leading-relaxed">
-            Your account does not have administrative privileges. Please contact the technical lead for role elevation.
+            Your account is currently registered with a <strong>'user'</strong> role. To access these tools, your account must be manually elevated to <strong>'admin'</strong> by the system administrator.
           </p>
+          <div className="bg-white p-4 rounded-xl border border-elf-gold/10 text-xs text-elf-text-light mb-8">
+            <p className="font-bold mb-1">Your UID:</p>
+            <code className="bg-elf-cream px-2 py-1 rounded block truncate">{user.uid}</code>
+          </div>
           <Button variant="outline" className="rounded-full w-full" onClick={() => auth && signOut(auth)}>
             Sign Out
           </Button>
@@ -359,18 +365,6 @@ export default function AdminPage() {
             </div>
           </TabsContent>
         </Tabs>
-
-        <div className="mt-20 p-8 bg-amber-50 border border-amber-100 rounded-3xl flex items-start gap-6">
-          <div className="bg-amber-100 p-3 rounded-2xl text-amber-600">
-            <ShieldAlert size={28} />
-          </div>
-          <div className="space-y-2">
-            <h4 className="font-bold text-amber-900 text-lg">System Permissions Policy</h4>
-            <p className="text-amber-700 leading-relaxed text-sm">
-              Note: New accounts are assigned standard privileges. To enable data mutations (uploads/deletions), your account UID must be manually elevated to 'admin' status in the primary database. Please contact technical support for elevation.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );
