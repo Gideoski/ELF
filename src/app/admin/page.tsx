@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Image as ImageIcon, LogOut, Trash2, Plus, Eye, EyeOff, Loader2, Lock, UserPlus, LogIn, AlertCircle, ExternalLink, RefreshCcw } from 'lucide-react';
+import { FileText, Image as ImageIcon, LogOut, Trash2, Plus, Eye, EyeOff, Loader2, Lock, UserPlus, LogIn, AlertCircle, ExternalLink, RefreshCcw, Copy, Check } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -43,6 +43,7 @@ export default function AdminPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   
   // Form States
   const [docTitle, setDocTitle] = useState('');
@@ -76,13 +77,19 @@ export default function AdminPage() {
             displayName: email.split('@')[0],
             createdAt: new Date().toISOString()
           };
-          // This creates the collection and document automatically
-          await setDoc(doc(firestore, 'users', res.user.uid), userData);
+          // Non-blocking write
+          setDoc(doc(firestore, 'users', res.user.uid), userData)
+            .catch((err) => {
+              errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: `users/${res.user.uid}`,
+                operation: 'create',
+                requestResourceData: userData
+              }));
+            });
         }
-        toast({ title: "Account created", description: "Profile initialized. Please elevate your role in the console." });
+        toast({ title: "Account created", description: "Authentication successful. Checking profile..." });
       }
     } catch (error: any) {
-      console.error("Auth Error:", error.code, error.message);
       const friendlyMessage = getErrorMessage(error);
       setAuthError(friendlyMessage);
       toast({ 
@@ -93,6 +100,25 @@ export default function AdminPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const retryProfileCreation = () => {
+    if (!firestore || !user) return;
+    const userData = {
+      email: user.email,
+      role: 'user',
+      displayName: user.email?.split('@')[0],
+      createdAt: new Date().toISOString()
+    };
+    setDoc(doc(firestore, 'users', user.uid), userData)
+      .then(() => toast({ title: "Profile created!" }))
+      .catch((err) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: `users/${user.uid}`,
+          operation: 'create',
+          requestResourceData: userData
+        }));
+      });
   };
 
   const addDocument = () => {
@@ -152,6 +178,13 @@ export default function AdminPage() {
           operation: 'delete'
         }));
       });
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast({ title: "ID copied to clipboard" });
   };
 
   if (authLoading || (user && profileLoading)) return (
@@ -253,46 +286,57 @@ export default function AdminPage() {
     );
   }
 
-  if (profile?.role !== 'admin') {
+  if (!profile || profile.role !== 'admin') {
     return (
       <div className="min-h-screen bg-elf-cream flex flex-col items-center justify-center p-6 pt-32 pb-20">
         <Card className="max-w-xl w-full text-center p-8 md:p-12 rounded-3xl border-elf-gold/10 shadow-2xl bg-white animate-fade-in-up">
           <div className="w-20 h-20 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto mb-6">
             <Lock size={40} />
           </div>
-          <h2 className="text-3xl md:text-4xl font-headline font-bold text-elf-green-dark mb-4">Awaiting Promotion</h2>
+          <h2 className="text-3xl md:text-4xl font-headline font-bold text-elf-green-dark mb-4">
+            {!profile ? 'Profile Not Found' : 'Awaiting Promotion'}
+          </h2>
           <p className="text-elf-text-mid mb-8 leading-relaxed">
-            Your account was successfully created! However, you are currently a <strong className="text-elf-gold">user</strong>. To manage the site, your role must be elevated to <strong className="text-elf-gold">admin</strong>.
+            {!profile 
+              ? "Your account exists, but we couldn't create your database profile. This usually happens because of initial Security Rules setup."
+              : "Your profile is active, but you are currently a user. You need to be an admin to access this dashboard."
+            }
           </p>
           
           <div className="text-left bg-elf-cream/50 p-6 rounded-2xl border border-elf-gold/10 mb-8 space-y-4">
             <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">1. Open Firestore in Console</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">1. Copy your UID</p>
+              <div 
+                className="bg-white px-3 py-2 rounded-lg border border-elf-gold/5 text-[10px] font-mono break-all cursor-pointer flex justify-between items-center group active:scale-[0.98] transition-transform"
+                onClick={() => copyToClipboard(user.uid)}
+              >
+                <span className="truncate">{user.uid}</span>
+                {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} className="opacity-40 group-hover:opacity-100" />}
+              </div>
+            </div>
+            
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">2. Create in Firestore Console</p>
+              <p className="text-xs text-elf-text-mid">
+                If the 'users' collection is missing, create it manually. Create a document with the **ID above**, and add field <code className="bg-elf-gold/10 px-1 rounded text-elf-gold font-bold">role: "admin"</code>.
+              </p>
               <a 
                 href="https://console.firebase.google.com/" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-elf-gold text-xs flex items-center gap-1 hover:underline"
+                className="text-elf-gold text-xs flex items-center gap-1 hover:underline mt-2"
               >
                 Go to Database <ExternalLink size={12} />
               </a>
             </div>
-            
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">2. Locate Your Document</p>
-              <div className="bg-white px-3 py-2 rounded-lg border border-elf-gold/5 text-[10px] font-mono break-all select-all flex justify-between items-center">
-                <span>ID: {user.uid}</span>
-              </div>
-              <p className="text-[10px] text-elf-text-light italic mt-1">* The 'users' collection appeared automatically when you registered.</p>
-            </div>
-
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">3. Update "role" field</p>
-              <p className="text-xs text-elf-text-mid">Change <span className="line-through opacity-50">"user"</span> to <span className="text-elf-gold font-bold">"admin"</span> and save.</p>
-            </div>
           </div>
 
           <div className="flex flex-col gap-3">
+            {!profile && (
+              <Button className="rounded-full w-full h-12 bg-elf-gold text-elf-green-dark font-bold" onClick={retryProfileCreation}>
+                Try Automatic Creation Again
+              </Button>
+            )}
             <Button className="rounded-full w-full h-12 bg-elf-green-dark text-white font-bold" onClick={() => window.location.reload()}>
               <RefreshCcw size={18} className="mr-2" /> I've updated my role, refresh
             </Button>
