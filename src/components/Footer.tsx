@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -46,7 +47,7 @@ export function Footer() {
         <div className="flex flex-wrap justify-center gap-6">
           <Link href="/home" className="text-white/60 hover:text-elf-gold text-sm transition-colors">Home</Link>
           <Link href="/about" className="text-white/60 hover:text-elf-gold text-sm transition-colors">About</Link>
-          <Link href="/programs" className="text-white/60 hover:text-elf-gold text-sm transition-colors">Programs</Link>
+          <Link href="/archive" className="text-white/60 hover:text-elf-gold text-sm transition-colors">Archive</Link>
           <Link href="/gallery" className="text-white/60 hover:text-elf-gold text-sm transition-colors">Gallery</Link>
           <Link href="/join-us" className="text-white/60 hover:text-elf-gold text-sm transition-colors">Join Us</Link>
         </div>

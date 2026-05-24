@@ -1,15 +1,46 @@
 
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
 
 const categories = ["All", "The Gauntlet", "Workshops", "Community", "Leadership"];
 
 export default function Gallery() {
   const [activeTab, setActiveTab] = useState("All");
+  const firestore = useFirestore();
+
+  const galleryQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'gallery'), orderBy('createdAt', 'desc'));
+  }, [firestore]);
+
+  const { data: dbImages, loading } = useCollection(galleryQuery);
+
+  // Static images as fallbacks or defaults
+  const staticImages = [
+    { imageUrl: "/images/20260427_092908.jpg", category: "The Gauntlet", title: "Rising Leaders", createdAt: "2024-01-01" },
+    { imageUrl: "/images/20260427_093026.jpg", category: "Workshops", title: "Core Science Review", createdAt: "2024-01-02" },
+    { imageUrl: "/images/20260427_093121.jpg", category: "Community", title: "ELF Connections", createdAt: "2024-01-03" },
+    { imageUrl: "/images/20260427_093142.jpg", category: "Leadership", title: "Strategy Session", createdAt: "2024-01-04" },
+    { imageUrl: "/images/20260427_093232.jpg", category: "The Gauntlet", title: "Academic Showdown", createdAt: "2024-01-05" },
+    { imageUrl: "/images/20260427_093310.jpg", category: "Workshops", title: "Foundation Skills", createdAt: "2024-01-06" },
+  ];
+
+  const allImages = useMemo(() => {
+    const combined = [...(dbImages || [])];
+    // Add static ones if db is empty or just as base
+    if (!dbImages || dbImages.length === 0) {
+      return staticImages;
+    }
+    return combined;
+  }, [dbImages]);
+
+  const filtered = activeTab === "All" ? allImages : allImages.filter(img => img.category === activeTab);
 
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
@@ -20,18 +51,7 @@ export default function Gallery() {
 
     document.querySelectorAll('.reveal-on-scroll').forEach(el => observer.observe(el));
     return () => observer.disconnect();
-  }, []);
-
-  const galleryImages = [
-    { src: "/images/20260427_092908.jpg", cat: "The Gauntlet", title: "Rising Leaders" },
-    { src: "/images/20260427_093026.jpg", cat: "Workshops", title: "Core Science Review" },
-    { src: "/images/20260427_093121.jpg", cat: "Community", title: "ELF Connections" },
-    { src: "/images/20260427_093142.jpg", cat: "Leadership", title: "Strategy Session" },
-    { src: "/images/20260427_093232.jpg", cat: "The Gauntlet", title: "Academic Showdown" },
-    { src: "/images/20260427_093310.jpg", cat: "Workshops", title: "Foundation Skills" },
-  ];
-
-  const filtered = activeTab === "All" ? galleryImages : galleryImages.filter(img => img.cat === activeTab);
+  }, [filtered]);
 
   return (
     <div className="bg-elf-green-dark min-h-screen pt-32 pb-24 text-white">
@@ -58,21 +78,27 @@ export default function Gallery() {
           </div>
         </div>
 
-        <div className="columns-1 md:columns-2 lg:columns-3 gap-8 space-y-8 reveal-on-scroll">
-          {filtered.map((img, i) => (
-            <Card key={i} className="group relative overflow-hidden rounded-2xl border-none shadow-none bg-white/5 break-inside-avoid">
-              <img 
-                src={img.src} 
-                alt={img.title} 
-                className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-elf-green-dark/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-8 bg-gradient-to-t from-elf-green-dark/80 to-transparent">
-                <span className="text-elf-gold uppercase tracking-widest text-xs font-bold mb-2">{img.cat}</span>
-                <h3 className="font-headline text-2xl font-bold text-white">{img.title}</h3>
-              </div>
-            </Card>
-          ))}
-        </div>
+        {loading ? (
+           <div className="flex justify-center py-20">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-elf-gold"></div>
+           </div>
+        ) : (
+          <div className="columns-1 md:columns-2 lg:columns-3 gap-8 space-y-8 reveal-on-scroll">
+            {filtered.map((img, i) => (
+              <Card key={i} className="group relative overflow-hidden rounded-2xl border-none shadow-none bg-white/5 break-inside-avoid">
+                <img 
+                  src={img.imageUrl} 
+                  alt={img.title} 
+                  className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-elf-green-dark/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-8 bg-gradient-to-t from-elf-green-dark/80 to-transparent">
+                  <span className="text-elf-gold uppercase tracking-widest text-xs font-bold mb-2">{img.category}</span>
+                  <h3 className="font-headline text-2xl font-bold text-white">{img.title}</h3>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
 
         <div className="mt-20 text-center reveal-on-scroll">
           <p className="text-white/40 italic mb-8">View the complete archive on our official Google Drive</p>

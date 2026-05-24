@@ -1,0 +1,57 @@
+
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Information about users, including roles for authorization.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "displayName": { "type": "string" }
+      },
+      "required": ["email", "role"]
+    },
+    "Document": {
+      "title": "Archive Document",
+      "description": "PDFs and other documents uploaded for the public archive.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "fileUrl": { "type": "string" },
+        "fileType": { "type": "string" },
+        "uploadedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "fileUrl", "uploadedAt"]
+    },
+    "GalleryImage": {
+      "title": "Gallery Image",
+      "description": "Images displayed in the public gallery.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "category": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "imageUrl", "createdAt"]
+    }
+  },
+  "auth": {
+    "providers": ["password"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Stores user roles and profiles."
+    },
+    "/documents/{docId}": {
+      "schema": "Document",
+      "description": "Stores metadata for archived files."
+    },
+    "/gallery/{imageId}": {
+      "schema": "GalleryImage",
+      "description": "Stores metadata for gallery images."
+    }
+  }
+}
