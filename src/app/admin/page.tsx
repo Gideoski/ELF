@@ -20,11 +20,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Image as ImageIcon, LogOut, Trash2, Plus, Eye, EyeOff, Loader2, Lock, UserPlus, LogIn } from 'lucide-react';
+import { FileText, Image as ImageIcon, LogOut, Trash2, Plus, Eye, EyeOff, Loader2, Lock, UserPlus, LogIn, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function AdminPage() {
   const auth = useAuth();
@@ -40,6 +41,7 @@ export default function AdminPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   
   // Form States
   const [docTitle, setDocTitle] = useState('');
@@ -59,6 +61,7 @@ export default function AdminPage() {
     e.preventDefault();
     if (!auth) return;
     setIsSubmitting(true);
+    setAuthError(null);
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
@@ -72,7 +75,6 @@ export default function AdminPage() {
             displayName: email.split('@')[0],
             createdAt: new Date().toISOString()
           };
-          // Initialize user profile in background
           setDoc(doc(firestore, 'users', res.user.uid), userData)
             .catch(async () => {
               errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -85,11 +87,12 @@ export default function AdminPage() {
         toast({ title: "Account created", description: "Please contact the head admin to elevate your role." });
       }
     } catch (error: any) {
-      console.error("Auth Error Code:", error.code); // Helpful for debugging
+      const friendlyMessage = getErrorMessage(error);
+      setAuthError(friendlyMessage);
       toast({ 
         variant: "destructive", 
         title: "Authentication Failed", 
-        description: getErrorMessage(error) 
+        description: friendlyMessage 
       });
     } finally {
       setIsSubmitting(false);
@@ -159,7 +162,7 @@ export default function AdminPage() {
   };
 
   if (authLoading || (user && profileLoading)) return (
-    <div className="min-h-screen flex items-center justify-center bg-elf-cream">
+    <div className="min-h-screen flex items-center justify-center bg-elf-cream pt-24">
       <div className="flex flex-col items-center gap-4">
         <Loader2 className="animate-spin text-elf-gold" size={48} />
         <p className="text-elf-text-light font-headline italic">Verifying credentials...</p>
@@ -182,6 +185,13 @@ export default function AdminPage() {
             </p>
           </CardHeader>
           <CardContent className="pt-8 px-8 pb-10">
+            {authError && (
+              <Alert variant="destructive" className="mb-6 rounded-xl border-destructive/20 bg-destructive/5">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{authError}</AlertDescription>
+              </Alert>
+            )}
             <form onSubmit={handleAuth} className="space-y-6">
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light ml-1">Email Address</label>
