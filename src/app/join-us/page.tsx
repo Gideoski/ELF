@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { Instagram, Twitter, Mail, Linkedin } from 'lucide-react';
+import { Instagram, Twitter } from 'lucide-react';
 
 const formSchema = z.object({
   fullName: z.string().min(2, "Name is too short"),
@@ -169,11 +169,24 @@ export default function JoinUs() {
         <div className="mt-24 text-center space-y-8 reveal-on-scroll">
           <p className="text-white/60 tracking-widest uppercase text-sm font-bold">Connect With Us</p>
           <div className="flex justify-center gap-12">
-            {[Instagram, Twitter, Mail, Linkedin].map((Icon, i) => (
-              <a key={i} href="#" className="text-white/40 hover:text-elf-gold transition-colors">
-                <Icon size={32} />
-              </a>
-            ))}
+            <a 
+              href="https://www.instagram.com/laumsa_elf" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-white/40 hover:text-elf-gold transition-colors flex flex-col items-center gap-2"
+            >
+              <Instagram size={32} />
+              <span className="text-xs">laumsa_elf</span>
+            </a>
+            <a 
+              href="https://x.com/elflaumsa" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-white/40 hover:text-elf-gold transition-colors flex flex-col items-center gap-2"
+            >
+              <Twitter size={32} />
+              <span className="text-xs">@elflaumsa</span>
+            </a>
           </div>
           <div className="pt-16 border-t border-white/10">
             <h3 className="font-headline italic text-elf-gold text-3xl">— WE ARE NiMSA-AMSA ELF!</h3>
