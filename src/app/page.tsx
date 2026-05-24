@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useRef } from 'react';
@@ -57,8 +58,7 @@ export default function Home() {
           </p>
           
           <p className="max-w-2xl mx-auto text-lg text-white/70 leading-relaxed reveal-on-scroll">
-            Bridging the gap between early medical training and future professional excellence — 
-            through academics, mentorship, leadership, and community.
+            Supporting and empowering premedical and preclinical students academically, professionally, and socially under the Nigerian Medical Students’ Association.
           </p>
           
           <div className="flex flex-wrap justify-center gap-6 pt-4 reveal-on-scroll">
@@ -94,6 +94,17 @@ export default function Home() {
               </Card>
             </Link>
           ))}
+        </div>
+      </section>
+
+      {/* Mission Section */}
+      <section className="py-24 bg-white px-6">
+        <div className="max-w-4xl mx-auto text-center reveal-on-scroll">
+          <h2 className="text-4xl md:text-5xl font-headline text-elf-green-dark mb-8 italic">"Bridging the gap between early medical training and professional excellence."</h2>
+          <p className="text-elf-text-mid text-lg leading-relaxed mb-12">
+            NiMSA-AMSA ELF creates opportunities for students to grow through academics, leadership development, mentorship, networking, and extracurricular engagement. We help young medical students build confidence and connect with a community of future healthcare leaders across Nigeria and beyond.
+          </p>
+          <div className="w-24 h-1 bg-elf-gold mx-auto" />
         </div>
       </section>
     </div>

@@ -55,18 +55,26 @@ export default function About() {
               Investing in Visionaries
             </span>
             <h1 className="text-5xl md:text-7xl font-headline leading-tight text-elf-green-dark mb-8">
-              Built for the early years. Designed for a lifetime of impact.
+              Built for the early years. Designed for impact.
             </h1>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
             <div className="space-y-6 text-elf-text-mid text-lg leading-relaxed reveal-on-scroll">
               <p>
-                NiMSA-AMSA ELF (Emerging Leaders' Forum) is a specialized initiative dedicated to nurturing the next generation of medical professionals during their most critical formative years.
+                NiMSA-AMSA ELF (Emerging Leaders’ Forum) is a platform under the Nigerian Medical Students’ Association dedicated to supporting and empowering premedical and preclinical students academically, professionally, and socially.
               </p>
               <p>
-                We believe that leadership is not just a destination, but a journey that begins early in medical training. Our mission is to provide the platform, resources, and community needed to bridge the gap between academic theory and clinical excellence.
+                Focused on bridging the gap between the early years of medical training and future professional excellence, ELF creates opportunities for students to grow through academics, leadership development, mentorship, networking, and extracurricular engagement.
               </p>
+              <p>
+                Through innovative programs, collaborations, and student-centered initiatives, NiMSA-AMSA ELF helps young medical students build confidence, develop relevant skills, and connect with a community of future healthcare leaders across Nigeria and beyond.
+              </p>
+              
+              <div className="pt-8">
+                 <h2 className="text-4xl font-headline italic text-elf-gold">WE ARE NiMSA-AMSA ELF!</h2>
+              </div>
+
               <div className="pt-8 border-t border-elf-gold/20 flex gap-12">
                 <div>
                   <h4 className="font-headline text-3xl text-elf-green-dark italic">NiMSA</h4>

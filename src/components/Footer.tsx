@@ -8,6 +8,7 @@ export function Footer() {
         <div className="flex flex-col gap-2">
           <h3 className="font-headline text-2xl text-elf-gold italic">NiMSA-AMSA ELF</h3>
           <p className="text-white/60 text-sm tracking-widest uppercase">Emerging Leaders' Forum · AMSA Chapter</p>
+          <p className="text-elf-gold font-headline text-lg mt-2 italic">WE ARE NiMSA-AMSA ELF!</p>
         </div>
         
         <div className="flex flex-wrap justify-center gap-6">
