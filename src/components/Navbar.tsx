@@ -88,10 +88,22 @@ export function Navbar() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="bg-elf-green-dark border-elf-gold/20 text-white w-[300px] sm:w-[350px]">
-              <SheetHeader className="sr-only">
-                <SheetTitle>Menu</SheetTitle>
+              <SheetHeader className="mb-8 pt-6">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="relative w-20 h-20 overflow-hidden rounded-full border-4 border-elf-gold/20 shadow-xl">
+                    <Image 
+                      src="/images/elf logo.jpeg" 
+                      alt="NiMSA-AMSA ELF Logo" 
+                      fill 
+                      className="object-cover"
+                    />
+                  </div>
+                  <SheetTitle className="text-elf-gold font-headline text-2xl italic tracking-tight">
+                    NiMSA-AMSA ELF
+                  </SheetTitle>
+                </div>
               </SheetHeader>
-              <div className="flex flex-col gap-2 pt-10">
+              <div className="flex flex-col gap-2">
                 {navLinks.map((link) => (
                   <Link 
                     key={link.name} 
@@ -107,8 +119,11 @@ export function Navbar() {
                 ))}
                 <div className="mt-8">
                   <Button asChild className="w-full bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark rounded-full py-6 text-lg font-bold" onClick={() => setIsOpen(false)}>
-                    <Link href="/join-us">Join Us</Link>
+                    <Link href="/join-us">Join Us Today</Link>
                   </Button>
+                </div>
+                <div className="mt-auto pt-10 text-center">
+                  <p className="text-elf-gold/50 font-headline italic text-sm">Investing in Visionaries</p>
                 </div>
               </div>
             </SheetContent>
