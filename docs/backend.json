@@ -8,7 +8,8 @@
       "properties": {
         "email": { "type": "string", "format": "email" },
         "role": { "type": "string", "enum": ["admin", "user"] },
-        "displayName": { "type": "string" }
+        "displayName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["email", "role"]
     },

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -20,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Image as ImageIcon, LogOut, Trash2, Plus, Eye, EyeOff, Loader2, Lock, UserPlus, LogIn, AlertCircle } from 'lucide-react';
+import { FileText, Image as ImageIcon, LogOut, Trash2, Plus, Eye, EyeOff, Loader2, Lock, UserPlus, LogIn, AlertCircle, ExternalLink } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -87,6 +88,7 @@ export default function AdminPage() {
         toast({ title: "Account created", description: "Please contact the head admin to elevate your role." });
       }
     } catch (error: any) {
+      console.error("Auth Error Code:", error.code);
       const friendlyMessage = getErrorMessage(error);
       setAuthError(friendlyMessage);
       toast({ 
@@ -165,7 +167,7 @@ export default function AdminPage() {
     <div className="min-h-screen flex items-center justify-center bg-elf-cream pt-24">
       <div className="flex flex-col items-center gap-4">
         <Loader2 className="animate-spin text-elf-gold" size={48} />
-        <p className="text-elf-text-light font-headline italic">Verifying credentials...</p>
+        <p className="text-elf-text-light font-headline italic text-lg">Verifying credentials...</p>
       </div>
     </div>
   );
@@ -262,20 +264,43 @@ export default function AdminPage() {
   if (profile?.role !== 'admin') {
     return (
       <div className="min-h-screen bg-elf-cream flex flex-col items-center justify-center p-6 pt-32 pb-20">
-        <Card className="max-w-md w-full text-center p-12 rounded-3xl border-elf-gold/10 shadow-xl bg-white animate-fade-in-up">
+        <Card className="max-w-xl w-full text-center p-8 md:p-12 rounded-3xl border-elf-gold/10 shadow-2xl bg-white animate-fade-in-up">
           <div className="w-20 h-20 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto mb-6">
             <Lock size={40} />
           </div>
-          <h2 className="text-3xl font-headline font-bold text-elf-green-dark mb-4">Unauthorized Access</h2>
+          <h2 className="text-3xl md:text-4xl font-headline font-bold text-elf-green-dark mb-4">Account Pending Promotion</h2>
           <p className="text-elf-text-mid mb-8 leading-relaxed">
-            Your account is currently registered with a <strong className="text-elf-gold">user</strong> role. To access these tools, your account must be manually elevated to <strong className="text-elf-gold">admin</strong> in the Firebase Console.
+            Your account is currently registered with a <strong className="text-elf-gold">user</strong> role. To access the dashboard, you must elevate your role to <strong className="text-elf-gold">admin</strong> in the Firebase Console.
           </p>
-          <div className="bg-elf-cream/50 p-6 rounded-2xl border border-elf-gold/10 text-xs text-elf-text-light mb-8">
-            <p className="font-bold mb-2 uppercase tracking-widest">Your Unique Identifier (UID):</p>
-            <code className="bg-white px-3 py-2 rounded-lg block truncate font-mono text-elf-green-dark border border-elf-gold/5 select-all">{user.uid}</code>
+          
+          <div className="text-left bg-elf-cream/50 p-6 rounded-2xl border border-elf-gold/10 mb-8 space-y-4">
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">1. Go to Firebase Console</p>
+              <a 
+                href="https://console.firebase.google.com/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-elf-gold text-xs flex items-center gap-1 hover:underline"
+              >
+                Open Firestore Database <ExternalLink size={12} />
+              </a>
+            </div>
+            
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">2. Find this User Document</p>
+              <div className="bg-white px-3 py-2 rounded-lg border border-elf-gold/5 text-[10px] font-mono break-all select-all">
+                Collection: <span className="text-elf-gold">users</span> / ID: <span className="text-elf-green-dark font-bold">{user.uid}</span>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">3. Change Role Field</p>
+              <p className="text-xs text-elf-text-mid italic">Change "user" to <span className="text-elf-gold font-bold">"admin"</span> and click Update.</p>
+            </div>
           </div>
+
           <Button variant="outline" className="rounded-full w-full h-12 border-elf-gold text-elf-gold hover:bg-elf-gold hover:text-white transition-all font-bold" onClick={() => auth && signOut(auth)}>
-            <LogOut size={18} className="mr-2" /> Sign Out
+            <LogOut size={18} className="mr-2" /> Sign Out & Try Again
           </Button>
         </Card>
       </div>

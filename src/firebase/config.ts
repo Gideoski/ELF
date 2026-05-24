@@ -9,7 +9,7 @@
  * 3. Look for "Web API Key" in the General tab.
  */
 export const firebaseConfig = {
-  apiKey: "REPLACE_WITH_YOUR_WEB_API_KEY",
+  apiKey: "AIzaSyDrJWUKerEr5pR0jCOcShDvdDnBe1rNqu0",
   authDomain: "nextn-640c4.firebaseapp.com",
   projectId: "nextn-640c4",
   storageBucket: "nextn-640c4.firebasestorage.app",
