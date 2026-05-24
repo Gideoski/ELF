@@ -46,15 +46,15 @@ export default function Home() {
             </span>
           </div>
           
-          <div className="space-y-4">
-            <h1 className="text-6xl md:text-8xl lg:text-9xl font-headline leading-tight reveal-on-scroll">
-              Emerging <span className="italic text-elf-gold">Leaders'</span> Forum
-            </h1>
+          <div className="space-y-6">
             <div className="reveal-on-scroll">
-              <p className="text-sm md:text-base tracking-[0.25em] uppercase text-white/50 font-medium max-w-2xl mx-auto leading-relaxed px-4">
+              <p className="text-sm md:text-base tracking-[0.25em] uppercase text-white/50 font-medium max-w-3xl mx-auto leading-relaxed px-4">
                 Nigerian Medical Students' Association — African Medical Students' Association
               </p>
             </div>
+            <h1 className="text-6xl md:text-8xl lg:text-9xl font-headline leading-tight reveal-on-scroll">
+              Emerging <span className="italic text-elf-gold">Leaders'</span> Forum
+            </h1>
           </div>
           
           <p className="max-w-2xl mx-auto text-lg md:text-xl text-white/70 leading-relaxed reveal-on-scroll">
