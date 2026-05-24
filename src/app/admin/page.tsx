@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Image as ImageIcon, LogOut, Trash2, Plus, Eye, EyeOff, Loader2, Lock, UserPlus, LogIn, AlertCircle, ExternalLink, RefreshCcw, Copy, Check } from 'lucide-react';
+import { FileText, Image as ImageIcon, LogOut, Trash2, Plus, Eye, EyeOff, Loader2, Lock, UserPlus, LogIn, AlertCircle, ExternalLink, RefreshCcw, Copy, Check, ShieldAlert } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -35,7 +35,7 @@ export default function AdminPage() {
   
   // Role checking
   const userProfileRef = useMemo(() => (firestore && user) ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
-  const { data: profile, loading: profileLoading } = useDoc(userProfileRef);
+  const { data: profile, loading: profileLoading, error: profileError } = useDoc(userProfileRef);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -77,7 +77,6 @@ export default function AdminPage() {
             displayName: email.split('@')[0],
             createdAt: new Date().toISOString()
           };
-          // Non-blocking write
           setDoc(doc(firestore, 'users', res.user.uid), userData)
             .catch((err) => {
               errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -111,7 +110,7 @@ export default function AdminPage() {
       createdAt: new Date().toISOString()
     };
     setDoc(doc(firestore, 'users', user.uid), userData)
-      .then(() => toast({ title: "Profile created!" }))
+      .then(() => toast({ title: "Profile creation initiated" }))
       .catch((err) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: `users/${user.uid}`,
@@ -129,11 +128,6 @@ export default function AdminPage() {
       uploadedAt: new Date().toISOString()
     };
     addDoc(collection(firestore, 'documents'), data)
-      .then(() => {
-        setDocTitle(''); 
-        setDocUrl('');
-        toast({ title: "Resource published successfully" });
-      })
       .catch((err) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: 'documents',
@@ -143,35 +137,9 @@ export default function AdminPage() {
       });
   };
 
-  const addGalleryImage = () => {
-    if (!firestore || !galleryTitle || !galleryUrl) return;
-    const data = {
-      title: galleryTitle,
-      imageUrl: galleryUrl,
-      category: galleryCat,
-      createdAt: new Date().toISOString()
-    };
-    addDoc(collection(firestore, 'gallery'), data)
-      .then(() => {
-        setGalleryTitle(''); 
-        setGalleryUrl('');
-        toast({ title: "Gallery updated successfully" });
-      })
-      .catch(() => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: 'gallery',
-          operation: 'create',
-          requestResourceData: data
-        }));
-      });
-  };
-
   const deleteItem = (col: string, id: string) => {
     if (!firestore) return;
     deleteDoc(doc(firestore, col, id))
-      .then(() => {
-        toast({ title: "Item removed from system" });
-      })
       .catch(() => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: `${col}/${id}`,
@@ -296,16 +264,27 @@ export default function AdminPage() {
           <h2 className="text-3xl md:text-4xl font-headline font-bold text-elf-green-dark mb-4">
             {!profile ? 'Profile Not Found' : 'Awaiting Promotion'}
           </h2>
+          
+          {profileError && (
+            <Alert variant="destructive" className="mb-6 text-left rounded-xl">
+              <ShieldAlert className="h-4 w-4" />
+              <AlertTitle>Database Error</AlertTitle>
+              <AlertDescription className="text-xs">
+                {getErrorMessage(profileError)}
+              </AlertDescription>
+            </Alert>
+          )}
+
           <p className="text-elf-text-mid mb-8 leading-relaxed">
             {!profile 
-              ? "Your account exists, but we couldn't create your database profile. This usually happens because of initial Security Rules setup."
-              : "Your profile is active, but you are currently a user. You need to be an admin to access this dashboard."
+              ? "Your account is authenticated, but your Firestore profile is missing or blocked by Security Rules."
+              : "Your profile is active, but you are currently a user. An existing admin must elevate your role to 'admin'."
             }
           </p>
           
           <div className="text-left bg-elf-cream/50 p-6 rounded-2xl border border-elf-gold/10 mb-8 space-y-4">
             <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">1. Copy your UID</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">1. Verify your UID</p>
               <div 
                 className="bg-white px-3 py-2 rounded-lg border border-elf-gold/5 text-[10px] font-mono break-all cursor-pointer flex justify-between items-center group active:scale-[0.98] transition-transform"
                 onClick={() => copyToClipboard(user.uid)}
@@ -316,9 +295,9 @@ export default function AdminPage() {
             </div>
             
             <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">2. Create in Firestore Console</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">2. Firestore Setup</p>
               <p className="text-xs text-elf-text-mid">
-                If the 'users' collection is missing, create it manually. Create a document with the **ID above**, and add field <code className="bg-elf-gold/10 px-1 rounded text-elf-gold font-bold">role: "admin"</code>.
+                In the Firebase Console, go to **Firestore**. Create a document in the <code className="bg-elf-gold/10 px-1 rounded text-elf-gold font-bold">users</code> collection with the ID above. Add a field <code className="bg-elf-gold/10 px-1 rounded text-elf-gold font-bold">role: "admin"</code>.
               </p>
               <a 
                 href="https://console.firebase.google.com/" 
@@ -326,17 +305,12 @@ export default function AdminPage() {
                 rel="noopener noreferrer"
                 className="text-elf-gold text-xs flex items-center gap-1 hover:underline mt-2"
               >
-                Go to Database <ExternalLink size={12} />
+                Go to Database Console <ExternalLink size={12} />
               </a>
             </div>
           </div>
 
           <div className="flex flex-col gap-3">
-            {!profile && (
-              <Button className="rounded-full w-full h-12 bg-elf-gold text-elf-green-dark font-bold" onClick={retryProfileCreation}>
-                Try Automatic Creation Again
-              </Button>
-            )}
             <Button className="rounded-full w-full h-12 bg-elf-green-dark text-white font-bold" onClick={() => window.location.reload()}>
               <RefreshCcw size={18} className="mr-2" /> I've updated my role, refresh
             </Button>
