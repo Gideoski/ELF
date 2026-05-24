@@ -165,13 +165,13 @@ export default function AdminPage() {
   // Login View
   if (!user) {
     return (
-      <div className="min-h-screen bg-elf-green-dark flex items-center justify-center p-6">
-        <Card className="w-full max-w-md bg-white shadow-2xl rounded-2xl overflow-hidden border-none">
-          <CardHeader className="text-center pb-2 bg-elf-cream/30 border-b border-elf-gold/10">
+      <div className="min-h-screen bg-elf-green-dark flex flex-col items-center justify-center p-6 pt-32 pb-20">
+        <Card className="w-full max-w-md bg-white shadow-2xl rounded-2xl overflow-hidden border-none animate-fade-in-up">
+          <CardHeader className="text-center pb-6 bg-elf-cream/30 border-b border-elf-gold/10 pt-8">
             <CardTitle className="text-3xl font-headline italic text-elf-green-dark">Admin Portal</CardTitle>
-            <p className="text-elf-text-light text-sm">Secure Administrative Access</p>
+            <p className="text-elf-text-light text-sm mt-2">Secure Administrative Access</p>
           </CardHeader>
-          <CardContent className="pt-8">
+          <CardContent className="pt-8 px-8">
             <form onSubmit={handleAuth} className="space-y-6">
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light ml-1">Email Address</label>
@@ -181,7 +181,7 @@ export default function AdminPage() {
                   value={email} 
                   onChange={(e) => setEmail(e.target.value)} 
                   required 
-                  className="h-12 border-elf-gold/20 focus:ring-elf-gold"
+                  className="h-12 border-elf-gold/20 focus:ring-elf-gold rounded-xl"
                 />
               </div>
               <div className="relative space-y-2">
@@ -193,7 +193,7 @@ export default function AdminPage() {
                     value={password} 
                     onChange={(e) => setPassword(e.target.value)} 
                     required 
-                    className="pr-12 h-12 border-elf-gold/20 focus:ring-elf-gold"
+                    className="pr-12 h-12 border-elf-gold/20 focus:ring-elf-gold rounded-xl"
                   />
                   <button
                     type="button"
@@ -207,7 +207,7 @@ export default function AdminPage() {
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="w-full bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark h-12 font-bold transition-all rounded-full"
+                className="w-full bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark h-12 font-bold transition-all rounded-full shadow-lg"
               >
                 {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : (isLogin ? 'Sign In' : 'Create Admin Account')}
               </Button>
@@ -230,8 +230,8 @@ export default function AdminPage() {
   // Access Denied View
   if (profile?.role !== 'admin') {
     return (
-      <div className="min-h-screen bg-elf-cream flex items-center justify-center p-6">
-        <Card className="max-w-md w-full text-center p-12 rounded-3xl border-elf-gold/10">
+      <div className="min-h-screen bg-elf-cream flex flex-col items-center justify-center p-6 pt-32">
+        <Card className="max-w-md w-full text-center p-12 rounded-3xl border-elf-gold/10 shadow-xl bg-white animate-fade-in-up">
           <div className="w-20 h-20 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto mb-6">
             <Lock size={40} />
           </div>
@@ -239,11 +239,11 @@ export default function AdminPage() {
           <p className="text-elf-text-mid mb-8 leading-relaxed">
             Your account is currently registered with a <strong>'user'</strong> role. To access these tools, your account must be manually elevated to <strong>'admin'</strong> by the system administrator.
           </p>
-          <div className="bg-white p-4 rounded-xl border border-elf-gold/10 text-xs text-elf-text-light mb-8">
-            <p className="font-bold mb-1">Your UID:</p>
-            <code className="bg-elf-cream px-2 py-1 rounded block truncate">{user.uid}</code>
+          <div className="bg-elf-cream/50 p-6 rounded-2xl border border-elf-gold/10 text-xs text-elf-text-light mb-8">
+            <p className="font-bold mb-2 uppercase tracking-widest">Your Unique Identifier (UID):</p>
+            <code className="bg-white px-3 py-2 rounded-lg block truncate font-mono text-elf-green-dark border border-elf-gold/5">{user.uid}</code>
           </div>
-          <Button variant="outline" className="rounded-full w-full" onClick={() => auth && signOut(auth)}>
+          <Button variant="outline" className="rounded-full w-full h-12 border-elf-gold text-elf-gold hover:bg-elf-gold hover:text-white transition-all font-bold" onClick={() => auth && signOut(auth)}>
             Sign Out
           </Button>
         </Card>
@@ -257,43 +257,43 @@ export default function AdminPage() {
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
           <div>
-            <h1 className="text-4xl font-headline text-elf-green-dark font-bold">Dashboard</h1>
-            <p className="text-elf-text-mid flex items-center gap-2">
+            <h1 className="text-4xl font-headline text-elf-green-dark font-bold">Admin Dashboard</h1>
+            <p className="text-elf-text-mid flex items-center gap-2 mt-1">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              Authenticated as {user.email} (Admin)
+              Authenticated as <span className="font-bold">{user.email}</span>
             </p>
           </div>
-          <Button variant="outline" className="text-destructive border-destructive/20 hover:bg-destructive/5 rounded-full" onClick={() => auth && signOut(auth)}>
+          <Button variant="outline" className="text-destructive border-destructive/20 hover:bg-destructive/5 rounded-full px-6 h-11" onClick={() => auth && signOut(auth)}>
             <LogOut size={18} className="mr-2" /> End Session
           </Button>
         </div>
 
         <Tabs defaultValue="archive" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8 h-14 bg-white border border-elf-gold/10 p-1 rounded-full overflow-hidden">
-            <TabsTrigger value="archive" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white">
+          <TabsList className="grid w-full grid-cols-2 mb-8 h-14 bg-white border border-elf-gold/10 p-1 rounded-full overflow-hidden shadow-sm">
+            <TabsTrigger value="archive" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white data-[state=active]:shadow-lg font-bold transition-all">
               <FileText size={18} className="mr-2" /> Archive Management
             </TabsTrigger>
-            <TabsTrigger value="gallery" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white">
+            <TabsTrigger value="gallery" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white data-[state=active]:shadow-lg font-bold transition-all">
               <ImageIcon size={18} className="mr-2" /> Gallery Management
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="archive" className="space-y-8">
+          <TabsContent value="archive" className="space-y-8 animate-fade-in-up">
             <Card className="border-elf-gold/10 shadow-sm overflow-hidden rounded-2xl">
-              <CardHeader className="bg-white/50 border-b border-elf-gold/5">
+              <CardHeader className="bg-white/50 border-b border-elf-gold/5 p-6">
                 <CardTitle className="text-lg font-bold text-elf-green-dark">Upload New Resource</CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
+              <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-8 px-6 pb-8">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Document Title</label>
-                  <Input placeholder="e.g. Preclinical Guide Vol 1" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} />
+                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light ml-1">Document Title</label>
+                  <Input placeholder="e.g. Preclinical Guide Vol 1" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} className="rounded-xl border-elf-gold/20" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Direct PDF Link</label>
-                  <Input placeholder="URL from Cloud Storage" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} />
+                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light ml-1">Direct PDF Link</label>
+                  <Input placeholder="URL from Cloud Storage" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl border-elf-gold/20" />
                 </div>
                 <div className="flex items-end">
-                  <Button onClick={addDocument} className="w-full bg-elf-gold text-elf-green-dark font-bold h-10 rounded-full">
+                  <Button onClick={addDocument} className="w-full bg-elf-gold text-elf-green-dark font-bold h-10 rounded-full shadow-md hover:scale-[1.02] transition-transform">
                     <Plus size={18} className="mr-2"/> Add to Archive
                   </Button>
                 </div>
@@ -302,17 +302,17 @@ export default function AdminPage() {
 
             <div className="grid grid-cols-1 gap-4">
               {documents?.map(d => (
-                <div key={d.id} className="bg-white p-6 rounded-2xl shadow-sm border border-elf-gold/5 flex justify-between items-center group hover:border-elf-gold/20 transition-all">
+                <div key={d.id} className="bg-white p-6 rounded-2xl shadow-sm border border-elf-gold/5 flex justify-between items-center group hover:border-elf-gold/20 hover:shadow-md transition-all">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-xl bg-elf-gold/5 flex items-center justify-center text-elf-gold">
                       <FileText size={20} />
                     </div>
                     <div>
                       <p className="font-bold text-elf-green-dark">{d.title}</p>
-                      <p className="text-xs text-elf-text-light">Published on {new Date(d.uploadedAt).toLocaleDateString()}</p>
+                      <p className="text-xs text-elf-text-light uppercase tracking-widest">Published on {new Date(d.uploadedAt).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => deleteItem('documents', d.id)} className="text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button variant="ghost" size="icon" onClick={() => deleteItem('documents', d.id)} className="text-destructive opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/5 rounded-full">
                     <Trash2 size={18} />
                   </Button>
                 </div>
@@ -320,23 +320,23 @@ export default function AdminPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="gallery" className="space-y-8">
+          <TabsContent value="gallery" className="space-y-8 animate-fade-in-up">
              <Card className="border-elf-gold/10 shadow-sm overflow-hidden rounded-2xl">
-              <CardHeader className="bg-white/50 border-b border-elf-gold/5">
+              <CardHeader className="bg-white/50 border-b border-elf-gold/5 p-6">
                 <CardTitle className="text-lg font-bold text-elf-green-dark">Add Gallery Content</CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-6">
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-8 px-6 pb-8">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Image Title</label>
-                  <Input placeholder="e.g. Workshop Highlights" value={galleryTitle} onChange={(e) => setGalleryTitle(e.target.value)} />
+                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light ml-1">Image Title</label>
+                  <Input placeholder="e.g. Workshop Highlights" value={galleryTitle} onChange={(e) => setGalleryTitle(e.target.value)} className="rounded-xl border-elf-gold/20" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Image Link</label>
-                  <Input placeholder="Public Image URL" value={galleryUrl} onChange={(e) => setGalleryUrl(e.target.value)} />
+                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light ml-1">Image Link</label>
+                  <Input placeholder="Public Image URL" value={galleryUrl} onChange={(e) => setGalleryUrl(e.target.value)} className="rounded-xl border-elf-gold/20" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Category</label>
-                  <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background" value={galleryCat} onChange={(e) => setGalleryCat(e.target.value)}>
+                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light ml-1">Category</label>
+                  <select className="flex h-10 w-full rounded-xl border border-elf-gold/20 bg-background px-3 py-2 text-sm ring-offset-background outline-none focus:ring-2 focus:ring-elf-gold" value={galleryCat} onChange={(e) => setGalleryCat(e.target.value)}>
                     <option value="Workshops">Workshops</option>
                     <option value="The Gauntlet">The Gauntlet</option>
                     <option value="Community">Community</option>
@@ -344,20 +344,21 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div className="flex items-end">
-                  <Button onClick={addGalleryImage} className="w-full bg-elf-gold text-elf-green-dark font-bold h-10 rounded-full">
+                  <Button onClick={addGalleryImage} className="w-full bg-elf-gold text-elf-green-dark font-bold h-10 rounded-full shadow-md hover:scale-[1.02] transition-transform">
                     <Plus size={18} className="mr-2"/> Post to Gallery
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
               {galleryItems?.map(g => (
-                <div key={g.id} className="relative group rounded-2xl overflow-hidden aspect-square shadow-sm border border-elf-gold/10">
+                <div key={g.id} className="relative group rounded-2xl overflow-hidden aspect-square shadow-md border border-elf-gold/10 transition-transform hover:scale-[1.02]">
                   <img src={g.imageUrl} className="w-full h-full object-cover" alt={g.title} />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                    <Button variant="ghost" size="icon" onClick={() => deleteItem('gallery', g.id)} className="text-white hover:text-destructive scale-90 group-hover:scale-100 transition-transform">
-                      <Trash2 size={24} />
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity p-4">
+                    <p className="text-white text-[10px] uppercase tracking-widest font-bold mb-4 text-center">{g.title}</p>
+                    <Button variant="ghost" size="icon" onClick={() => deleteItem('gallery', g.id)} className="text-white hover:text-destructive scale-90 group-hover:scale-100 transition-transform bg-black/20 hover:bg-white rounded-full">
+                      <Trash2 size={20} />
                     </Button>
                   </div>
                 </div>
