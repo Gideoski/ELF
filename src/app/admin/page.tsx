@@ -30,8 +30,6 @@ import {
   EyeOff, 
   Loader2, 
   Lock, 
-  Copy, 
-  Check, 
   Users as UsersIcon,
   ShieldCheck,
   X,
@@ -174,9 +172,9 @@ export default function AdminPage() {
         .then(() => {
           toast({ 
             title: "Success!", 
-            description: "Your resource has been published to the archive." 
+            description: "Resource published successfully." 
           });
-          // Reset form automatically
+          // Reset form state
           setDocTitle(''); 
           setDocUrl(''); 
           setDocFile(null);
@@ -192,7 +190,7 @@ export default function AdminPage() {
       toast({ 
         variant: "destructive", 
         title: "Publishing Failed", 
-        description: "There was an error processing your file. Please try again." 
+        description: "There was an error processing your file. Please check the file size (Max 1MB)." 
       });
     } finally {
       setIsSubmitting(false);
@@ -215,9 +213,9 @@ export default function AdminPage() {
         .then(() => {
           toast({ 
             title: "Success!", 
-            description: "Image has been published to the gallery." 
+            description: "Image published to gallery." 
           });
-          // Reset form automatically
+          // Reset form state
           setGalleryCaption(''); 
           setGalleryFile(null);
         })
@@ -232,7 +230,7 @@ export default function AdminPage() {
       toast({ 
         variant: "destructive", 
         title: "Upload Failed", 
-        description: "There was an error processing your picture." 
+        description: "There was an error processing your picture. Please check the file size (Max 1MB)." 
       });
     } finally {
       setIsSubmitting(false);
@@ -257,12 +255,11 @@ export default function AdminPage() {
     const isSelf = user?.uid === userToDelete.id;
     try {
       await deleteDoc(doc(firestore, 'users', userToDelete.id));
-      toast({ title: "Account data removed from database" });
+      toast({ title: "Account removed" });
       
       if (isSelf && auth?.currentUser) {
         try { 
           await deleteAuthUser(auth.currentUser);
-          toast({ title: "Authentication account deleted" });
         } catch (e) { 
           await signOut(auth); 
         }
@@ -455,8 +452,7 @@ export default function AdminPage() {
                       <input type="file" accept="application/pdf" className="hidden" id="a-up" onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) setDocFile(file);
-                        // Reset input value to allow re-selecting same file if deleted
-                        e.target.value = ''; 
+                        e.target.value = ''; // Reset input value for re-selection
                       }} />
                       <Button asChild variant="outline" className="flex-grow rounded-xl h-12 justify-start font-normal"><label htmlFor="a-up" className="cursor-pointer truncate">{docFile ? docFile.name : 'Choose PDF'}</label></Button>
                       {docFile && <Button variant="ghost" className="text-destructive border" onClick={() => setDocFile(null)}><X size={18} /></Button>}
@@ -466,13 +462,28 @@ export default function AdminPage() {
                 <div className="flex justify-end"><Button onClick={addDocument} disabled={isSubmitting || !docTitle || (archiveMode === 'file' && !docFile) || (archiveMode === 'link' && !docUrl)} className="bg-elf-gold text-elf-green-dark font-bold rounded-full px-8">Publish</Button></div>
               </CardContent>
             </Card>
-            <div className="grid gap-4">
-              {documents?.map(d => (
-                <div key={d.id} className="bg-white p-6 rounded-2xl border border-elf-gold/5 flex justify-between items-center group">
-                  <div className="flex items-center gap-4"><FileText className="text-elf-gold" size={24} /><div><p className="font-bold">{d.title}</p></div></div>
-                  <Button variant="ghost" size="icon" onClick={() => setItemToDelete({ col: 'documents', id: d.id, title: d.title })} className="text-destructive opacity-0 group-hover:opacity-100"><Trash2 size={18} /></Button>
-                </div>
-              ))}
+            
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-elf-text-light uppercase tracking-widest px-1">Manage Archive</h3>
+              <div className="grid gap-3">
+                {documents?.map(d => (
+                  <div key={d.id} className="bg-white p-5 rounded-2xl border border-elf-gold/10 flex justify-between items-center group">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-elf-gold/5 flex items-center justify-center text-elf-gold">
+                        <FileText size={20} />
+                      </div>
+                      <div>
+                        <p className="font-bold text-elf-green-dark leading-none">{d.title}</p>
+                        <p className="text-[10px] text-elf-text-light mt-1">{new Date(d.uploadedAt).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => setItemToDelete({ col: 'documents', id: d.id, title: d.title })} className="text-destructive">
+                      <Trash2 size={18} />
+                    </Button>
+                  </div>
+                ))}
+                {documents?.length === 0 && <p className="text-center py-10 text-elf-text-light italic">No documents found.</p>}
+              </div>
             </div>
           </TabsContent>
 
@@ -485,13 +496,12 @@ export default function AdminPage() {
                   <Input placeholder="Moment description..." value={galleryCaption} onChange={(e) => setGalleryCaption(e.target.value)} className="rounded-xl" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Image File</Label>
+                  <Label>Image File (Max 1MB)</Label>
                   <div className="flex gap-2">
                     <input type="file" accept="image/*" className="hidden" id="g-up" onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) setGalleryFile(file);
-                      // Reset input value to allow re-selecting same file if deleted
-                      e.target.value = ''; 
+                      e.target.value = ''; // Reset input value for re-selection
                     }} />
                     <Button asChild variant="outline" className="flex-grow rounded-xl h-12"><label htmlFor="g-up" className="truncate cursor-pointer">{galleryFile ? galleryFile.name : 'Choose Image'}</label></Button>
                     {galleryFile && <Button variant="ghost" onClick={() => setGalleryFile(null)} className="h-12 border"><X size={16}/></Button>}
@@ -502,14 +512,23 @@ export default function AdminPage() {
                 </div>
               </CardContent>
             </Card>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-              {galleryItems?.map(g => (
-                <div key={g.id} className="bg-white rounded-2xl overflow-hidden border border-elf-gold/10 group relative">
-                  <img src={g.imageUrl} className="w-full aspect-video object-cover" alt="" />
-                  <div className="p-4"><p className="font-bold text-sm truncate">{g.title || 'Untitled Moment'}</p></div>
-                  <Button variant="destructive" size="icon" onClick={() => setItemToDelete({ col: 'gallery', id: g.id, title: g.title || 'Moment' })} className="absolute top-2 right-2 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 shadow-lg"><Trash2 size={14} /></Button>
-                </div>
-              ))}
+
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-elf-text-light uppercase tracking-widest px-1">Manage Gallery</h3>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {galleryItems?.map(g => (
+                  <div key={g.id} className="bg-white rounded-2xl overflow-hidden border border-elf-gold/10 relative shadow-sm">
+                    <img src={g.imageUrl} className="w-full aspect-video object-cover" alt="" />
+                    <div className="p-3">
+                      <p className="font-bold text-xs truncate text-elf-green-dark">{g.title || 'Untitled Moment'}</p>
+                    </div>
+                    <Button variant="destructive" size="icon" onClick={() => setItemToDelete({ col: 'gallery', id: g.id, title: g.title || 'Moment' })} className="absolute top-2 right-2 h-7 w-7 rounded-full shadow-lg">
+                      <Trash2 size={14} />
+                    </Button>
+                  </div>
+                ))}
+                {galleryItems?.length === 0 && <p className="col-span-full text-center py-10 text-elf-text-light italic">No gallery items found.</p>}
+              </div>
             </div>
           </TabsContent>
 
@@ -519,7 +538,7 @@ export default function AdminPage() {
             ) : (
               <div className="grid gap-4">
                 {allUsers?.map(u => (
-                  <div key={u.id} className="bg-white p-6 rounded-2xl border border-elf-gold/5 flex justify-between items-center group">
+                  <div key={u.id} className="bg-white p-6 rounded-2xl border border-elf-gold/10 flex justify-between items-center group">
                     <div className="flex items-center gap-4">
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center ${u.role === 'admin' ? 'bg-elf-gold/10 text-elf-gold' : 'bg-elf-green-dark/5 text-elf-text-light'}`}>
                         <UsersIcon size={20} />
