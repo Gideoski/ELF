@@ -44,13 +44,20 @@ import {
   ShieldCheck,
   ShieldX,
   Upload,
-  FileUp
+  Info,
+  Link as LinkIcon
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const SUPER_ADMIN_EMAIL = 'gideonjackbara@gmail.com';
 
@@ -59,9 +66,8 @@ export default function AdminPage() {
   const firestore = useFirestore();
   const { user, loading: authLoading } = useUser();
   
-  // Role checking
   const userProfileRef = useMemo(() => (firestore && user) ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
-  const { data: profile, loading: profileLoading } = useDoc(userProfileRef);
+  const { data: profile } = useDoc(userProfileRef);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -73,7 +79,8 @@ export default function AdminPage() {
   
   // Form States
   const [docTitle, setDocTitle] = useState('');
-  const [docFile, setDocFile] = useState<File | null>(null);
+  const [docUrl, setDocUrl] = useState('');
+  
   const [galleryTitle, setGalleryTitle] = useState('');
   const [galleryFile, setGalleryFile] = useState<File | null>(null);
   const [galleryCat, setGalleryCat] = useState('Workshops');
@@ -142,38 +149,32 @@ export default function AdminPage() {
   };
 
   const addDocument = async () => {
-    if (!firestore || !docTitle || !docFile) {
-      toast({ variant: "destructive", title: "Missing Information", description: "Please provide a title and select a file." });
+    if (!firestore || !docTitle || !docUrl) {
+      toast({ variant: "destructive", title: "Missing Information", description: "Please provide both a title and a link." });
       return;
     }
     
     setIsSubmitting(true);
-    try {
-      const base64 = await fileToBase64(docFile);
-      const data = {
-        title: docTitle,
-        fileUrl: base64,
-        uploadedAt: new Date().toISOString()
-      };
-      
-      addDoc(collection(firestore, 'documents'), data)
-        .then(() => {
-          setDocTitle('');
-          setDocFile(null);
-          toast({ title: "Resource published", description: "The document is now available in the archive." });
-        })
-        .catch((err) => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: 'documents',
-            operation: 'create',
-            requestResourceData: data
-          }));
-        });
-    } catch (err) {
-      toast({ variant: "destructive", title: "Upload Failed", description: "Could not process the selected file." });
-    } finally {
-      setIsSubmitting(false);
-    }
+    const data = {
+      title: docTitle,
+      fileUrl: docUrl,
+      uploadedAt: new Date().toISOString()
+    };
+    
+    addDoc(collection(firestore, 'documents'), data)
+      .then(() => {
+        setDocTitle('');
+        setDocUrl('');
+        toast({ title: "Resource published", description: "The resource link is now available in the archive." });
+      })
+      .catch((err) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: 'documents',
+          operation: 'create',
+          requestResourceData: data
+        }));
+      })
+      .finally(() => setIsSubmitting(false));
   };
 
   const addGalleryImage = async () => {
@@ -269,9 +270,6 @@ export default function AdminPage() {
             <CardTitle className="text-4xl font-headline italic text-elf-green-dark">
               {isLogin ? 'Admin Portal' : 'Register Admin'}
             </CardTitle>
-            <p className="text-elf-text-light text-[10px] mt-2 tracking-widest uppercase font-bold">
-              {isLogin ? 'Secure Administrative Access' : 'Create your initial profile'}
-            </p>
           </CardHeader>
           <CardContent className="pt-8 px-8 pb-10">
             {authError && (
@@ -290,7 +288,7 @@ export default function AdminPage() {
                   value={email} 
                   onChange={(e) => setEmail(e.target.value)} 
                   required 
-                  className="h-12 border-elf-gold/20 focus:ring-elf-gold rounded-xl bg-elf-cream/10"
+                  className="h-12 border-elf-gold/20 focus:ring-elf-gold rounded-xl"
                 />
               </div>
               <div className="relative space-y-2">
@@ -302,7 +300,7 @@ export default function AdminPage() {
                     value={password} 
                     onChange={(e) => setPassword(e.target.value)} 
                     required 
-                    className="pr-12 h-12 border-elf-gold/20 focus:ring-elf-gold rounded-xl bg-elf-cream/10"
+                    className="pr-12 h-12 border-elf-gold/20 focus:ring-elf-gold rounded-xl"
                   />
                   <button
                     type="button"
@@ -316,7 +314,7 @@ export default function AdminPage() {
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="w-full bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark h-14 font-bold transition-all rounded-full shadow-lg text-lg"
+                className="w-full bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark h-14 font-bold rounded-full shadow-lg text-lg"
               >
                 {isSubmitting ? (
                   <Loader2 className="animate-spin" size={24} />
@@ -362,26 +360,24 @@ export default function AdminPage() {
           </h2>
           
           <p className="text-elf-text-mid mb-8 leading-relaxed">
-            Authentication successful, but you don't have administrative privileges yet. 
-            If you are <strong>{SUPER_ADMIN_EMAIL}</strong>, ensure your profile exists in the database.
+            Your account is verified, but you need administrative permissions to access the dashboard. 
+            If you are the Super Admin (<strong>{SUPER_ADMIN_EMAIL}</strong>), please ensure your email matches exactly.
           </p>
           
           <div className="text-left bg-elf-cream/50 p-6 rounded-2xl border border-elf-gold/10 mb-8 space-y-4">
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">Your UID</p>
-              <div 
-                className="bg-white px-3 py-2 rounded-lg border border-elf-gold/5 text-[10px] font-mono break-all cursor-pointer flex justify-between items-center group active:scale-[0.98] transition-transform"
-                onClick={() => copyToClipboard(user.uid)}
-              >
-                <span className="truncate">{user.uid}</span>
-                {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} className="opacity-40 group-hover:opacity-100" />}
-              </div>
+            <p className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Diagnostic UID</p>
+            <div 
+              className="bg-white px-3 py-2 rounded-lg border border-elf-gold/5 text-[10px] font-mono break-all cursor-pointer flex justify-between items-center group active:scale-[0.98] transition-transform"
+              onClick={() => copyToClipboard(user.uid)}
+            >
+              <span className="truncate">{user.uid}</span>
+              {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} className="opacity-40 group-hover:opacity-100" />}
             </div>
           </div>
 
           <div className="flex flex-col gap-3">
             <Button className="rounded-full w-full h-12 bg-elf-green-dark text-white font-bold" onClick={() => window.location.reload()}>
-              <RefreshCcw size={18} className="mr-2" /> Refresh Status
+              <RefreshCcw size={18} className="mr-2" /> Check Status Again
             </Button>
             <Button variant="ghost" className="text-elf-text-light" onClick={() => auth && signOut(auth)}>
               <LogOut size={16} className="mr-2" /> Sign out
@@ -417,59 +413,62 @@ export default function AdminPage() {
               <ImageIcon size={18} className="mr-2" /> Gallery
             </TabsTrigger>
             <TabsTrigger value="users" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold transition-all">
-              <UsersIcon size={18} className="mr-2" /> User Management
+              <UsersIcon size={18} className="mr-2" /> Users
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="archive" className="space-y-8 animate-fade-in-up">
             <Card className="border-elf-gold/10 shadow-sm overflow-hidden rounded-2xl">
               <CardHeader className="bg-white/50 border-b border-elf-gold/5 p-6">
-                <CardTitle className="text-lg font-bold text-elf-green-dark">Publish New Resource</CardTitle>
+                <CardTitle className="text-lg font-bold text-elf-green-dark">Post Resource Link</CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-8 px-6 pb-8">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Title</label>
-                  <Input placeholder="e.g. Preclinical Guide" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} className="rounded-xl" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">File (PDF)</label>
-                  <div className="relative">
-                    <input 
-                      type="file" 
-                      accept=".pdf" 
-                      className="hidden" 
-                      id="doc-upload" 
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file && file.size > 1024 * 1024) {
-                          toast({ variant: "destructive", title: "File too large", description: "Please keep files under 1MB." });
-                          return;
-                        }
-                        setDocFile(file || null);
-                      }}
-                    />
-                    <Button 
-                      asChild 
-                      variant="outline" 
-                      className={`w-full h-10 rounded-xl justify-start px-3 font-normal ${docFile ? 'text-elf-green-dark border-elf-gold' : 'text-muted-foreground'}`}
-                    >
-                      <label htmlFor="doc-upload" className="cursor-pointer flex items-center gap-2">
-                        <FileUp size={16} />
-                        <span className="truncate">{docFile ? docFile.name : 'Select PDF file'}</span>
-                      </label>
-                    </Button>
+              <CardContent className="space-y-6 pt-8 px-6 pb-8">
+                <Alert className="bg-blue-50/50 border-blue-200">
+                  <Info className="h-4 w-4 text-blue-600" />
+                  <AlertTitle className="text-blue-800 text-sm font-bold">Large File Management</AlertTitle>
+                  <AlertDescription className="text-blue-700 text-xs leading-relaxed">
+                    To avoid document size limits (1MB), please upload your PDFs to <strong>Google Drive</strong>, set sharing to <strong>"Anyone with the link"</strong>, and paste the link below.
+                  </AlertDescription>
+                </Alert>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Title</label>
+                    <Input placeholder="e.g. Preclinical Guide" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} className="rounded-xl" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Google Drive Link</label>
+                    <div className="relative">
+                      <Input placeholder="https://drive.google.com/..." value={docUrl} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl pl-10" />
+                      <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-elf-text-light" size={16} />
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-end">
+
+                <div className="flex justify-end pt-4">
                   <Button 
                     onClick={addDocument} 
-                    disabled={isSubmitting || !docFile || !docTitle}
-                    className="w-full bg-elf-gold text-elf-green-dark font-bold h-10 rounded-full"
+                    disabled={isSubmitting || !docUrl || !docTitle}
+                    className="bg-elf-gold text-elf-green-dark font-bold px-10 h-12 rounded-full"
                   >
                     {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18}/> : <Plus size={18} className="mr-2"/>}
                     Add to Archive
                   </Button>
                 </div>
+
+                <Accordion type="single" collapsible className="mt-6">
+                  <AccordionItem value="drive-guide" className="border-none bg-elf-cream/30 px-4 rounded-xl">
+                    <AccordionTrigger className="text-xs font-bold uppercase tracking-widest text-elf-text-light py-4 hover:no-underline">
+                      How to get a direct Google Drive link
+                    </AccordionTrigger>
+                    <AccordionContent className="text-xs text-elf-text-mid space-y-2 pb-4">
+                      <p>1. Upload your PDF to Google Drive.</p>
+                      <p>2. Right-click the file and select <strong>Share</strong>.</p>
+                      <p>3. Under "General Access", change "Restricted" to <strong>"Anyone with the link"</strong>.</p>
+                      <p>4. Click <strong>"Copy link"</strong> and paste it into the field above.</p>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               </CardContent>
             </Card>
 
@@ -480,7 +479,7 @@ export default function AdminPage() {
                     <FileText className="text-elf-gold" size={24} />
                     <div>
                       <p className="font-bold text-elf-green-dark">{d.title}</p>
-                      <p className="text-xs text-elf-text-light uppercase tracking-widest">Added {new Date(d.uploadedAt).toLocaleDateString()}</p>
+                      <p className="text-[10px] text-elf-text-light uppercase tracking-widest truncate max-w-[200px] md:max-w-md">{d.fileUrl}</p>
                     </div>
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => deleteItem('documents', d.id)} className="text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
@@ -494,15 +493,15 @@ export default function AdminPage() {
           <TabsContent value="gallery" className="space-y-8 animate-fade-in-up">
              <Card className="border-elf-gold/10 shadow-sm overflow-hidden rounded-2xl">
               <CardHeader className="bg-white/50 border-b border-elf-gold/5 p-6">
-                <CardTitle className="text-lg font-bold text-elf-green-dark">Upload to Gallery</CardTitle>
+                <CardTitle className="text-lg font-bold text-elf-green-dark">Upload New Picture</CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-8 px-6 pb-8">
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Image Title</label>
-                  <Input placeholder="e.g. Workshop" value={galleryTitle} onChange={(e) => setGalleryTitle(e.target.value)} className="rounded-xl" />
+                  <Input placeholder="e.g. Workshop Session" value={galleryTitle} onChange={(e) => setGalleryTitle(e.target.value)} className="rounded-xl" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Picture File</label>
+                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Select File</label>
                   <div className="relative">
                     <input 
                       type="file" 
@@ -512,7 +511,7 @@ export default function AdminPage() {
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file && file.size > 1024 * 1024) {
-                          toast({ variant: "destructive", title: "Image too large", description: "Please keep images under 1MB." });
+                          toast({ variant: "destructive", title: "Image too large", description: "Please optimize images below 1MB." });
                           return;
                         }
                         setGalleryFile(file || null);
@@ -525,7 +524,7 @@ export default function AdminPage() {
                     >
                       <label htmlFor="gallery-upload" className="cursor-pointer flex items-center gap-2">
                         <Upload size={16} />
-                        <span className="truncate">{galleryFile ? galleryFile.name : 'Select picture'}</span>
+                        <span className="truncate">{galleryFile ? galleryFile.name : 'Choose picture'}</span>
                       </label>
                     </Button>
                   </div>
@@ -546,7 +545,7 @@ export default function AdminPage() {
                     className="w-full bg-elf-gold text-elf-green-dark font-bold h-10 rounded-full"
                   >
                     {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18}/> : <Plus size={18} className="mr-2"/>}
-                    Post Image
+                    Publish Image
                   </Button>
                 </div>
               </CardContent>
@@ -554,16 +553,21 @@ export default function AdminPage() {
 
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
               {galleryItems?.map(g => (
-                <div key={g.id} className="relative group rounded-2xl overflow-hidden aspect-square border border-elf-gold/10">
+                <div key={g.id} className="relative group rounded-2xl overflow-hidden aspect-square border border-elf-gold/10 bg-white">
                   <img src={g.imageUrl} className="w-full h-full object-cover" alt={g.title} />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity p-4">
-                    <p className="text-white text-[10px] uppercase font-bold text-center line-clamp-1 mb-2">{g.title}</p>
-                    <Button variant="ghost" size="icon" onClick={() => deleteItem('gallery', g.id)} className="text-white hover:text-destructive bg-black/20 rounded-full">
-                      <Trash2 size={18} />
+                  <div className="absolute inset-0 bg-elf-green-dark/80 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity p-4 text-center">
+                    <p className="text-white text-[10px] uppercase font-bold mb-2 line-clamp-2">{g.title}</p>
+                    <Button variant="ghost" size="icon" onClick={() => deleteItem('gallery', g.id)} className="text-white hover:text-destructive hover:bg-white/10 rounded-full">
+                      <Trash2 size={20} />
                     </Button>
                   </div>
                 </div>
               ))}
+              {!galleryItems?.length && (
+                <div className="col-span-full py-20 text-center text-elf-text-light italic border-2 border-dashed border-elf-gold/10 rounded-3xl">
+                  No gallery images found.
+                </div>
+              )}
             </div>
           </TabsContent>
 
@@ -579,10 +583,9 @@ export default function AdminPage() {
                       <p className="font-bold text-elf-green-dark flex items-center gap-2">
                         {u.email}
                         {u.role === 'admin' && <ShieldCheck size={14} className="text-elf-gold" />}
-                        {u.email === SUPER_ADMIN_EMAIL && <span className="text-[8px] bg-elf-green-dark text-white px-1.5 py-0.5 rounded-full uppercase tracking-widest">Master</span>}
                       </p>
-                      <p className="text-xs text-elf-text-light uppercase tracking-widest">
-                        Role: <span className="font-bold">{u.role}</span> • Joined {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'Unknown'}
+                      <p className="text-[10px] text-elf-text-light uppercase tracking-widest">
+                        Status: <span className="font-bold">{u.role}</span> • Joined {new Date(u.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
@@ -595,11 +598,8 @@ export default function AdminPage() {
                         className={`rounded-full h-10 px-4 border-elf-gold/20 ${u.role === 'admin' ? 'text-destructive hover:bg-destructive/5' : 'text-elf-gold hover:bg-elf-gold/5'}`}
                         onClick={() => toggleAdmin(u.id, u.role)}
                       >
-                        {u.role === 'admin' ? (
-                          <><ShieldX size={16} className="mr-2" /> Revoke Admin</>
-                        ) : (
-                          <><ShieldCheck size={16} className="mr-2" /> Make Admin</>
-                        )}
+                        {u.role === 'admin' ? <ShieldX size={16} className="mr-2" /> : <ShieldCheck size={16} className="mr-2" />}
+                        {u.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => deleteItem('users', u.id)} className="text-destructive">
                         <Trash2 size={18} />
@@ -608,11 +608,6 @@ export default function AdminPage() {
                   )}
                 </div>
               ))}
-              {!allUsers?.length && (
-                <div className="text-center py-20 text-elf-text-light italic">
-                  No registered users found in the database.
-                </div>
-              )}
             </div>
           </TabsContent>
         </Tabs>

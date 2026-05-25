@@ -21,7 +21,6 @@ export default function Gallery() {
 
   const { data: dbImages, loading } = useCollection(galleryQuery);
 
-  // Static images as fallbacks or defaults
   const staticImages = [
     { imageUrl: "/images/20260427_092908.jpg", category: "The Gauntlet", title: "Rising Leaders", createdAt: "2024-01-01" },
     { imageUrl: "/images/20260427_093026.jpg", category: "Workshops", title: "Core Science Review", createdAt: "2024-01-02" },
@@ -33,7 +32,6 @@ export default function Gallery() {
 
   const allImages = useMemo(() => {
     const combined = [...(dbImages || [])];
-    // Add static ones if db is empty or just as base
     if (!dbImages || dbImages.length === 0) {
       return staticImages;
     }
@@ -92,8 +90,8 @@ export default function Gallery() {
                   className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-elf-green-dark/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-8 bg-gradient-to-t from-elf-green-dark/80 to-transparent">
-                  <span className="text-elf-gold uppercase tracking-widest text-xs font-bold mb-2">{img.category}</span>
-                  <h3 className="font-headline text-2xl font-bold text-white">{img.title}</h3>
+                  <span className="text-elf-gold uppercase tracking-widest text-[10px] font-bold mb-2">{img.category}</span>
+                  <h3 className="font-headline text-2xl font-bold text-white leading-tight">{img.title}</h3>
                 </div>
               </Card>
             ))}
