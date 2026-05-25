@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth, useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { 
   signInWithEmailAndPassword, 
@@ -32,8 +32,7 @@ import {
   Lock, 
   Users as UsersIcon,
   ShieldCheck,
-  X,
-  RefreshCw
+  X
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
@@ -95,6 +94,19 @@ export default function AdminPage() {
   const { data: galleryItems } = useCollection(galleryQuery);
   const { data: allUsers, loading: usersLoading } = useCollection(usersQuery);
 
+  // EFFECT: Ensure current user has a Firestore profile for management
+  useEffect(() => {
+    if (user && firestore && !profile && !authLoading) {
+      const userRef = doc(firestore, 'users', user.uid);
+      setDoc(userRef, {
+        email: user.email,
+        role: user.email === SUPER_ADMIN_EMAIL ? 'admin' : 'user',
+        displayName: user.email?.split('@')[0],
+        lastActive: new Date().toISOString()
+      }, { merge: true });
+    }
+  }, [user, firestore, profile, authLoading]);
+
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -111,13 +123,11 @@ export default function AdminPage() {
     try {
       if (isLogin) {
         const res = await signInWithEmailAndPassword(auth, email, password);
-        // FORCE SYNC: Ensure user exists in Firestore collection to show in Users tab
         const userRef = doc(firestore, 'users', res.user.uid);
-        setDoc(userRef, {
+        await setDoc(userRef, {
           email: res.user.email,
           displayName: res.user.email?.split('@')[0],
           lastLogin: new Date().toISOString(),
-          // Don't overwrite role if it exists, but set 'user' if new
         }, { merge: true });
         
         toast({ title: "Welcome back", description: "Access granted." });
@@ -130,9 +140,7 @@ export default function AdminPage() {
           displayName: email.split('@')[0],
           createdAt: new Date().toISOString()
         };
-        setDoc(doc(firestore, 'users', res.user.uid), userData)
-          .catch((err) => errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `users/${res.user.uid}`, operation: 'create', requestResourceData: userData })));
-        
+        await setDoc(doc(firestore, 'users', res.user.uid), userData);
         toast({ title: "Account created", description: "Authentication successful." });
       }
     } catch (error: any) {
@@ -165,24 +173,24 @@ export default function AdminPage() {
         uploadedAt: new Date().toISOString()
       };
       
-      addDoc(collection(firestore, 'documents'), data)
-        .then(() => {
-          toast({ title: "Upload Successful!", description: "The resource is now live." });
-          // RESET FORM
-          setDocTitle(''); 
-          setDocUrl(''); 
-          setDocFile(null);
-          setDocFileKey(prev => prev + 1);
-          setIsSubmitting(false);
-        })
-        .catch((err) => {
-          setIsSubmitting(false);
-          errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'documents', operation: 'create', requestResourceData: data }));
-        });
-
-    } catch (err) {
+      await addDoc(collection(firestore, 'documents'), data);
+      
+      toast({ title: "Upload Successful!", description: "The resource is now live." });
+      
+      // RESET FORM COMPLETELY
+      setDocTitle(''); 
+      setDocUrl(''); 
+      setDocFile(null);
+      setDocFileKey(prev => prev + 1);
       setIsSubmitting(false);
-      toast({ variant: "destructive", title: "Upload Error", description: "Ensure file size is under 1MB." });
+
+    } catch (err: any) {
+      setIsSubmitting(false);
+      if (err.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'documents', operation: 'create' }));
+      } else {
+        toast({ variant: "destructive", title: "Upload Error", description: "Ensure file size is under 1MB." });
+      }
     }
   };
 
@@ -198,23 +206,23 @@ export default function AdminPage() {
         createdAt: new Date().toISOString()
       };
 
-      addDoc(collection(firestore, 'gallery'), data)
-        .then(() => {
-          toast({ title: "Gallery Updated!", description: "Moment successfully published." });
-          // RESET FORM
-          setGalleryCaption(''); 
-          setGalleryFile(null);
-          setGalleryFileKey(prev => prev + 1);
-          setIsSubmitting(false);
-        })
-        .catch((err) => {
-          setIsSubmitting(false);
-          errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'gallery', operation: 'create', requestResourceData: data }));
-        });
-
-    } catch (err) {
+      await addDoc(collection(firestore, 'gallery'), data);
+      
+      toast({ title: "Gallery Updated!", description: "Moment successfully published." });
+      
+      // RESET FORM COMPLETELY
+      setGalleryCaption(''); 
+      setGalleryFile(null);
+      setGalleryFileKey(prev => prev + 1);
       setIsSubmitting(false);
-      toast({ variant: "destructive", title: "Upload Error", description: "Ensure image is under 1MB." });
+
+    } catch (err: any) {
+      setIsSubmitting(false);
+      if (err.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'gallery', operation: 'create' }));
+      } else {
+        toast({ variant: "destructive", title: "Upload Error", description: "Ensure image is under 1MB." });
+      }
     }
   };
 
@@ -349,8 +357,8 @@ export default function AdminPage() {
                   ) : (
                     <div className="flex gap-2">
                       <input key={docFileKey} type="file" accept="application/pdf" className="hidden" id="pdf-in" onChange={(e) => setDocFile(e.target.files?.[0] || null)} />
-                      <Button asChild variant="outline" className="flex-grow h-12 justify-start font-normal"><label htmlFor="pdf-in" className="cursor-pointer truncate">{docFile ? docFile.name : 'Choose PDF File'}</label></Button>
-                      {docFile && <Button variant="ghost" onClick={() => { setDocFile(null); setDocFileKey(k => k + 1); }}><X size={18}/></Button>}
+                      <Button asChild variant="outline" className="flex-grow h-12 justify-start font-normal text-left overflow-hidden"><label htmlFor="pdf-in" className="cursor-pointer truncate block">{docFile ? docFile.name : 'Choose PDF File'}</label></Button>
+                      {docFile && <Button variant="ghost" size="icon" onClick={() => { setDocFile(null); setDocFileKey(k => k + 1); }}><X size={18}/></Button>}
                     </div>
                   )}
                 </div>
@@ -383,8 +391,8 @@ export default function AdminPage() {
                     <Label>Image (Max 1MB)</Label>
                     <div className="flex gap-2">
                       <input key={galleryFileKey} type="file" accept="image/*" className="hidden" id="img-in" onChange={(e) => setGalleryFile(e.target.files?.[0] || null)} />
-                      <Button asChild variant="outline" className="flex-grow h-12 justify-start font-normal"><label htmlFor="img-in" className="cursor-pointer truncate">{galleryFile ? galleryFile.name : 'Choose Image File'}</label></Button>
-                      {galleryFile && <Button variant="ghost" onClick={() => { setGalleryFile(null); setGalleryFileKey(k => k + 1); }}><X size={18}/></Button>}
+                      <Button asChild variant="outline" className="flex-grow h-12 justify-start font-normal text-left overflow-hidden"><label htmlFor="img-in" className="cursor-pointer truncate block">{galleryFile ? galleryFile.name : 'Choose Image File'}</label></Button>
+                      {galleryFile && <Button variant="ghost" size="icon" onClick={() => { setGalleryFile(null); setGalleryFileKey(k => k + 1); }}><X size={18}/></Button>}
                     </div>
                   </div>
                 </div>
