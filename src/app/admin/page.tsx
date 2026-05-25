@@ -75,10 +75,12 @@ export default function AdminPage() {
   const [docUrl, setDocUrl] = useState('');
   const [docFile, setDocFile] = useState<File | null>(null);
   const [archiveMode, setArchiveMode] = useState<'link' | 'file'>('link');
+  const [docFileKey, setDocFileKey] = useState(0);
   
   // Gallery States
   const [galleryCaption, setGalleryCaption] = useState('');
   const [galleryFile, setGalleryFile] = useState<File | null>(null);
+  const [galleryFileKey, setGalleryFileKey] = useState(0);
 
   // Confirmation States
   const [isSignOutDialogOpen, setIsSignOutDialogOpen] = useState(false);
@@ -169,6 +171,12 @@ export default function AdminPage() {
       };
       
       addDoc(collection(firestore, 'documents'), data)
+        .then(() => {
+          toast({ 
+            title: "Success!", 
+            description: "Resource published successfully." 
+          });
+        })
         .catch(err => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({ 
             path: 'documents', 
@@ -177,14 +185,11 @@ export default function AdminPage() {
           }));
         });
 
-      // Optimistic Reset
-      toast({ 
-        title: "Success!", 
-        description: "Resource published successfully." 
-      });
+      // Reset UI immediately
       setDocTitle(''); 
       setDocUrl(''); 
       setDocFile(null);
+      setDocFileKey(prev => prev + 1);
       setIsSubmitting(false);
 
     } catch (err) {
@@ -210,6 +215,12 @@ export default function AdminPage() {
       };
       
       addDoc(collection(firestore, 'gallery'), data)
+        .then(() => {
+          toast({ 
+            title: "Success!", 
+            description: "Image published to gallery." 
+          });
+        })
         .catch(err => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({ 
             path: 'gallery', 
@@ -218,13 +229,10 @@ export default function AdminPage() {
           }));
         });
 
-      // Optimistic Reset
-      toast({ 
-        title: "Success!", 
-        description: "Image published to gallery." 
-      });
+      // Reset UI immediately
       setGalleryCaption(''); 
       setGalleryFile(null);
+      setGalleryFileKey(prev => prev + 1);
       setIsSubmitting(false);
 
     } catch (err) {
@@ -449,13 +457,23 @@ export default function AdminPage() {
                     </div>
                   ) : (
                     <div className="flex gap-2">
-                      <input type="file" accept="application/pdf" className="hidden" id="a-up" onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) setDocFile(file);
-                        e.target.value = ''; // Reset input value for re-selection
-                      }} />
-                      <Button asChild variant="outline" className="flex-grow rounded-xl h-12 justify-start font-normal"><label htmlFor="a-up" className="cursor-pointer truncate">{docFile ? docFile.name : 'Choose PDF'}</label></Button>
-                      {docFile && <Button variant="ghost" className="text-destructive border" onClick={() => setDocFile(null)}><X size={18} /></Button>}
+                      <input 
+                        key={docFileKey} 
+                        type="file" 
+                        accept="application/pdf" 
+                        className="hidden" 
+                        id="a-up" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) setDocFile(file);
+                        }} 
+                      />
+                      <Button asChild variant="outline" className="flex-grow rounded-xl h-12 justify-start font-normal">
+                        <label htmlFor="a-up" className="cursor-pointer truncate">
+                          {docFile ? docFile.name : 'Choose PDF'}
+                        </label>
+                      </Button>
+                      {docFile && <Button variant="ghost" className="text-destructive border" onClick={() => { setDocFile(null); setDocFileKey(prev => prev + 1); }}><X size={18} /></Button>}
                     </div>
                   )}
                 </div>
@@ -498,13 +516,23 @@ export default function AdminPage() {
                 <div className="space-y-2">
                   <Label>Image File (Max 1MB)</Label>
                   <div className="flex gap-2">
-                    <input type="file" accept="image/*" className="hidden" id="g-up" onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) setGalleryFile(file);
-                      e.target.value = ''; // Reset input value for re-selection
-                    }} />
-                    <Button asChild variant="outline" className="flex-grow rounded-xl h-12"><label htmlFor="g-up" className="truncate cursor-pointer">{galleryFile ? galleryFile.name : 'Choose Image'}</label></Button>
-                    {galleryFile && <Button variant="ghost" onClick={() => setGalleryFile(null)} className="h-12 border"><X size={16}/></Button>}
+                    <input 
+                      key={galleryFileKey} 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      id="g-up" 
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setGalleryFile(file);
+                      }} 
+                    />
+                    <Button asChild variant="outline" className="flex-grow rounded-xl h-12">
+                      <label htmlFor="g-up" className="truncate cursor-pointer">
+                        {galleryFile ? galleryFile.name : 'Choose Image'}
+                      </label>
+                    </Button>
+                    {galleryFile && <Button variant="ghost" onClick={() => { setGalleryFile(null); setGalleryFileKey(prev => prev + 1); }} className="h-12 border"><X size={16}/></Button>}
                   </div>
                 </div>
                 <div className="flex items-end">

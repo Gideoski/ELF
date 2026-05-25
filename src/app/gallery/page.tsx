@@ -16,20 +16,8 @@ export default function Gallery() {
 
   const { data: dbImages, loading } = useCollection(galleryQuery);
 
-  const staticImages = [
-    { imageUrl: "/images/20260427_092908.jpg", title: "Rising Leaders", createdAt: "2024-01-01" },
-    { imageUrl: "/images/20260427_093026.jpg", title: "Core Science Review", createdAt: "2024-01-02" },
-    { imageUrl: "/images/20260427_093121.jpg", title: "ELF Connections", createdAt: "2024-01-03" },
-    { imageUrl: "/images/20260427_093142.jpg", title: "Strategy Session", createdAt: "2024-01-04" },
-    { imageUrl: "/images/20260427_093232.jpg", title: "Academic Showdown", createdAt: "2024-01-05" },
-    { imageUrl: "/images/20260427_093310.jpg", title: "Foundation Skills", createdAt: "2024-01-06" },
-  ];
-
   const allImages = useMemo(() => {
-    if (!dbImages || dbImages.length === 0) {
-      return staticImages;
-    }
-    return dbImages;
+    return dbImages || [];
   }, [dbImages]);
 
   useEffect(() => {
@@ -57,7 +45,7 @@ export default function Gallery() {
            <div className="flex justify-center py-20">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-elf-gold"></div>
            </div>
-        ) : (
+        ) : allImages.length > 0 ? (
           <div className="columns-1 md:columns-2 lg:columns-3 gap-8 space-y-8 reveal-on-scroll">
             {allImages.map((img, i) => (
               <Card key={i} className="group relative overflow-hidden rounded-2xl border-none shadow-none bg-white/5 break-inside-avoid">
@@ -73,6 +61,10 @@ export default function Gallery() {
                 )}
               </Card>
             ))}
+          </div>
+        ) : (
+          <div className="text-center py-32 reveal-on-scroll">
+            <p className="text-white/40 italic">No moments captured in the gallery yet.</p>
           </div>
         )}
 
