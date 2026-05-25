@@ -16,10 +16,6 @@ export default function Gallery() {
 
   const { data: dbImages, loading } = useCollection(galleryQuery);
 
-  const allImages = useMemo(() => {
-    return dbImages || [];
-  }, [dbImages]);
-
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -29,7 +25,7 @@ export default function Gallery() {
 
     document.querySelectorAll('.reveal-on-scroll').forEach(el => observer.observe(el));
     return () => observer.disconnect();
-  }, [allImages]);
+  }, [dbImages]);
 
   return (
     <div className="bg-elf-green-dark min-h-screen pt-32 pb-24 text-white">
@@ -45,10 +41,10 @@ export default function Gallery() {
            <div className="flex justify-center py-20">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-elf-gold"></div>
            </div>
-        ) : allImages.length > 0 ? (
+        ) : dbImages && dbImages.length > 0 ? (
           <div className="columns-1 md:columns-2 lg:columns-3 gap-8 space-y-8 reveal-on-scroll">
-            {allImages.map((img, i) => (
-              <Card key={i} className="group relative overflow-hidden rounded-2xl border-none shadow-none bg-white/5 break-inside-avoid">
+            {dbImages.map((img, i) => (
+              <Card key={img.id || i} className="group relative overflow-hidden rounded-2xl border-none shadow-none bg-white/5 break-inside-avoid">
                 <img 
                   src={img.imageUrl} 
                   alt={img.title || "Gallery image"} 

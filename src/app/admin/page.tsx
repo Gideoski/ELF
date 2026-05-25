@@ -172,25 +172,22 @@ export default function AdminPage() {
       
       addDoc(collection(firestore, 'documents'), data)
         .then(() => {
-          toast({ 
-            title: "Success!", 
-            description: "Resource published successfully." 
-          });
+          toast({ title: "Success!", description: "Resource published successfully." });
+          // Reset UI
+          setDocTitle(''); 
+          setDocUrl(''); 
+          setDocFile(null);
+          setDocFileKey(prev => prev + 1);
+          setIsSubmitting(false);
         })
         .catch(err => {
+          setIsSubmitting(false);
           errorEmitter.emit('permission-error', new FirestorePermissionError({ 
             path: 'documents', 
             operation: 'create', 
             requestResourceData: data 
           }));
         });
-
-      // Reset UI immediately
-      setDocTitle(''); 
-      setDocUrl(''); 
-      setDocFile(null);
-      setDocFileKey(prev => prev + 1);
-      setIsSubmitting(false);
 
     } catch (err) {
       toast({ 
@@ -216,24 +213,21 @@ export default function AdminPage() {
       
       addDoc(collection(firestore, 'gallery'), data)
         .then(() => {
-          toast({ 
-            title: "Success!", 
-            description: "Image published to gallery." 
-          });
+          toast({ title: "Success!", description: "Image published to gallery." });
+          // Reset UI
+          setGalleryCaption(''); 
+          setGalleryFile(null);
+          setGalleryFileKey(prev => prev + 1);
+          setIsSubmitting(false);
         })
         .catch(err => {
+          setIsSubmitting(false);
           errorEmitter.emit('permission-error', new FirestorePermissionError({ 
             path: 'gallery', 
             operation: 'create', 
             requestResourceData: data 
           }));
         });
-
-      // Reset UI immediately
-      setGalleryCaption(''); 
-      setGalleryFile(null);
-      setGalleryFileKey(prev => prev + 1);
-      setIsSubmitting(false);
 
     } catch (err) {
       toast({ 
