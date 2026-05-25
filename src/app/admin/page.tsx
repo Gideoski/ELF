@@ -16,7 +16,8 @@ import {
   orderBy, 
   deleteDoc,
   addDoc,
-  updateDoc
+  updateDoc,
+  serverTimestamp
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -73,12 +74,12 @@ export default function AdminPage() {
   const [docUrl, setDocUrl] = useState('');
   const [docFile, setDocFile] = useState<File | null>(null);
   const [archiveMode, setArchiveMode] = useState<'link' | 'file'>('link');
-  const [docFileKey, setDocFileKey] = useState(0);
+  const [docFileKey, setDocFileKey] = useState(Date.now());
   
   // Gallery States
   const [galleryCaption, setGalleryCaption] = useState('');
   const [galleryFile, setGalleryFile] = useState<File | null>(null);
-  const [galleryFileKey, setGalleryFileKey] = useState(0);
+  const [galleryFileKey, setGalleryFileKey] = useState(Date.now() + 1);
 
   // Confirmation States
   const [isSignOutDialogOpen, setIsSignOutDialogOpen] = useState(false);
@@ -94,18 +95,18 @@ export default function AdminPage() {
   const { data: galleryItems } = useCollection(galleryQuery);
   const { data: allUsers, loading: usersLoading } = useCollection(usersQuery);
 
-  // EFFECT: Ensure current user has a Firestore profile for management
+  // Aggressive Sync: Ensure any logged in user has a Firestore profile
   useEffect(() => {
-    if (user && firestore && !profile && !authLoading) {
+    if (user && firestore && !authLoading) {
       const userRef = doc(firestore, 'users', user.uid);
       setDoc(userRef, {
         email: user.email,
-        role: user.email === SUPER_ADMIN_EMAIL ? 'admin' : 'user',
+        role: user.email === SUPER_ADMIN_EMAIL ? 'admin' : (profile?.role || 'user'),
         displayName: user.email?.split('@')[0],
         lastActive: new Date().toISOString()
       }, { merge: true });
     }
-  }, [user, firestore, profile, authLoading]);
+  }, [user, firestore, authLoading, profile?.role]);
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -129,7 +130,6 @@ export default function AdminPage() {
           displayName: res.user.email?.split('@')[0],
           lastLogin: new Date().toISOString(),
         }, { merge: true });
-        
         toast({ title: "Welcome back", description: "Access granted." });
       } else {
         if (password.length < 6) throw { code: 'auth/weak-password' };
@@ -177,11 +177,11 @@ export default function AdminPage() {
       
       toast({ title: "Upload Successful!", description: "The resource is now live." });
       
-      // RESET FORM COMPLETELY
+      // INSTANT FORM RESET
       setDocTitle(''); 
       setDocUrl(''); 
       setDocFile(null);
-      setDocFileKey(prev => prev + 1);
+      setDocFileKey(Date.now()); // Forces file input to reset to "Choose File"
       setIsSubmitting(false);
 
     } catch (err: any) {
@@ -189,7 +189,7 @@ export default function AdminPage() {
       if (err.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'documents', operation: 'create' }));
       } else {
-        toast({ variant: "destructive", title: "Upload Error", description: "Ensure file size is under 1MB." });
+        toast({ variant: "destructive", title: "Upload Error", description: "Error saving document." });
       }
     }
   };
@@ -210,10 +210,10 @@ export default function AdminPage() {
       
       toast({ title: "Gallery Updated!", description: "Moment successfully published." });
       
-      // RESET FORM COMPLETELY
+      // INSTANT FORM RESET
       setGalleryCaption(''); 
       setGalleryFile(null);
-      setGalleryFileKey(prev => prev + 1);
+      setGalleryFileKey(Date.now() + 1); // Forces file input to reset to "Choose Image"
       setIsSubmitting(false);
 
     } catch (err: any) {
@@ -221,7 +221,7 @@ export default function AdminPage() {
       if (err.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'gallery', operation: 'create' }));
       } else {
-        toast({ variant: "destructive", title: "Upload Error", description: "Ensure image is under 1MB." });
+        toast({ variant: "destructive", title: "Upload Error", description: "Error saving image." });
       }
     }
   };
@@ -358,7 +358,7 @@ export default function AdminPage() {
                     <div className="flex gap-2">
                       <input key={docFileKey} type="file" accept="application/pdf" className="hidden" id="pdf-in" onChange={(e) => setDocFile(e.target.files?.[0] || null)} />
                       <Button asChild variant="outline" className="flex-grow h-12 justify-start font-normal text-left overflow-hidden"><label htmlFor="pdf-in" className="cursor-pointer truncate block">{docFile ? docFile.name : 'Choose PDF File'}</label></Button>
-                      {docFile && <Button variant="ghost" size="icon" onClick={() => { setDocFile(null); setDocFileKey(k => k + 1); }}><X size={18}/></Button>}
+                      {docFile && <Button variant="ghost" size="icon" onClick={() => { setDocFile(null); setDocFileKey(Date.now()); }}><X size={18}/></Button>}
                     </div>
                   )}
                 </div>
@@ -392,7 +392,7 @@ export default function AdminPage() {
                     <div className="flex gap-2">
                       <input key={galleryFileKey} type="file" accept="image/*" className="hidden" id="img-in" onChange={(e) => setGalleryFile(e.target.files?.[0] || null)} />
                       <Button asChild variant="outline" className="flex-grow h-12 justify-start font-normal text-left overflow-hidden"><label htmlFor="img-in" className="cursor-pointer truncate block">{galleryFile ? galleryFile.name : 'Choose Image File'}</label></Button>
-                      {galleryFile && <Button variant="ghost" size="icon" onClick={() => { setGalleryFile(null); setGalleryFileKey(k => k + 1); }}><X size={18}/></Button>}
+                      {galleryFile && <Button variant="ghost" size="icon" onClick={() => { setGalleryFile(null); setGalleryFileKey(Date.now() + 1); }}><X size={18}/></Button>}
                     </div>
                   </div>
                 </div>
