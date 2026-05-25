@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -5,7 +6,8 @@ import { useAuth, useUser, useFirestore, useCollection, useDoc } from '@/firebas
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
-  signOut 
+  signOut,
+  deleteUser as deleteAuthUser
 } from 'firebase/auth';
 import { 
   doc, 
@@ -60,6 +62,17 @@ import {
 } from "@/components/ui/accordion";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const SUPER_ADMIN_EMAIL = 'gideonjackbara@gmail.com';
 
@@ -89,6 +102,11 @@ export default function AdminPage() {
   const [galleryTitle, setGalleryTitle] = useState('');
   const [galleryFile, setGalleryFile] = useState<File | null>(null);
   const [galleryCat, setGalleryCat] = useState('Workshops');
+
+  // Confirmation States
+  const [isSignOutDialogOpen, setIsSignOutDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ col: string, id: string, title?: string } | null>(null);
+  const [userToDelete, setUserToDelete] = useState<{ id: string, email: string } | null>(null);
 
   // Queries
   const docsQuery = useMemo(() => firestore ? query(collection(firestore, 'documents'), orderBy('uploadedAt', 'desc')) : null, [firestore]);
@@ -150,6 +168,13 @@ export default function AdminPage() {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    if (auth) {
+      await signOut(auth);
+      toast({ title: "Signed out", description: "You have been securely logged out." });
     }
   };
 
@@ -245,16 +270,53 @@ export default function AdminPage() {
     }
   };
 
-  const deleteItem = (col: string, id: string) => {
-    if (!firestore) return;
-    deleteDoc(doc(firestore, col, id))
-      .then(() => toast({ title: "Item removed" }))
+  const confirmDelete = () => {
+    if (!firestore || !itemToDelete) return;
+    deleteDoc(doc(firestore, itemToDelete.col, itemToDelete.id))
+      .then(() => {
+        toast({ title: "Item removed", description: `${itemToDelete.title || 'Item'} has been deleted.` });
+        setItemToDelete(null);
+      })
       .catch(() => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: `${col}/${id}`,
+          path: `${itemToDelete.col}/${itemToDelete.id}`,
           operation: 'delete'
         }));
+        setItemToDelete(null);
       });
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!firestore || !userToDelete) return;
+    
+    try {
+      // Delete Firestore profile
+      await deleteDoc(doc(firestore, 'users', userToDelete.id));
+      
+      toast({ title: "Account removed", description: `${userToDelete.email} has been deleted.` });
+      
+      // If deleting self
+      if (user?.uid === userToDelete.id) {
+        // We attempt to delete the auth account, but it usually requires a recent login.
+        // If it fails, we at least sign them out since their profile is gone.
+        if (auth?.currentUser) {
+          try {
+            await deleteAuthUser(auth.currentUser);
+          } catch (e) {
+            console.log("Auth user deletion skipped or requires re-auth. Signing out instead.");
+            await signOut(auth);
+          }
+        }
+      }
+      
+      setUserToDelete(null);
+    } catch (error) {
+       errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: `users/${userToDelete.id}`,
+          operation: 'delete'
+        }));
+        setUserToDelete(null);
+    }
   };
 
   const toggleAdmin = (userId: string, currentRole: string) => {
@@ -431,9 +493,28 @@ export default function AdminPage() {
               Logged in as <span className="font-bold">{user.email}</span>
             </p>
           </div>
-          <Button variant="outline" className="text-destructive border-destructive/20 hover:bg-destructive/5 rounded-full px-6 h-11" onClick={() => auth && signOut(auth)}>
-            <LogOut size={18} className="mr-2" /> End Session
-          </Button>
+          
+          <AlertDialog open={isSignOutDialogOpen} onOpenChange={setIsSignOutDialogOpen}>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" className="text-destructive border-destructive/20 hover:bg-destructive/5 rounded-full px-6 h-11">
+                <LogOut size={18} className="mr-2" /> End Session
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="rounded-2xl">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure you want to log out?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will end your current administrative session.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleSignOut} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full">
+                  Sign Out
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
         <Tabs defaultValue="archive" className="w-full">
@@ -574,7 +655,12 @@ export default function AdminPage() {
                       </p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => deleteItem('documents', d.id)} className="text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => setItemToDelete({ col: 'documents', id: d.id, title: d.title })} 
+                    className="text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
                     <Trash2 size={18} />
                   </Button>
                 </div>
@@ -670,7 +756,12 @@ export default function AdminPage() {
                   <div className="aspect-video relative overflow-hidden">
                     <img src={g.imageUrl} className="w-full h-full object-cover" alt={g.title} />
                     <div className="absolute top-2 right-2">
-                      <Button variant="destructive" size="icon" onClick={() => deleteItem('gallery', g.id)} className="rounded-full shadow-lg h-8 w-8">
+                      <Button 
+                        variant="destructive" 
+                        size="icon" 
+                        onClick={() => setItemToDelete({ col: 'gallery', id: g.id, title: g.title })} 
+                        className="rounded-full shadow-lg h-8 w-8"
+                      >
                         <Trash2 size={14} />
                       </Button>
                     </div>
@@ -704,6 +795,7 @@ export default function AdminPage() {
                       <p className="font-bold text-elf-green-dark flex items-center gap-2">
                         {u.email}
                         {u.role === 'admin' && <ShieldCheck size={14} className="text-elf-gold" />}
+                        {user?.uid === u.id && <span className="text-[10px] bg-elf-cream px-2 py-0.5 rounded-full border border-elf-gold/20">You</span>}
                       </p>
                       <p className="text-[10px] text-elf-text-light uppercase tracking-widest">
                         Status: <span className="font-bold">{u.role}</span> • Joined {new Date(u.createdAt).toLocaleDateString()}
@@ -711,8 +803,8 @@ export default function AdminPage() {
                     </div>
                   </div>
                   
-                  {u.email !== SUPER_ADMIN_EMAIL && (
-                    <div className="flex gap-2">
+                  <div className="flex gap-2">
+                    {u.email !== SUPER_ADMIN_EMAIL && (
                       <Button 
                         variant="outline" 
                         size="sm" 
@@ -722,16 +814,64 @@ export default function AdminPage() {
                         {u.role === 'admin' ? <ShieldX size={16} className="mr-2" /> : <ShieldCheck size={16} className="mr-2" />}
                         {u.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => deleteItem('users', u.id)} className="text-destructive">
+                    )}
+                    
+                    {u.email !== SUPER_ADMIN_EMAIL || user?.uid === u.id ? (
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => setUserToDelete({ id: u.id, email: u.email })} 
+                        className="text-destructive"
+                      >
                         <Trash2 size={18} />
                       </Button>
-                    </div>
-                  )}
+                    ) : null}
+                  </div>
                 </div>
               ))}
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Global Deletion Confirmation Dialog for Items */}
+        <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
+          <AlertDialogContent className="rounded-2xl">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete "{itemToDelete?.title}"?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This resource will be permanently removed from the public website.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Global Deletion Confirmation Dialog for Users */}
+        <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+          <AlertDialogContent className="rounded-2xl">
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {user?.uid === userToDelete?.id ? "Delete your account?" : `Delete account for ${userToDelete?.email}?`}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {user?.uid === userToDelete?.id 
+                  ? "Are you sure you want to delete your own administrative account? You will be immediately logged out and your profile removed."
+                  : "This will permanently remove this user's profile from the system."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full">
+                {user?.uid === userToDelete?.id ? "Delete My Account" : "Delete User"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
