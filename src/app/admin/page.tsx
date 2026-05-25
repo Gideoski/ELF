@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth, useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { 
   signInWithEmailAndPassword, 
@@ -31,9 +31,7 @@ import {
   Loader2, 
   Lock, 
   Users as UsersIcon,
-  ShieldCheck,
-  X,
-  Plus
+  ShieldCheck
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
@@ -145,22 +143,24 @@ export default function AdminPage() {
         uploadedAt: new Date().toISOString()
       };
       
-      await addDoc(collection(firestore, 'documents'), data);
-      
-      toast({ title: "Upload Successful!", description: "The resource is now live in the archive." });
-      
+      // Reset form instantly for a smooth experience
       setDocTitle('');
       setDocUrl('');
       setDocFile(null);
       setDocFormKey(Date.now());
-      setIsSubmitting(false);
+      
+      addDoc(collection(firestore, 'documents'), data)
+        .then(() => {
+          toast({ title: "Upload Successful!", description: "The resource is now live in the archive." });
+        })
+        .catch((err) => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'documents', operation: 'create' }));
+        })
+        .finally(() => setIsSubmitting(false));
+
     } catch (err: any) {
       setIsSubmitting(false);
-      if (err.code === 'permission-denied') {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'documents', operation: 'create' }));
-      } else {
-        toast({ variant: "destructive", title: "Upload Error", description: "Could not save document." });
-      }
+      toast({ variant: "destructive", title: "Process Error", description: "Could not prepare the document." });
     }
   };
 
@@ -176,21 +176,23 @@ export default function AdminPage() {
         createdAt: new Date().toISOString()
       };
 
-      await addDoc(collection(firestore, 'gallery'), data);
-      
-      toast({ title: "Gallery Updated!", description: "The image has been published to the gallery." });
-      
+      // Reset form instantly
       setGalleryCaption('');
       setGalleryFile(null);
       setGalleryFormKey(Date.now() + 1);
-      setIsSubmitting(false);
+
+      addDoc(collection(firestore, 'gallery'), data)
+        .then(() => {
+          toast({ title: "Gallery Updated!", description: "The image has been published to the gallery." });
+        })
+        .catch(() => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'gallery', operation: 'create' }));
+        })
+        .finally(() => setIsSubmitting(false));
+
     } catch (err: any) {
       setIsSubmitting(false);
-      if (err.code === 'permission-denied') {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'gallery', operation: 'create' }));
-      } else {
-        toast({ variant: "destructive", title: "Upload Error", description: "Could not save gallery item." });
-      }
+      toast({ variant: "destructive", title: "Process Error", description: "Could not prepare the image." });
     }
   };
 
@@ -306,7 +308,7 @@ export default function AdminPage() {
             <TabsTrigger value="users" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold">Users</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="archive" className="space-y-8 animate-fade-in-up">
+          <TabsContent value="archive" className="space-y-8">
             <Card className="rounded-2xl border-elf-gold/10 overflow-hidden" key={docFormKey}>
               <CardHeader className="bg-white border-b p-6">
                 <CardTitle className="text-lg font-headline italic">Publish New Resource</CardTitle>
@@ -335,7 +337,7 @@ export default function AdminPage() {
             <div className="grid gap-3">
               <h3 className="font-headline text-2xl text-elf-green-dark italic mb-2">Recent Uploads</h3>
               {documents?.map(d => (
-                <div key={d.id} className="bg-white p-5 rounded-2xl border border-elf-gold/10 flex justify-between items-center shadow-sm hover:shadow-md transition-shadow">
+                <div key={d.id} className="bg-white p-5 rounded-2xl border border-elf-gold/10 flex justify-between items-center shadow-sm">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-elf-gold/10 rounded-xl flex items-center justify-center text-elf-gold"><FileText size={20} /></div>
                     <div>
@@ -349,7 +351,7 @@ export default function AdminPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="gallery" className="space-y-8 animate-fade-in-up">
+          <TabsContent value="gallery" className="space-y-8">
             <Card className="rounded-2xl border-elf-gold/10 overflow-hidden" key={galleryFormKey}>
               <CardHeader className="bg-white border-b p-6">
                 <CardTitle className="text-lg font-headline italic">Add Gallery Moment</CardTitle>
@@ -377,7 +379,7 @@ export default function AdminPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="users" className="space-y-6 animate-fade-in-up">
+          <TabsContent value="users" className="space-y-6">
             <div className="flex justify-between items-center mb-4">
                <h3 className="font-headline text-3xl text-elf-green-dark italic">Manage Members</h3>
             </div>
