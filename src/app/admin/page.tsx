@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -15,7 +16,8 @@ import {
   orderBy, 
   deleteDoc,
   addDoc,
-  updateDoc
+  updateDoc,
+  serverTimestamp
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,7 +34,8 @@ import {
   Users as UsersIcon,
   ShieldCheck,
   X,
-  UserMinus
+  UserPlus,
+  RefreshCw
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
@@ -105,25 +108,33 @@ export default function AdminPage() {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth) return;
+    if (!auth || !firestore) return;
     setIsSubmitting(true);
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        const res = await signInWithEmailAndPassword(auth, email, password);
+        // Sync user profile to Firestore even on login to ensure visibility in Users tab
+        const syncData = {
+          email: res.user.email,
+          displayName: res.user.email?.split('@')[0],
+          lastLogin: new Date().toISOString()
+        };
+        setDoc(doc(firestore, 'users', res.user.uid), syncData, { merge: true })
+          .catch(() => {});
+          
         toast({ title: "Welcome back", description: "Access granted." });
       } else {
         if (password.length < 6) throw { code: 'auth/weak-password' };
         const res = await createUserWithEmailAndPassword(auth, email, password);
-        if (firestore) {
-          const userData = {
-            email: res.user.email,
-            role: res.user.email === SUPER_ADMIN_EMAIL ? 'admin' : 'user',
-            displayName: email.split('@')[0],
-            createdAt: new Date().toISOString()
-          };
-          setDoc(doc(firestore, 'users', res.user.uid), userData)
-            .catch((err) => errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `users/${res.user.uid}`, operation: 'create', requestResourceData: userData })));
-        }
+        const userData = {
+          email: res.user.email,
+          role: res.user.email === SUPER_ADMIN_EMAIL ? 'admin' : 'user',
+          displayName: email.split('@')[0],
+          createdAt: new Date().toISOString()
+        };
+        setDoc(doc(firestore, 'users', res.user.uid), userData)
+          .catch((err) => errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `users/${res.user.uid}`, operation: 'create', requestResourceData: userData })));
+        
         toast({ title: "Account created", description: "Authentication successful." });
       }
     } catch (error: any) {
@@ -160,23 +171,23 @@ export default function AdminPage() {
 
       addDoc(collection(firestore, 'documents'), data)
         .then(() => {
-          toast({ title: "Upload Successful!", description: `"${savedTitle}" has been published.` });
-          // Resetting everything
+          toast({ title: "Upload Successful!", description: `"${savedTitle}" is now live.` });
+          // FORCED RESET
           setDocTitle(''); 
           setDocUrl(''); 
           setDocFile(null);
-          setDocFileKey(prev => prev + 1);
+          setDocFileKey(prev => prev + 1); // This resets the file input physically
           setIsSubmitting(false);
         })
         .catch((err) => {
           setIsSubmitting(false);
-          toast({ variant: "destructive", title: "Action Denied", description: "You don't have permission to write this data." });
+          toast({ variant: "destructive", title: "Upload Failed", description: "Permission denied." });
           errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'documents', operation: 'create', requestResourceData: data }));
         });
 
     } catch (err) {
       setIsSubmitting(false);
-      toast({ variant: "destructive", title: "Upload Failed", description: "Ensure file is under 1MB." });
+      toast({ variant: "destructive", title: "Upload Error", description: "Ensure file size is under 1MB." });
     }
   };
 
@@ -194,22 +205,22 @@ export default function AdminPage() {
 
       addDoc(collection(firestore, 'gallery'), data)
         .then(() => {
-          toast({ title: "Gallery Updated!", description: "The image is now live." });
-          // Resetting everything
+          toast({ title: "Gallery Updated!", description: "Moment successfully published." });
+          // FORCED RESET
           setGalleryCaption(''); 
           setGalleryFile(null);
-          setGalleryFileKey(prev => prev + 1);
+          setGalleryFileKey(prev => prev + 1); // This resets the file input physically
           setIsSubmitting(false);
         })
         .catch((err) => {
           setIsSubmitting(false);
-          toast({ variant: "destructive", title: "Action Denied", description: "You don't have permission to update the gallery." });
+          toast({ variant: "destructive", title: "Gallery Error", description: "Permission denied." });
           errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'gallery', operation: 'create', requestResourceData: data }));
         });
 
     } catch (err) {
       setIsSubmitting(false);
-      toast({ variant: "destructive", title: "Upload Failed", description: "Ensure image is under 1MB." });
+      toast({ variant: "destructive", title: "Upload Error", description: "Ensure image is under 1MB." });
     }
   };
 
@@ -298,8 +309,8 @@ export default function AdminPage() {
       <div className="min-h-screen bg-elf-cream flex flex-col items-center justify-center p-6 pt-32 pb-20">
         <Card className="max-w-xl w-full text-center p-12 rounded-3xl bg-white shadow-2xl animate-fade-in-up">
           <div className="w-20 h-20 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto mb-6"><Lock size={40} /></div>
-          <h2 className="text-3xl font-headline font-bold text-elf-green-dark mb-4">Access Restricted</h2>
-          <p className="text-elf-text-mid mb-8">Verification pending. Contact the administrator to grant access.</p>
+          <h2 className="text-3xl font-headline font-bold text-elf-green-dark mb-4">Verification Pending</h2>
+          <p className="text-elf-text-mid mb-8">Your account is registered, but you need admin approval. Contact {SUPER_ADMIN_EMAIL} for access.</p>
           <div className="flex flex-col gap-3">
              <Button variant="ghost" onClick={() => auth && signOut(auth)}>Sign Out</Button>
           </div>
@@ -313,8 +324,8 @@ export default function AdminPage() {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-12">
           <div>
-            <h1 className="text-4xl font-headline text-elf-green-dark font-bold">Dashboard</h1>
-            <p className="text-elf-text-mid">Admin: <b>{user.email}</b></p>
+            <h1 className="text-4xl font-headline text-elf-green-dark font-bold">Admin Dashboard</h1>
+            <p className="text-elf-text-mid">Welcome, <b>{user.email}</b></p>
           </div>
           <Button variant="outline" className="rounded-full" onClick={() => setIsSignOutDialogOpen(true)}><LogOut size={16} className="mr-2" /> Logout</Button>
         </div>
@@ -328,28 +339,28 @@ export default function AdminPage() {
 
           <TabsContent value="archive" className="space-y-8 animate-fade-in-up">
             <Card className="rounded-2xl border-elf-gold/10">
-              <CardHeader className="border-b p-6"><CardTitle className="text-lg">Publish Resource</CardTitle></CardHeader>
+              <CardHeader className="border-b p-6"><CardTitle className="text-lg">Publish New Resource</CardTitle></CardHeader>
               <CardContent className="p-8 space-y-6">
                 <div className="space-y-4">
-                  <div className="space-y-1"><Label>Title</Label><Input placeholder="Guide Name" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} /></div>
+                  <div className="space-y-1"><Label>Title</Label><Input placeholder="E.g. Preclinical Study Guide" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} /></div>
                   <RadioGroup value={archiveMode} onValueChange={(val: 'link' | 'file') => setArchiveMode(val)} className="flex gap-6">
-                    <div className="flex items-center space-x-2"><RadioGroupItem value="file" id="f" /><Label htmlFor="f">Direct Upload</Label></div>
-                    <div className="flex items-center space-x-2"><RadioGroupItem value="link" id="l" /><Label htmlFor="l">Drive Link</Label></div>
+                    <div className="flex items-center space-x-2"><RadioGroupItem value="file" id="f" /><Label htmlFor="f">Direct Upload (PDF)</Label></div>
+                    <div className="flex items-center space-x-2"><RadioGroupItem value="link" id="l" /><Label htmlFor="l">External Link (Drive)</Label></div>
                   </RadioGroup>
                   {archiveMode === 'link' ? (
                     <div className="space-y-2">
-                      <Input placeholder="Google Drive URL" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} />
+                      <Input placeholder="URL (e.g. Google Drive link)" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} />
                     </div>
                   ) : (
                     <div className="flex gap-2">
                       <input key={docFileKey} type="file" accept="application/pdf" className="hidden" id="pdf-in" onChange={(e) => setDocFile(e.target.files?.[0] || null)} />
-                      <Button asChild variant="outline" className="flex-grow h-12 justify-start font-normal"><label htmlFor="pdf-in" className="cursor-pointer truncate">{docFile ? docFile.name : 'Choose PDF'}</label></Button>
+                      <Button asChild variant="outline" className="flex-grow h-12 justify-start font-normal"><label htmlFor="pdf-in" className="cursor-pointer truncate">{docFile ? docFile.name : 'Choose PDF File'}</label></Button>
                       {docFile && <Button variant="ghost" onClick={() => { setDocFile(null); setDocFileKey(k => k + 1); }}><X size={18}/></Button>}
                     </div>
                   )}
                 </div>
                 <Button onClick={addDocument} disabled={isSubmitting || !docTitle || (archiveMode === 'file' && !docFile) || (archiveMode === 'link' && !docUrl)} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold">
-                  {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : null} Publish Resource
+                  {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : null} Publish to Archive
                 </Button>
               </CardContent>
             </Card>
@@ -369,15 +380,15 @@ export default function AdminPage() {
 
           <TabsContent value="gallery" className="space-y-8 animate-fade-in-up">
             <Card className="rounded-2xl border-elf-gold/10">
-              <CardHeader className="border-b p-6"><CardTitle className="text-lg">Add Moment</CardTitle></CardHeader>
+              <CardHeader className="border-b p-6"><CardTitle className="text-lg">Add Gallery Moment</CardTitle></CardHeader>
               <CardContent className="p-8 space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-1"><Label>Caption (Optional)</Label><Input placeholder="Brief description..." value={galleryCaption} onChange={(e) => setGalleryCaption(e.target.value)} /></div>
+                  <div className="space-y-1"><Label>Caption (Optional)</Label><Input placeholder="Event description..." value={galleryCaption} onChange={(e) => setGalleryCaption(e.target.value)} /></div>
                   <div className="space-y-1">
                     <Label>Image (Max 1MB)</Label>
                     <div className="flex gap-2">
                       <input key={galleryFileKey} type="file" accept="image/*" className="hidden" id="img-in" onChange={(e) => setGalleryFile(e.target.files?.[0] || null)} />
-                      <Button asChild variant="outline" className="flex-grow h-12 justify-start font-normal"><label htmlFor="img-in" className="cursor-pointer truncate">{galleryFile ? galleryFile.name : 'Choose Image'}</label></Button>
+                      <Button asChild variant="outline" className="flex-grow h-12 justify-start font-normal"><label htmlFor="img-in" className="cursor-pointer truncate">{galleryFile ? galleryFile.name : 'Choose Image File'}</label></Button>
                       {galleryFile && <Button variant="ghost" onClick={() => { setGalleryFile(null); setGalleryFileKey(k => k + 1); }}><X size={18}/></Button>}
                     </div>
                   </div>
@@ -399,19 +410,28 @@ export default function AdminPage() {
           </TabsContent>
 
           <TabsContent value="users" className="space-y-4 animate-fade-in-up">
-            {usersLoading ? <div className="flex justify-center py-10"><Loader2 className="animate-spin text-elf-gold" /></div> : (
+            <div className="flex justify-between items-center mb-4">
+               <h3 className="font-headline text-2xl text-elf-green-dark italic">Manage Registered Users</h3>
+            </div>
+            {usersLoading ? (
+              <div className="flex justify-center py-20"><Loader2 className="animate-spin text-elf-gold" size={32} /></div>
+            ) : !allUsers || allUsers.length === 0 ? (
+              <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-elf-gold/20 text-elf-text-light italic">
+                No registered user profiles found in the database.
+              </div>
+            ) : (
               <div className="grid gap-3">
                 {allUsers?.map(u => (
-                  <div key={u.id} className="bg-white p-6 rounded-2xl border border-elf-gold/10 flex justify-between items-center">
+                  <div key={u.id} className="bg-white p-6 rounded-2xl border border-elf-gold/10 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${u.role === 'admin' ? 'bg-elf-gold/10 text-elf-gold' : 'bg-elf-green-dark/5'}`}>
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${u.role === 'admin' ? 'bg-elf-gold/10 text-elf-gold' : 'bg-elf-green-dark/5 text-elf-text-mid'}`}>
                         <UsersIcon size={20} />
                       </div>
                       <div>
                         <p className="font-bold text-elf-green-dark flex items-center gap-2">
                           {u.email} {u.role === 'admin' && <ShieldCheck size={14} className="text-elf-gold" />}
                         </p>
-                        <p className="text-[10px] text-elf-text-light uppercase tracking-widest font-bold">Role: {u.role}</p>
+                        <p className="text-[10px] text-elf-text-light uppercase tracking-widest font-bold">Role: {u.role || 'user'}</p>
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -433,21 +453,21 @@ export default function AdminPage() {
 
         <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
           <AlertDialogContent className="rounded-2xl">
-            <AlertDialogHeader><AlertDialogTitle>Confirm Deletion</AlertDialogTitle><AlertDialogDescription>Delete "{itemToDelete?.title}"? This cannot be undone.</AlertDialogDescription></AlertDialogHeader>
-            <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive">Delete</AlertDialogAction></AlertDialogFooter>
+            <AlertDialogHeader><AlertDialogTitle>Delete Resource?</AlertDialogTitle><AlertDialogDescription>Are you sure you want to remove "{itemToDelete?.title}"? This cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Delete Forever</AlertDialogAction></AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
         <AlertDialog open={!!userToDelete} onOpenChange={() => setUserToDelete(null)}>
           <AlertDialogContent className="rounded-2xl">
-            <AlertDialogHeader><AlertDialogTitle>Remove User Profile?</AlertDialogTitle><AlertDialogDescription>Remove {userToDelete?.email} from the Firestore profile list?</AlertDialogDescription></AlertDialogHeader>
-            <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteUser} className="bg-destructive">Confirm</AlertDialogAction></AlertDialogFooter>
+            <AlertDialogHeader><AlertDialogTitle>Remove User Profile?</AlertDialogTitle><AlertDialogDescription>This will delete {userToDelete?.email}'s record from Firestore. It does NOT delete their login credentials.</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteUser} className="bg-destructive hover:bg-destructive/90">Remove Profile</AlertDialogAction></AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
         <AlertDialog open={isSignOutDialogOpen} onOpenChange={setIsSignOutDialogOpen}>
           <AlertDialogContent className="rounded-2xl">
-            <AlertDialogHeader><AlertDialogTitle>Sign Out?</AlertDialogTitle></AlertDialogHeader>
+            <AlertDialogHeader><AlertDialogTitle>End Session?</AlertDialogTitle><AlertDialogDescription>You will be signed out of the Admin Dashboard.</AlertDialogDescription></AlertDialogHeader>
             <AlertDialogFooter><AlertDialogCancel>Stay</AlertDialogCancel><AlertDialogAction onClick={handleSignOut}>Logout</AlertDialogAction></AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
