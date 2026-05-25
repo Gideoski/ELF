@@ -6,8 +6,7 @@ import { useAuth, useUser, useFirestore, useCollection, useDoc } from '@/firebas
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
-  signOut,
-  deleteUser as deleteAuthUser
+  signOut
 } from 'firebase/auth';
 import { 
   doc, 
@@ -34,9 +33,7 @@ import {
   Users as UsersIcon,
   ShieldCheck,
   X,
-  UserCircle,
-  UserMinus,
-  CheckCircle2
+  UserMinus
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
@@ -53,7 +50,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 const SUPER_ADMIN_EMAIL = 'gideonjackbara@gmail.com';
@@ -164,18 +160,19 @@ export default function AdminPage() {
       const savedTitle = docTitle;
 
       addDoc(collection(firestore, 'documents'), data)
-        .catch(async (err) => {
+        .then(() => {
+          toast({ title: "Upload Successful!", description: `"${savedTitle}" has been published.` });
+          // Instant Reset
+          setDocTitle(''); 
+          setDocUrl(''); 
+          setDocFile(null);
+          setDocFileKey(prev => prev + 1);
+          setIsSubmitting(false);
+        })
+        .catch((err) => {
+          setIsSubmitting(false);
           errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'documents', operation: 'create', requestResourceData: data }));
         });
-
-      // Instant Reset
-      setDocTitle(''); 
-      setDocUrl(''); 
-      setDocFile(null);
-      setDocFileKey(prev => prev + 1);
-      setIsSubmitting(false);
-      
-      toast({ title: "Upload Successful!", description: `"${savedTitle}" has been published.` });
 
     } catch (err) {
       setIsSubmitting(false);
@@ -196,17 +193,18 @@ export default function AdminPage() {
       };
 
       addDoc(collection(firestore, 'gallery'), data)
-        .catch(async (err) => {
+        .then(() => {
+          toast({ title: "Gallery Updated!", description: "Image successfully added." });
+          // Instant Reset
+          setGalleryCaption(''); 
+          setGalleryFile(null);
+          setGalleryFileKey(prev => prev + 1);
+          setIsSubmitting(false);
+        })
+        .catch((err) => {
+          setIsSubmitting(false);
           errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'gallery', operation: 'create', requestResourceData: data }));
         });
-
-      // Instant Reset
-      setGalleryCaption(''); 
-      setGalleryFile(null);
-      setGalleryFileKey(prev => prev + 1);
-      setIsSubmitting(false);
-
-      toast({ title: "Gallery Updated!", description: "Image successfully added." });
 
     } catch (err) {
       setIsSubmitting(false);
@@ -231,10 +229,7 @@ export default function AdminPage() {
     if (!firestore || !userToDelete) return;
     try {
       await deleteDoc(doc(firestore, 'users', userToDelete.id));
-      toast({ title: "User removed" });
-      if (user?.uid === userToDelete.id && auth?.currentUser) {
-        signOut(auth);
-      }
+      toast({ title: "User document removed" });
       setUserToDelete(null);
     } catch (error) {
        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `users/${userToDelete.id}`, operation: 'delete' }));
@@ -305,7 +300,6 @@ export default function AdminPage() {
           <h2 className="text-3xl font-headline font-bold text-elf-green-dark mb-4">Access Restricted</h2>
           <p className="text-elf-text-mid mb-8">Verification pending. Contact the administrator to grant access.</p>
           <div className="flex flex-col gap-3">
-             <Button variant="outline" className="rounded-full w-full h-12 text-destructive" onClick={() => setUserToDelete({ id: user.uid, email: user.email! })}><UserMinus size={18} className="mr-2" /> Delete My Account</Button>
              <Button variant="ghost" onClick={() => auth && signOut(auth)}>Sign Out</Button>
           </div>
         </Card>
@@ -322,7 +316,6 @@ export default function AdminPage() {
             <p className="text-elf-text-mid">Logged in: <b>{user.email}</b></p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="rounded-full text-destructive border-destructive/20" onClick={() => setUserToDelete({ id: user.uid, email: user.email! })}><UserMinus size={16} className="mr-2" /> Delete Account</Button>
             <Button variant="outline" className="rounded-full" onClick={() => setIsSignOutDialogOpen(true)}><LogOut size={16} className="mr-2" /> Logout</Button>
           </div>
         </div>
@@ -345,7 +338,18 @@ export default function AdminPage() {
                     <div className="flex items-center space-x-2"><RadioGroupItem value="link" id="l" /><Label htmlFor="l">Drive Link</Label></div>
                   </RadioGroup>
                   {archiveMode === 'link' ? (
-                    <Input placeholder="Google Drive URL" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} />
+                    <div className="space-y-2">
+                      <Input placeholder="Google Drive URL" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} />
+                      <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <p className="text-[11px] font-bold text-blue-800 uppercase tracking-widest mb-2">Instructions</p>
+                        <ol className="text-[10px] text-blue-600 space-y-1 list-decimal ml-3">
+                          <li>Upload PDF to Google Drive.</li>
+                          <li>Right-click file {'>'} Share {'>'} Share.</li>
+                          <li>Change "Restricted" to "Anyone with the link".</li>
+                          <li>Copy link and paste above.</li>
+                        </ol>
+                      </div>
+                    </div>
                   ) : (
                     <div className="flex gap-2">
                       <input key={docFileKey} type="file" accept="application/pdf" className="hidden" id="pdf-in" onChange={(e) => setDocFile(e.target.files?.[0] || null)} />
@@ -446,7 +450,7 @@ export default function AdminPage() {
 
         <AlertDialog open={!!userToDelete} onOpenChange={() => setUserToDelete(null)}>
           <AlertDialogContent className="rounded-2xl">
-            <AlertDialogHeader><AlertDialogTitle>Delete User?</AlertDialogTitle><AlertDialogDescription>Permanently remove {userToDelete?.email} from the system?</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogHeader><AlertDialogTitle>Remove User Profile?</AlertDialogTitle><AlertDialogDescription>Remove {userToDelete?.email} from the Firestore profile list? (Note: They will still exist in Authentication until removed from the console).</AlertDialogDescription></AlertDialogHeader>
             <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteUser} className="bg-destructive">Confirm</AlertDialogAction></AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -461,4 +465,3 @@ export default function AdminPage() {
     </div>
   );
 }
-    
