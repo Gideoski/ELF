@@ -82,7 +82,6 @@ export default function AdminPage() {
   // Gallery States
   const [galleryTitle, setGalleryTitle] = useState('');
   const [galleryFile, setGalleryFile] = useState<File | null>(null);
-  const [galleryCat, setGalleryCat] = useState('Workshops');
 
   // Confirmation States
   const [isSignOutDialogOpen, setIsSignOutDialogOpen] = useState(false);
@@ -190,13 +189,12 @@ export default function AdminPage() {
       const data = {
         title: galleryTitle,
         imageUrl: base64,
-        category: galleryCat,
         createdAt: new Date().toISOString()
       };
       addDoc(collection(firestore, 'gallery'), data)
         .then(() => {
           setGalleryTitle(''); setGalleryFile(null);
-          toast({ title: "Image posted" });
+          toast({ title: "Image published to Gallery" });
         })
         .catch(err => errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'gallery', operation: 'create', requestResourceData: data })));
     } catch (err) {
@@ -422,7 +420,11 @@ export default function AdminPage() {
                     <Input placeholder="Google Drive URL" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl" />
                   ) : (
                     <div className="flex gap-2">
-                      <input type="file" accept="application/pdf" className="hidden" id="a-up" onChange={(e) => setDocFile(e.target.files?.[0] || null)} />
+                      <input type="file" accept="application/pdf" className="hidden" id="a-up" onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setDocFile(file);
+                        e.target.value = ''; // Reset input to allow re-selection
+                      }} />
                       <Button asChild variant="outline" className="flex-grow rounded-xl h-12 justify-start font-normal"><label htmlFor="a-up" className="cursor-pointer truncate">{docFile ? docFile.name : 'Choose PDF'}</label></Button>
                       {docFile && <Button variant="ghost" className="text-destructive border" onClick={() => setDocFile(null)}><X size={18} /></Button>}
                     </div>
@@ -444,27 +446,34 @@ export default function AdminPage() {
           <TabsContent value="gallery" className="space-y-8 animate-fade-in-up">
             <Card className="rounded-2xl border-elf-gold/10">
               <CardHeader className="bg-white/50 border-b p-6"><CardTitle className="text-lg font-bold">Upload Picture</CardTitle></CardHeader>
-              <CardContent className="grid md:grid-cols-4 gap-6 pt-8 pb-8 px-6">
-                <Input placeholder="Image Title" value={galleryTitle} onChange={(e) => setGalleryTitle(e.target.value)} className="rounded-xl" />
-                <div className="flex gap-2">
-                  <input type="file" accept="image/*" className="hidden" id="g-up" onChange={(e) => setGalleryFile(e.target.files?.[0] || null)} />
-                  <Button asChild variant="outline" className="flex-grow rounded-xl"><label htmlFor="g-up" className="truncate">{galleryFile ? galleryFile.name : 'Choose Image'}</label></Button>
-                  {galleryFile && <Button variant="ghost" onClick={() => setGalleryFile(null)}><X size={16}/></Button>}
+              <CardContent className="grid md:grid-cols-3 gap-6 pt-8 pb-8 px-6">
+                <div className="space-y-2">
+                  <Label>Add Caption (optional)</Label>
+                  <Input placeholder="Moment description..." value={galleryTitle} onChange={(e) => setGalleryTitle(e.target.value)} className="rounded-xl" />
                 </div>
-                <select className="rounded-xl border h-10 px-3 text-sm" value={galleryCat} onChange={(e) => setGalleryCat(e.target.value)}>
-                  <option value="Workshops">Workshops</option>
-                  <option value="The Gauntlet">The Gauntlet</option>
-                  <option value="Community">Community</option>
-                </select>
-                <Button onClick={addGalleryImage} disabled={isSubmitting || !galleryFile} className="bg-elf-gold text-elf-green-dark rounded-full">Publish</Button>
+                <div className="space-y-2">
+                  <Label>Image File</Label>
+                  <div className="flex gap-2">
+                    <input type="file" accept="image/*" className="hidden" id="g-up" onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) setGalleryFile(file);
+                      e.target.value = ''; // Reset input
+                    }} />
+                    <Button asChild variant="outline" className="flex-grow rounded-xl h-12"><label htmlFor="g-up" className="truncate cursor-pointer">{galleryFile ? galleryFile.name : 'Choose Image'}</label></Button>
+                    {galleryFile && <Button variant="ghost" onClick={() => setGalleryFile(null)} className="h-12 border"><X size={16}/></Button>}
+                  </div>
+                </div>
+                <div className="flex items-end">
+                  <Button onClick={addGalleryImage} disabled={isSubmitting || !galleryFile} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold">Publish</Button>
+                </div>
               </CardContent>
             </Card>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
               {galleryItems?.map(g => (
                 <div key={g.id} className="bg-white rounded-2xl overflow-hidden border border-elf-gold/10 group relative">
                   <img src={g.imageUrl} className="w-full aspect-video object-cover" alt="" />
-                  <div className="p-4"><p className="font-bold text-sm truncate">{g.title}</p></div>
-                  <Button variant="destructive" size="icon" onClick={() => setItemToDelete({ col: 'gallery', id: g.id, title: g.title })} className="absolute top-2 right-2 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 shadow-lg"><Trash2 size={14} /></Button>
+                  <div className="p-4"><p className="font-bold text-sm truncate">{g.title || 'Untitled'}</p></div>
+                  <Button variant="destructive" size="icon" onClick={() => setItemToDelete({ col: 'gallery', id: g.id, title: g.title || 'Moment' })} className="absolute top-2 right-2 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 shadow-lg"><Trash2 size={14} /></Button>
                 </div>
               ))}
             </div>

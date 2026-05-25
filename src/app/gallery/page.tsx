@@ -1,17 +1,12 @@
-
 "use client";
 
-import React, { useEffect, useState, useMemo } from 'react';
-import { Badge } from '@/components/ui/badge';
+import React, { useEffect, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 
-const categories = ["All", "The Gauntlet", "Workshops", "Community", "Leadership"];
-
 export default function Gallery() {
-  const [activeTab, setActiveTab] = useState("All");
   const firestore = useFirestore();
 
   const galleryQuery = useMemo(() => {
@@ -22,23 +17,20 @@ export default function Gallery() {
   const { data: dbImages, loading } = useCollection(galleryQuery);
 
   const staticImages = [
-    { imageUrl: "/images/20260427_092908.jpg", category: "The Gauntlet", title: "Rising Leaders", createdAt: "2024-01-01" },
-    { imageUrl: "/images/20260427_093026.jpg", category: "Workshops", title: "Core Science Review", createdAt: "2024-01-02" },
-    { imageUrl: "/images/20260427_093121.jpg", category: "Community", title: "ELF Connections", createdAt: "2024-01-03" },
-    { imageUrl: "/images/20260427_093142.jpg", category: "Leadership", title: "Strategy Session", createdAt: "2024-01-04" },
-    { imageUrl: "/images/20260427_093232.jpg", category: "The Gauntlet", title: "Academic Showdown", createdAt: "2024-01-05" },
-    { imageUrl: "/images/20260427_093310.jpg", category: "Workshops", title: "Foundation Skills", createdAt: "2024-01-06" },
+    { imageUrl: "/images/20260427_092908.jpg", title: "Rising Leaders", createdAt: "2024-01-01" },
+    { imageUrl: "/images/20260427_093026.jpg", title: "Core Science Review", createdAt: "2024-01-02" },
+    { imageUrl: "/images/20260427_093121.jpg", title: "ELF Connections", createdAt: "2024-01-03" },
+    { imageUrl: "/images/20260427_093142.jpg", title: "Strategy Session", createdAt: "2024-01-04" },
+    { imageUrl: "/images/20260427_093232.jpg", title: "Academic Showdown", createdAt: "2024-01-05" },
+    { imageUrl: "/images/20260427_093310.jpg", title: "Foundation Skills", createdAt: "2024-01-06" },
   ];
 
   const allImages = useMemo(() => {
-    const combined = [...(dbImages || [])];
     if (!dbImages || dbImages.length === 0) {
       return staticImages;
     }
-    return combined;
+    return dbImages;
   }, [dbImages]);
-
-  const filtered = activeTab === "All" ? allImages : allImages.filter(img => img.category === activeTab);
 
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
@@ -49,7 +41,7 @@ export default function Gallery() {
 
     document.querySelectorAll('.reveal-on-scroll').forEach(el => observer.observe(el));
     return () => observer.disconnect();
-  }, [filtered]);
+  }, [allImages]);
 
   return (
     <div className="bg-elf-green-dark min-h-screen pt-32 pb-24 text-white">
@@ -59,21 +51,6 @@ export default function Gallery() {
             <h1 className="text-5xl md:text-7xl font-headline mb-4">Moments That Matter 🫶🏾</h1>
             <p className="text-white/60 text-lg max-w-xl">Capturing the intensity, the joy, and the growth of Nigeria's emerging medical leaders.</p>
           </div>
-          
-          <div className="flex flex-wrap gap-2">
-            {categories.map(cat => (
-              <Badge 
-                key={cat} 
-                onClick={() => setActiveTab(cat)}
-                variant={activeTab === cat ? "default" : "outline"}
-                className={`cursor-pointer px-6 py-2 rounded-full transition-all ${
-                  activeTab === cat ? "bg-elf-gold text-elf-green-dark border-elf-gold" : "border-white/20 text-white/60 hover:text-white"
-                }`}
-              >
-                {cat}
-              </Badge>
-            ))}
-          </div>
         </div>
 
         {loading ? (
@@ -82,17 +59,18 @@ export default function Gallery() {
            </div>
         ) : (
           <div className="columns-1 md:columns-2 lg:columns-3 gap-8 space-y-8 reveal-on-scroll">
-            {filtered.map((img, i) => (
+            {allImages.map((img, i) => (
               <Card key={i} className="group relative overflow-hidden rounded-2xl border-none shadow-none bg-white/5 break-inside-avoid">
                 <img 
                   src={img.imageUrl} 
-                  alt={img.title} 
+                  alt={img.title || "Gallery image"} 
                   className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-110"
                 />
-                <div className="absolute inset-0 bg-elf-green-dark/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-8 bg-gradient-to-t from-elf-green-dark/80 to-transparent">
-                  <span className="text-elf-gold uppercase tracking-widest text-[10px] font-bold mb-2">{img.category}</span>
-                  <h3 className="font-headline text-2xl font-bold text-white leading-tight">{img.title}</h3>
-                </div>
+                {img.title && (
+                  <div className="absolute inset-0 bg-elf-green-dark/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-8 bg-gradient-to-t from-elf-green-dark/80 to-transparent">
+                    <h3 className="font-headline text-2xl font-bold text-white leading-tight">{img.title}</h3>
+                  </div>
+                )}
               </Card>
             ))}
           </div>
