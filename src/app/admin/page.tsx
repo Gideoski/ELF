@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -41,7 +42,9 @@ import {
   ShieldAlert,
   Users as UsersIcon,
   ShieldCheck,
-  ShieldX
+  ShieldX,
+  Upload,
+  FileUp
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
@@ -58,7 +61,7 @@ export default function AdminPage() {
   
   // Role checking
   const userProfileRef = useMemo(() => (firestore && user) ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
-  const { data: profile, loading: profileLoading, error: profileError } = useDoc(userProfileRef);
+  const { data: profile, loading: profileLoading } = useDoc(userProfileRef);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -70,9 +73,9 @@ export default function AdminPage() {
   
   // Form States
   const [docTitle, setDocTitle] = useState('');
-  const [docUrl, setDocUrl] = useState('');
+  const [docFile, setDocFile] = useState<File | null>(null);
   const [galleryTitle, setGalleryTitle] = useState('');
-  const [galleryUrl, setGalleryUrl] = useState('');
+  const [galleryFile, setGalleryFile] = useState<File | null>(null);
   const [galleryCat, setGalleryCat] = useState('Workshops');
 
   // Queries
@@ -83,6 +86,15 @@ export default function AdminPage() {
   const { data: documents } = useCollection(docsQuery);
   const { data: galleryItems } = useCollection(galleryQuery);
   const { data: allUsers } = useCollection(usersQuery);
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,7 +129,6 @@ export default function AdminPage() {
         toast({ title: "Account created", description: "Authentication successful." });
       }
     } catch (error: any) {
-      console.error("Auth Error Code:", error.code);
       const friendlyMessage = getErrorMessage(error);
       setAuthError(friendlyMessage);
       toast({ 
@@ -130,49 +141,75 @@ export default function AdminPage() {
     }
   };
 
-  const addDocument = () => {
-    if (!firestore || !docTitle || !docUrl) return;
-    const data = {
-      title: docTitle,
-      fileUrl: docUrl,
-      uploadedAt: new Date().toISOString()
-    };
-    addDoc(collection(firestore, 'documents'), data)
-      .then(() => {
-        setDocTitle('');
-        setDocUrl('');
-        toast({ title: "Resource published" });
-      })
-      .catch((err) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: 'documents',
-          operation: 'create',
-          requestResourceData: data
-        }));
-      });
+  const addDocument = async () => {
+    if (!firestore || !docTitle || !docFile) {
+      toast({ variant: "destructive", title: "Missing Information", description: "Please provide a title and select a file." });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      const base64 = await fileToBase64(docFile);
+      const data = {
+        title: docTitle,
+        fileUrl: base64,
+        uploadedAt: new Date().toISOString()
+      };
+      
+      addDoc(collection(firestore, 'documents'), data)
+        .then(() => {
+          setDocTitle('');
+          setDocFile(null);
+          toast({ title: "Resource published", description: "The document is now available in the archive." });
+        })
+        .catch((err) => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: 'documents',
+            operation: 'create',
+            requestResourceData: data
+          }));
+        });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Upload Failed", description: "Could not process the selected file." });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const addGalleryImage = () => {
-    if (!firestore || !galleryTitle || !galleryUrl) return;
-    const data = {
-      title: galleryTitle,
-      imageUrl: galleryUrl,
-      category: galleryCat,
-      createdAt: new Date().toISOString()
-    };
-    addDoc(collection(firestore, 'gallery'), data)
-      .then(() => {
-        setGalleryTitle('');
-        setGalleryUrl('');
-        toast({ title: "Image posted to gallery" });
-      })
-      .catch((err) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: 'gallery',
-          operation: 'create',
-          requestResourceData: data
-        }));
-      });
+  const addGalleryImage = async () => {
+    if (!firestore || !galleryTitle || !galleryFile) {
+      toast({ variant: "destructive", title: "Missing Information", description: "Please provide a title and select an image." });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const base64 = await fileToBase64(galleryFile);
+      const data = {
+        title: galleryTitle,
+        imageUrl: base64,
+        category: galleryCat,
+        createdAt: new Date().toISOString()
+      };
+      
+      addDoc(collection(firestore, 'gallery'), data)
+        .then(() => {
+          setGalleryTitle('');
+          setGalleryFile(null);
+          toast({ title: "Image posted", description: "The image has been added to the gallery." });
+        })
+        .catch((err) => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: 'gallery',
+            operation: 'create',
+            requestResourceData: data
+          }));
+        });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Upload Failed", description: "Could not process the selected image." });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const deleteItem = (col: string, id: string) => {
@@ -214,7 +251,7 @@ export default function AdminPage() {
     return profile?.role === 'admin';
   }, [user, profile]);
 
-  if (authLoading || (user && profileLoading)) return (
+  if (authLoading || (user && !profile && user.email !== SUPER_ADMIN_EMAIL)) return (
     <div className="min-h-screen flex items-center justify-center bg-elf-cream pt-24">
       <div className="flex flex-col items-center gap-4">
         <Loader2 className="animate-spin text-elf-gold" size={48} />
@@ -326,8 +363,7 @@ export default function AdminPage() {
           
           <p className="text-elf-text-mid mb-8 leading-relaxed">
             Authentication successful, but you don't have administrative privileges yet. 
-            If you are <strong>{SUPER_ADMIN_EMAIL}</strong>, please ensure you've registered and refreshed. 
-            Others must be approved by an existing admin.
+            If you are <strong>{SUPER_ADMIN_EMAIL}</strong>, ensure your profile exists in the database.
           </p>
           
           <div className="text-left bg-elf-cream/50 p-6 rounded-2xl border border-elf-gold/10 mb-8 space-y-4">
@@ -396,12 +432,42 @@ export default function AdminPage() {
                   <Input placeholder="e.g. Preclinical Guide" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} className="rounded-xl" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">PDF URL</label>
-                  <Input placeholder="Direct download link" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl" />
+                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">File (PDF)</label>
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      accept=".pdf" 
+                      className="hidden" 
+                      id="doc-upload" 
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file && file.size > 1024 * 1024) {
+                          toast({ variant: "destructive", title: "File too large", description: "Please keep files under 1MB." });
+                          return;
+                        }
+                        setDocFile(file || null);
+                      }}
+                    />
+                    <Button 
+                      asChild 
+                      variant="outline" 
+                      className={`w-full h-10 rounded-xl justify-start px-3 font-normal ${docFile ? 'text-elf-green-dark border-elf-gold' : 'text-muted-foreground'}`}
+                    >
+                      <label htmlFor="doc-upload" className="cursor-pointer flex items-center gap-2">
+                        <FileUp size={16} />
+                        <span className="truncate">{docFile ? docFile.name : 'Select PDF file'}</span>
+                      </label>
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex items-end">
-                  <Button onClick={addDocument} className="w-full bg-elf-gold text-elf-green-dark font-bold h-10 rounded-full">
-                    <Plus size={18} className="mr-2"/> Add to Archive
+                  <Button 
+                    onClick={addDocument} 
+                    disabled={isSubmitting || !docFile || !docTitle}
+                    className="w-full bg-elf-gold text-elf-green-dark font-bold h-10 rounded-full"
+                  >
+                    {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18}/> : <Plus size={18} className="mr-2"/>}
+                    Add to Archive
                   </Button>
                 </div>
               </CardContent>
@@ -436,8 +502,33 @@ export default function AdminPage() {
                   <Input placeholder="e.g. Workshop" value={galleryTitle} onChange={(e) => setGalleryTitle(e.target.value)} className="rounded-xl" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Image URL</label>
-                  <Input placeholder="Direct image link" value={galleryUrl} onChange={(e) => setGalleryUrl(e.target.value)} className="rounded-xl" />
+                  <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Picture File</label>
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      id="gallery-upload" 
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file && file.size > 1024 * 1024) {
+                          toast({ variant: "destructive", title: "Image too large", description: "Please keep images under 1MB." });
+                          return;
+                        }
+                        setGalleryFile(file || null);
+                      }}
+                    />
+                    <Button 
+                      asChild 
+                      variant="outline" 
+                      className={`w-full h-10 rounded-xl justify-start px-3 font-normal ${galleryFile ? 'text-elf-green-dark border-elf-gold' : 'text-muted-foreground'}`}
+                    >
+                      <label htmlFor="gallery-upload" className="cursor-pointer flex items-center gap-2">
+                        <Upload size={16} />
+                        <span className="truncate">{galleryFile ? galleryFile.name : 'Select picture'}</span>
+                      </label>
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Category</label>
@@ -449,8 +540,13 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div className="flex items-end">
-                  <Button onClick={addGalleryImage} className="w-full bg-elf-gold text-elf-green-dark font-bold h-10 rounded-full">
-                    <Plus size={18} className="mr-2"/> Post Image
+                  <Button 
+                    onClick={addGalleryImage} 
+                    disabled={isSubmitting || !galleryFile || !galleryTitle}
+                    className="w-full bg-elf-gold text-elf-green-dark font-bold h-10 rounded-full"
+                  >
+                    {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18}/> : <Plus size={18} className="mr-2"/>}
+                    Post Image
                   </Button>
                 </div>
               </CardContent>
