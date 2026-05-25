@@ -16,8 +16,7 @@ import {
   orderBy, 
   deleteDoc,
   addDoc,
-  updateDoc,
-  serverTimestamp
+  updateDoc
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,7 +33,6 @@ import {
   Users as UsersIcon,
   ShieldCheck,
   X,
-  UserPlus,
   RefreshCw
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -113,15 +111,15 @@ export default function AdminPage() {
     try {
       if (isLogin) {
         const res = await signInWithEmailAndPassword(auth, email, password);
-        // Sync user profile to Firestore even on login to ensure visibility in Users tab
-        const syncData = {
+        // FORCE SYNC: Ensure user exists in Firestore collection to show in Users tab
+        const userRef = doc(firestore, 'users', res.user.uid);
+        setDoc(userRef, {
           email: res.user.email,
           displayName: res.user.email?.split('@')[0],
-          lastLogin: new Date().toISOString()
-        };
-        setDoc(doc(firestore, 'users', res.user.uid), syncData, { merge: true })
-          .catch(() => {});
-          
+          lastLogin: new Date().toISOString(),
+          // Don't overwrite role if it exists, but set 'user' if new
+        }, { merge: true });
+        
         toast({ title: "Welcome back", description: "Access granted." });
       } else {
         if (password.length < 6) throw { code: 'auth/weak-password' };
@@ -167,21 +165,18 @@ export default function AdminPage() {
         uploadedAt: new Date().toISOString()
       };
       
-      const savedTitle = docTitle;
-
       addDoc(collection(firestore, 'documents'), data)
         .then(() => {
-          toast({ title: "Upload Successful!", description: `"${savedTitle}" is now live.` });
-          // FORCED RESET
+          toast({ title: "Upload Successful!", description: "The resource is now live." });
+          // RESET FORM
           setDocTitle(''); 
           setDocUrl(''); 
           setDocFile(null);
-          setDocFileKey(prev => prev + 1); // This resets the file input physically
+          setDocFileKey(prev => prev + 1);
           setIsSubmitting(false);
         })
         .catch((err) => {
           setIsSubmitting(false);
-          toast({ variant: "destructive", title: "Upload Failed", description: "Permission denied." });
           errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'documents', operation: 'create', requestResourceData: data }));
         });
 
@@ -206,15 +201,14 @@ export default function AdminPage() {
       addDoc(collection(firestore, 'gallery'), data)
         .then(() => {
           toast({ title: "Gallery Updated!", description: "Moment successfully published." });
-          // FORCED RESET
+          // RESET FORM
           setGalleryCaption(''); 
           setGalleryFile(null);
-          setGalleryFileKey(prev => prev + 1); // This resets the file input physically
+          setGalleryFileKey(prev => prev + 1);
           setIsSubmitting(false);
         })
         .catch((err) => {
           setIsSubmitting(false);
-          toast({ variant: "destructive", title: "Gallery Error", description: "Permission denied." });
           errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'gallery', operation: 'create', requestResourceData: data }));
         });
 
@@ -239,14 +233,15 @@ export default function AdminPage() {
 
   const confirmDeleteUser = async () => {
     if (!firestore || !userToDelete) return;
-    try {
-      await deleteDoc(doc(firestore, 'users', userToDelete.id));
-      toast({ title: "User profile removed" });
-      setUserToDelete(null);
-    } catch (error) {
-       errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `users/${userToDelete.id}`, operation: 'delete' }));
-       setUserToDelete(null);
-    }
+    deleteDoc(doc(firestore, 'users', userToDelete.id))
+      .then(() => {
+        toast({ title: "User profile removed" });
+        setUserToDelete(null);
+      })
+      .catch(() => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `users/${userToDelete.id}`, operation: 'delete' }));
+        setUserToDelete(null);
+      });
   };
 
   const toggleAdmin = (userId: string, currentRole: string) => {
@@ -417,7 +412,8 @@ export default function AdminPage() {
               <div className="flex justify-center py-20"><Loader2 className="animate-spin text-elf-gold" size={32} /></div>
             ) : !allUsers || allUsers.length === 0 ? (
               <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-elf-gold/20 text-elf-text-light italic">
-                No registered user profiles found in the database.
+                No registered user profiles found in the database. 
+                <p className="mt-2 text-xs">Users appear here after their first login.</p>
               </div>
             ) : (
               <div className="grid gap-3">
