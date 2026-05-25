@@ -176,6 +176,7 @@ export default function AdminPage() {
             title: "Success!", 
             description: "Your resource has been published to the archive." 
           });
+          // Reset form automatically
           setDocTitle(''); 
           setDocUrl(''); 
           setDocFile(null);
@@ -216,6 +217,7 @@ export default function AdminPage() {
             title: "Success!", 
             description: "Image has been published to the gallery." 
           });
+          // Reset form automatically
           setGalleryCaption(''); 
           setGalleryFile(null);
         })
@@ -453,6 +455,7 @@ export default function AdminPage() {
                       <input type="file" accept="application/pdf" className="hidden" id="a-up" onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) setDocFile(file);
+                        // Reset input value to allow re-selecting same file if deleted
                         e.target.value = ''; 
                       }} />
                       <Button asChild variant="outline" className="flex-grow rounded-xl h-12 justify-start font-normal"><label htmlFor="a-up" className="cursor-pointer truncate">{docFile ? docFile.name : 'Choose PDF'}</label></Button>
@@ -487,6 +490,7 @@ export default function AdminPage() {
                     <input type="file" accept="image/*" className="hidden" id="g-up" onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) setGalleryFile(file);
+                      // Reset input value to allow re-selecting same file if deleted
                       e.target.value = ''; 
                     }} />
                     <Button asChild variant="outline" className="flex-grow rounded-xl h-12"><label htmlFor="g-up" className="truncate cursor-pointer">{galleryFile ? galleryFile.name : 'Choose Image'}</label></Button>
