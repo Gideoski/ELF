@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -15,18 +14,42 @@ import {
   query, 
   orderBy, 
   deleteDoc,
-  addDoc
+  addDoc,
+  updateDoc
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Image as ImageIcon, LogOut, Trash2, Plus, Eye, EyeOff, Loader2, Lock, UserPlus, LogIn, AlertCircle, ExternalLink, RefreshCcw, Copy, Check, ShieldAlert } from 'lucide-react';
+import { 
+  FileText, 
+  Image as ImageIcon, 
+  LogOut, 
+  Trash2, 
+  Plus, 
+  Eye, 
+  EyeOff, 
+  Loader2, 
+  Lock, 
+  UserPlus, 
+  LogIn, 
+  AlertCircle, 
+  ExternalLink, 
+  RefreshCcw, 
+  Copy, 
+  Check, 
+  ShieldAlert,
+  Users as UsersIcon,
+  ShieldCheck,
+  ShieldX
+} from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+const SUPER_ADMIN_EMAIL = 'gideonjackbara@gmail.com';
 
 export default function AdminPage() {
   const auth = useAuth();
@@ -55,9 +78,11 @@ export default function AdminPage() {
   // Queries
   const docsQuery = useMemo(() => firestore ? query(collection(firestore, 'documents'), orderBy('uploadedAt', 'desc')) : null, [firestore]);
   const galleryQuery = useMemo(() => firestore ? query(collection(firestore, 'gallery'), orderBy('createdAt', 'desc')) : null, [firestore]);
+  const usersQuery = useMemo(() => firestore ? query(collection(firestore, 'users'), orderBy('createdAt', 'desc')) : null, [firestore]);
   
   const { data: documents } = useCollection(docsQuery);
   const { data: galleryItems } = useCollection(galleryQuery);
+  const { data: allUsers } = useCollection(usersQuery);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +101,7 @@ export default function AdminPage() {
         if (firestore) {
           const userData = {
             email: res.user.email,
-            role: 'user',
+            role: res.user.email === SUPER_ADMIN_EMAIL ? 'admin' : 'user',
             displayName: email.split('@')[0],
             createdAt: new Date().toISOString()
           };
@@ -89,9 +114,10 @@ export default function AdminPage() {
               }));
             });
         }
-        toast({ title: "Account created", description: "Authentication successful. Checking profile..." });
+        toast({ title: "Account created", description: "Authentication successful." });
       }
     } catch (error: any) {
+      console.error("Auth Error Code:", error.code);
       const friendlyMessage = getErrorMessage(error);
       setAuthError(friendlyMessage);
       toast({ 
@@ -161,12 +187,32 @@ export default function AdminPage() {
       });
   };
 
+  const toggleAdmin = (userId: string, currentRole: string) => {
+    if (!firestore) return;
+    const newRole = currentRole === 'admin' ? 'user' : 'admin';
+    updateDoc(doc(firestore, 'users', userId), { role: newRole })
+      .then(() => toast({ title: `Role updated to ${newRole}` }))
+      .catch(() => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: `users/${userId}`,
+          operation: 'update',
+          requestResourceData: { role: newRole }
+        }));
+      });
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     toast({ title: "ID copied to clipboard" });
   };
+
+  const hasAdminAccess = useMemo(() => {
+    if (!user) return false;
+    if (user.email === SUPER_ADMIN_EMAIL) return true;
+    return profile?.role === 'admin';
+  }, [user, profile]);
 
   if (authLoading || (user && profileLoading)) return (
     <div className="min-h-screen flex items-center justify-center bg-elf-cream pt-24">
@@ -267,7 +313,7 @@ export default function AdminPage() {
     );
   }
 
-  if (!profile || profile.role !== 'admin') {
+  if (!hasAdminAccess) {
     return (
       <div className="min-h-screen bg-elf-cream flex flex-col items-center justify-center p-6 pt-32 pb-20">
         <Card className="max-w-xl w-full text-center p-8 md:p-12 rounded-3xl border-elf-gold/10 shadow-2xl bg-white animate-fade-in-up">
@@ -275,29 +321,18 @@ export default function AdminPage() {
             <Lock size={40} />
           </div>
           <h2 className="text-3xl md:text-4xl font-headline font-bold text-elf-green-dark mb-4">
-            {!profile ? 'Profile Not Found' : 'Access Restricted'}
+            Access Restricted
           </h2>
           
-          {profileError && (
-            <Alert variant="destructive" className="mb-6 text-left rounded-xl">
-              <ShieldAlert className="h-4 w-4" />
-              <AlertTitle>Database Error</AlertTitle>
-              <AlertDescription className="text-xs">
-                {getErrorMessage(profileError)}
-              </AlertDescription>
-            </Alert>
-          )}
-
           <p className="text-elf-text-mid mb-8 leading-relaxed">
-            {!profile 
-              ? "Authentication successful, but we couldn't find your profile document. This usually means the 'users' collection or your document needs to be created in Firestore."
-              : "Your profile is active, but you are currently a 'user'. An existing admin must elevate your role to 'admin' in the database."
-            }
+            Authentication successful, but you don't have administrative privileges yet. 
+            If you are <strong>{SUPER_ADMIN_EMAIL}</strong>, please ensure you've registered and refreshed. 
+            Others must be approved by an existing admin.
           </p>
           
           <div className="text-left bg-elf-cream/50 p-6 rounded-2xl border border-elf-gold/10 mb-8 space-y-4">
             <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">1. Verify your UID</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">Your UID</p>
               <div 
                 className="bg-white px-3 py-2 rounded-lg border border-elf-gold/5 text-[10px] font-mono break-all cursor-pointer flex justify-between items-center group active:scale-[0.98] transition-transform"
                 onClick={() => copyToClipboard(user.uid)}
@@ -306,30 +341,11 @@ export default function AdminPage() {
                 {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} className="opacity-40 group-hover:opacity-100" />}
               </div>
             </div>
-            
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-elf-text-light">2. Firestore Setup</p>
-              <p className="text-xs text-elf-text-mid">
-                In the Firebase Console, go to <strong>Firestore</strong>. Ensure there is a collection named <code className="bg-elf-gold/10 px-1 rounded text-elf-gold font-bold">users</code>. Create a document with the ID above and add:
-              </p>
-              <div className="bg-elf-green-dark/5 p-3 rounded-lg font-mono text-[10px] space-y-1 border border-elf-gold/10 mt-2">
-                <p>role: "admin"</p>
-                <p>email: "{user.email}"</p>
-              </div>
-              <a 
-                href="https://console.firebase.google.com/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-elf-gold text-xs flex items-center gap-1 hover:underline mt-2 font-bold"
-              >
-                Open Firebase Console <ExternalLink size={12} />
-              </a>
-            </div>
           </div>
 
           <div className="flex flex-col gap-3">
             <Button className="rounded-full w-full h-12 bg-elf-green-dark text-white font-bold" onClick={() => window.location.reload()}>
-              <RefreshCcw size={18} className="mr-2" /> I've updated my role, refresh
+              <RefreshCcw size={18} className="mr-2" /> Refresh Status
             </Button>
             <Button variant="ghost" className="text-elf-text-light" onClick={() => auth && signOut(auth)}>
               <LogOut size={16} className="mr-2" /> Sign out
@@ -357,12 +373,15 @@ export default function AdminPage() {
         </div>
 
         <Tabs defaultValue="archive" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8 h-14 bg-white border border-elf-gold/10 p-1 rounded-full overflow-hidden shadow-sm">
+          <TabsList className="grid w-full grid-cols-3 mb-8 h-14 bg-white border border-elf-gold/10 p-1 rounded-full overflow-hidden shadow-sm">
             <TabsTrigger value="archive" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold transition-all">
-              <FileText size={18} className="mr-2" /> Resource Archive
+              <FileText size={18} className="mr-2" /> Archive
             </TabsTrigger>
             <TabsTrigger value="gallery" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold transition-all">
-              <ImageIcon size={18} className="mr-2" /> Event Gallery
+              <ImageIcon size={18} className="mr-2" /> Gallery
+            </TabsTrigger>
+            <TabsTrigger value="users" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold transition-all">
+              <UsersIcon size={18} className="mr-2" /> User Management
             </TabsTrigger>
           </TabsList>
 
@@ -449,6 +468,55 @@ export default function AdminPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="users" className="space-y-8 animate-fade-in-up">
+            <div className="grid grid-cols-1 gap-4">
+              {allUsers?.map(u => (
+                <div key={u.id} className="bg-white p-6 rounded-2xl shadow-sm border border-elf-gold/5 flex justify-between items-center group">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${u.role === 'admin' ? 'bg-elf-gold/10 text-elf-gold' : 'bg-elf-green-dark/5 text-elf-text-light'}`}>
+                      <UsersIcon size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-elf-green-dark flex items-center gap-2">
+                        {u.email}
+                        {u.role === 'admin' && <ShieldCheck size={14} className="text-elf-gold" />}
+                        {u.email === SUPER_ADMIN_EMAIL && <span className="text-[8px] bg-elf-green-dark text-white px-1.5 py-0.5 rounded-full uppercase tracking-widest">Master</span>}
+                      </p>
+                      <p className="text-xs text-elf-text-light uppercase tracking-widest">
+                        Role: <span className="font-bold">{u.role}</span> • Joined {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'Unknown'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {u.email !== SUPER_ADMIN_EMAIL && (
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className={`rounded-full h-10 px-4 border-elf-gold/20 ${u.role === 'admin' ? 'text-destructive hover:bg-destructive/5' : 'text-elf-gold hover:bg-elf-gold/5'}`}
+                        onClick={() => toggleAdmin(u.id, u.role)}
+                      >
+                        {u.role === 'admin' ? (
+                          <><ShieldX size={16} className="mr-2" /> Revoke Admin</>
+                        ) : (
+                          <><ShieldCheck size={16} className="mr-2" /> Make Admin</>
+                        )}
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => deleteItem('users', u.id)} className="text-destructive">
+                        <Trash2 size={18} />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+              {!allUsers?.length && (
+                <div className="text-center py-20 text-elf-text-light italic">
+                  No registered users found in the database.
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>
