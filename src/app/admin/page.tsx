@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -72,7 +71,6 @@ export default function AdminPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [copied, setCopied] = false;
   
   // Archive States
   const [docTitle, setDocTitle] = useState('');
@@ -172,8 +170,16 @@ export default function AdminPage() {
         uploadedAt: new Date().toISOString()
       };
       
-      // Perform write (optimistic)
       addDoc(collection(firestore, 'documents'), data)
+        .then(() => {
+          toast({ 
+            title: "Success!", 
+            description: "Your resource has been published to the archive." 
+          });
+          setDocTitle(''); 
+          setDocUrl(''); 
+          setDocFile(null);
+        })
         .catch(err => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({ 
             path: 'documents', 
@@ -181,15 +187,6 @@ export default function AdminPage() {
             requestResourceData: data 
           }));
         });
-
-      // Clear form immediately
-      setDocTitle(''); 
-      setDocUrl(''); 
-      setDocFile(null);
-      toast({ 
-        title: "Success!", 
-        description: "Your resource has been published to the archive." 
-      });
     } catch (err) {
       toast({ 
         variant: "destructive", 
@@ -213,8 +210,15 @@ export default function AdminPage() {
         createdAt: new Date().toISOString()
       };
       
-      // Perform write (optimistic)
       addDoc(collection(firestore, 'gallery'), data)
+        .then(() => {
+          toast({ 
+            title: "Success!", 
+            description: "Image has been published to the gallery." 
+          });
+          setGalleryCaption(''); 
+          setGalleryFile(null);
+        })
         .catch(err => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({ 
             path: 'gallery', 
@@ -222,14 +226,6 @@ export default function AdminPage() {
             requestResourceData: data 
           }));
         });
-
-      // Clear form immediately
-      setGalleryCaption(''); 
-      setGalleryFile(null);
-      toast({ 
-        title: "Success!", 
-        description: "Image has been published to the gallery." 
-      });
     } catch (err) {
       toast({ 
         variant: "destructive", 
@@ -446,7 +442,7 @@ export default function AdminPage() {
                         <p className="text-xs font-bold text-blue-700 uppercase mb-2">How to get link:</p>
                         <ol className="text-[10px] text-blue-600 space-y-1 list-decimal ml-3">
                           <li>Upload PDF to Google Drive.</li>
-                          <li>Right-click file > Share > Share.</li>
+                          <li>Right-click file &gt; Share &gt; Share.</li>
                           <li>Change "Restricted" to "Anyone with the link".</li>
                           <li>Copy link and paste above.</li>
                         </ol>
@@ -457,7 +453,7 @@ export default function AdminPage() {
                       <input type="file" accept="application/pdf" className="hidden" id="a-up" onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) setDocFile(file);
-                        e.target.value = ''; // Reset input to allow re-selection
+                        e.target.value = ''; 
                       }} />
                       <Button asChild variant="outline" className="flex-grow rounded-xl h-12 justify-start font-normal"><label htmlFor="a-up" className="cursor-pointer truncate">{docFile ? docFile.name : 'Choose PDF'}</label></Button>
                       {docFile && <Button variant="ghost" className="text-destructive border" onClick={() => setDocFile(null)}><X size={18} /></Button>}
@@ -491,7 +487,7 @@ export default function AdminPage() {
                     <input type="file" accept="image/*" className="hidden" id="g-up" onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) setGalleryFile(file);
-                      e.target.value = ''; // Reset input to allow re-selection
+                      e.target.value = ''; 
                     }} />
                     <Button asChild variant="outline" className="flex-grow rounded-xl h-12"><label htmlFor="g-up" className="truncate cursor-pointer">{galleryFile ? galleryFile.name : 'Choose Image'}</label></Button>
                     {galleryFile && <Button variant="ghost" onClick={() => setGalleryFile(null)} className="h-12 border"><X size={16}/></Button>}
