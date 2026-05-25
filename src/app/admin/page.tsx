@@ -170,18 +170,21 @@ export default function AdminPage() {
         uploadedAt: new Date().toISOString()
       };
       
-      // Cache values for toast
-      const publishedTitle = docTitle;
-
-      // OPTIMISTIC RESET - Clear immediately so user sees UI change
-      setDocTitle(''); 
-      setDocUrl(''); 
-      setDocFile(null);
-      setDocFileKey(prev => prev + 1);
+      const savedTitle = docTitle;
 
       addDoc(collection(firestore, 'documents'), data)
         .then(() => {
-          toast({ title: "Resource Published!", description: `"${publishedTitle}" is now live.` });
+          // Success Feedback
+          toast({ 
+            title: "Upload Successful!", 
+            description: `"${savedTitle}" is now available in the archive.` 
+          });
+          
+          // Automatic Form Reset
+          setDocTitle(''); 
+          setDocUrl(''); 
+          setDocFile(null);
+          setDocFileKey(prev => prev + 1);
           setIsSubmitting(false);
         })
         .catch(err => {
@@ -215,14 +218,20 @@ export default function AdminPage() {
         createdAt: new Date().toISOString()
       };
 
-      // OPTIMISTIC RESET - Clear immediately
-      setGalleryCaption(''); 
-      setGalleryFile(null);
-      setGalleryFileKey(prev => prev + 1);
-      
+      const savedCaption = galleryCaption || "New moment";
+
       addDoc(collection(firestore, 'gallery'), data)
         .then(() => {
-          toast({ title: "Image Published!", description: "Moment successfully added to gallery." });
+          // Success Feedback
+          toast({ 
+            title: "Gallery Updated!", 
+            description: `"${savedCaption}" has been published to the gallery.` 
+          });
+
+          // Automatic Form Reset
+          setGalleryCaption(''); 
+          setGalleryFile(null);
+          setGalleryFileKey(prev => prev + 1);
           setIsSubmitting(false);
         })
         .catch(err => {
