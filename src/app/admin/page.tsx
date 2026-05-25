@@ -170,14 +170,18 @@ export default function AdminPage() {
         uploadedAt: new Date().toISOString()
       };
       
+      // Cache values for toast
+      const publishedTitle = docTitle;
+
+      // OPTIMISTIC RESET - Clear immediately so user sees UI change
+      setDocTitle(''); 
+      setDocUrl(''); 
+      setDocFile(null);
+      setDocFileKey(prev => prev + 1);
+
       addDoc(collection(firestore, 'documents'), data)
         .then(() => {
-          toast({ title: "Success!", description: "Resource published successfully." });
-          // Reset UI
-          setDocTitle(''); 
-          setDocUrl(''); 
-          setDocFile(null);
-          setDocFileKey(prev => prev + 1);
+          toast({ title: "Resource Published!", description: `"${publishedTitle}" is now live.` });
           setIsSubmitting(false);
         })
         .catch(err => {
@@ -190,12 +194,12 @@ export default function AdminPage() {
         });
 
     } catch (err) {
+      setIsSubmitting(false);
       toast({ 
         variant: "destructive", 
         title: "Publishing Failed", 
-        description: "There was an error processing your file. Please check the file size (Max 1MB)." 
+        description: "Error processing your file. Max size 1MB." 
       });
-      setIsSubmitting(false);
     }
   };
 
@@ -210,14 +214,15 @@ export default function AdminPage() {
         imageUrl: base64,
         createdAt: new Date().toISOString()
       };
+
+      // OPTIMISTIC RESET - Clear immediately
+      setGalleryCaption(''); 
+      setGalleryFile(null);
+      setGalleryFileKey(prev => prev + 1);
       
       addDoc(collection(firestore, 'gallery'), data)
         .then(() => {
-          toast({ title: "Success!", description: "Image published to gallery." });
-          // Reset UI
-          setGalleryCaption(''); 
-          setGalleryFile(null);
-          setGalleryFileKey(prev => prev + 1);
+          toast({ title: "Image Published!", description: "Moment successfully added to gallery." });
           setIsSubmitting(false);
         })
         .catch(err => {
@@ -230,12 +235,12 @@ export default function AdminPage() {
         });
 
     } catch (err) {
+      setIsSubmitting(false);
       toast({ 
         variant: "destructive", 
         title: "Upload Failed", 
-        description: "There was an error processing your picture. Please check the file size (Max 1MB)." 
+        description: "Error processing image. Max size 1MB." 
       });
-      setIsSubmitting(false);
     }
   };
 
@@ -462,12 +467,12 @@ export default function AdminPage() {
                           if (file) setDocFile(file);
                         }} 
                       />
-                      <Button asChild variant="outline" className="flex-grow rounded-xl h-12 justify-start font-normal">
+                      <Button asChild variant="outline" className="flex-grow rounded-xl h-12 justify-start font-normal" disabled={isSubmitting}>
                         <label htmlFor="a-up" className="cursor-pointer truncate">
                           {docFile ? docFile.name : 'Choose PDF'}
                         </label>
                       </Button>
-                      {docFile && <Button variant="ghost" className="text-destructive border" onClick={() => { setDocFile(null); setDocFileKey(prev => prev + 1); }}><X size={18} /></Button>}
+                      {docFile && <Button variant="ghost" disabled={isSubmitting} className="text-destructive border" onClick={() => { setDocFile(null); setDocFileKey(prev => prev + 1); }}><X size={18} /></Button>}
                     </div>
                   )}
                 </div>
@@ -521,12 +526,12 @@ export default function AdminPage() {
                         if (file) setGalleryFile(file);
                       }} 
                     />
-                    <Button asChild variant="outline" className="flex-grow rounded-xl h-12">
+                    <Button asChild variant="outline" className="flex-grow rounded-xl h-12" disabled={isSubmitting}>
                       <label htmlFor="g-up" className="truncate cursor-pointer">
                         {galleryFile ? galleryFile.name : 'Choose Image'}
                       </label>
                     </Button>
-                    {galleryFile && <Button variant="ghost" onClick={() => { setGalleryFile(null); setGalleryFileKey(prev => prev + 1); }} className="h-12 border"><X size={16}/></Button>}
+                    {galleryFile && <Button variant="ghost" disabled={isSubmitting} onClick={() => { setGalleryFile(null); setGalleryFileKey(prev => prev + 1); }} className="h-12 border"><X size={16}/></Button>}
                   </div>
                 </div>
                 <div className="flex items-end">
