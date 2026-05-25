@@ -169,16 +169,6 @@ export default function AdminPage() {
       };
       
       addDoc(collection(firestore, 'documents'), data)
-        .then(() => {
-          toast({ 
-            title: "Success!", 
-            description: "Resource published successfully." 
-          });
-          // Reset form state
-          setDocTitle(''); 
-          setDocUrl(''); 
-          setDocFile(null);
-        })
         .catch(err => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({ 
             path: 'documents', 
@@ -186,13 +176,23 @@ export default function AdminPage() {
             requestResourceData: data 
           }));
         });
+
+      // Optimistic Reset
+      toast({ 
+        title: "Success!", 
+        description: "Resource published successfully." 
+      });
+      setDocTitle(''); 
+      setDocUrl(''); 
+      setDocFile(null);
+      setIsSubmitting(false);
+
     } catch (err) {
       toast({ 
         variant: "destructive", 
         title: "Publishing Failed", 
         description: "There was an error processing your file. Please check the file size (Max 1MB)." 
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -210,15 +210,6 @@ export default function AdminPage() {
       };
       
       addDoc(collection(firestore, 'gallery'), data)
-        .then(() => {
-          toast({ 
-            title: "Success!", 
-            description: "Image published to gallery." 
-          });
-          // Reset form state
-          setGalleryCaption(''); 
-          setGalleryFile(null);
-        })
         .catch(err => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({ 
             path: 'gallery', 
@@ -226,13 +217,22 @@ export default function AdminPage() {
             requestResourceData: data 
           }));
         });
+
+      // Optimistic Reset
+      toast({ 
+        title: "Success!", 
+        description: "Image published to gallery." 
+      });
+      setGalleryCaption(''); 
+      setGalleryFile(null);
+      setIsSubmitting(false);
+
     } catch (err) {
       toast({ 
         variant: "destructive", 
         title: "Upload Failed", 
         description: "There was an error processing your picture. Please check the file size (Max 1MB)." 
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
