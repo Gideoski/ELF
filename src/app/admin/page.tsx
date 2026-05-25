@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -45,7 +44,8 @@ import {
   Upload,
   Info,
   Link as LinkIcon,
-  FileUp
+  FileUp,
+  X
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
@@ -486,31 +486,43 @@ export default function AdminPage() {
                   ) : (
                     <div className="space-y-2 animate-in fade-in duration-300">
                       <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Select PDF File</label>
-                      <div className="relative">
-                        <input 
-                          type="file" 
-                          accept="application/pdf" 
-                          className="hidden" 
-                          id="archive-upload" 
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file && file.size > 1024 * 1024) {
-                              toast({ variant: "destructive", title: "File too large", description: "This file exceeds 1MB. Please use the 'Link' option." });
-                              return;
-                            }
-                            setDocFile(file || null);
-                          }}
-                        />
-                        <Button 
-                          asChild 
-                          variant="outline" 
-                          className={`w-full h-12 rounded-xl justify-start px-3 font-normal ${docFile ? 'text-elf-green-dark border-elf-gold' : 'text-muted-foreground'}`}
-                        >
-                          <label htmlFor="archive-upload" className="cursor-pointer flex items-center gap-2">
-                            <FileUp size={18} />
-                            <span className="truncate">{docFile ? docFile.name : 'Choose PDF'}</span>
-                          </label>
-                        </Button>
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-grow">
+                          <input 
+                            type="file" 
+                            accept="application/pdf" 
+                            className="hidden" 
+                            id="archive-upload" 
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file && file.size > 1024 * 1024) {
+                                toast({ variant: "destructive", title: "File too large", description: "This file exceeds 1MB. Please use the 'Link' option." });
+                                return;
+                              }
+                              setDocFile(file || null);
+                            }}
+                          />
+                          <Button 
+                            asChild 
+                            variant="outline" 
+                            className={`w-full h-12 rounded-xl justify-start px-3 font-normal ${docFile ? 'text-elf-green-dark border-elf-gold' : 'text-muted-foreground'}`}
+                          >
+                            <label htmlFor="archive-upload" className="cursor-pointer flex items-center gap-2">
+                              <FileUp size={18} />
+                              <span className="truncate">{docFile ? docFile.name : 'Choose PDF'}</span>
+                            </label>
+                          </Button>
+                        </div>
+                        {docFile && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-destructive h-12 w-12 rounded-xl border border-destructive/20"
+                            onClick={() => setDocFile(null)}
+                          >
+                            <X size={18} />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   )}
@@ -582,31 +594,43 @@ export default function AdminPage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Select File</label>
-                  <div className="relative">
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      className="hidden" 
-                      id="gallery-upload" 
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file && file.size > 1024 * 1024) {
-                          toast({ variant: "destructive", title: "Image too large", description: "Please optimize images below 1MB." });
-                          return;
-                        }
-                        setGalleryFile(file || null);
-                      }}
-                    />
-                    <Button 
-                      asChild 
-                      variant="outline" 
-                      className={`w-full h-10 rounded-xl justify-start px-3 font-normal ${galleryFile ? 'text-elf-green-dark border-elf-gold' : 'text-muted-foreground'}`}
-                    >
-                      <label htmlFor="gallery-upload" className="cursor-pointer flex items-center gap-2">
-                        <Upload size={16} />
-                        <span className="truncate">{galleryFile ? galleryFile.name : 'Choose picture'}</span>
-                      </label>
-                    </Button>
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-grow">
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        id="gallery-upload" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file && file.size > 1024 * 1024) {
+                            toast({ variant: "destructive", title: "Image too large", description: "Please optimize images below 1MB." });
+                            return;
+                          }
+                          setGalleryFile(file || null);
+                        }}
+                      />
+                      <Button 
+                        asChild 
+                        variant="outline" 
+                        className={`w-full h-10 rounded-xl justify-start px-3 font-normal ${galleryFile ? 'text-elf-green-dark border-elf-gold' : 'text-muted-foreground'}`}
+                      >
+                        <label htmlFor="gallery-upload" className="cursor-pointer flex items-center gap-2">
+                          <Upload size={16} />
+                          <span className="truncate">{galleryFile ? galleryFile.name : 'Choose picture'}</span>
+                        </label>
+                      </Button>
+                    </div>
+                    {galleryFile && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-destructive h-10 w-10 rounded-xl"
+                        onClick={() => setGalleryFile(null)}
+                      >
+                        <X size={16} />
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-2">
