@@ -495,11 +495,16 @@ export default function AdminPage() {
                             id="archive-upload" 
                             onChange={(e) => {
                               const file = e.target.files?.[0];
-                              if (file && file.size > 1024 * 1024) {
-                                toast({ variant: "destructive", title: "File too large", description: "This file exceeds 1MB. Please use the 'Link' option." });
-                                return;
+                              if (file) {
+                                if (file.size > 1024 * 1024) {
+                                  toast({ variant: "destructive", title: "File too large", description: "This file exceeds 1MB. Please use the 'Link' option." });
+                                  e.target.value = "";
+                                  return;
+                                }
+                                setDocFile(file);
                               }
-                              setDocFile(file || null);
+                              // Reset value so selecting same file works again if removed
+                              e.target.value = "";
                             }}
                           />
                           <Button 
@@ -603,11 +608,15 @@ export default function AdminPage() {
                         id="gallery-upload" 
                         onChange={(e) => {
                           const file = e.target.files?.[0];
-                          if (file && file.size > 1024 * 1024) {
-                            toast({ variant: "destructive", title: "Image too large", description: "Please optimize images below 1MB." });
-                            return;
+                          if (file) {
+                            if (file.size > 1024 * 1024) {
+                              toast({ variant: "destructive", title: "Image too large", description: "Please optimize images below 1MB." });
+                              e.target.value = "";
+                              return;
+                            }
+                            setGalleryFile(file);
                           }
-                          setGalleryFile(file || null);
+                          e.target.value = "";
                         }}
                       />
                       <Button 
