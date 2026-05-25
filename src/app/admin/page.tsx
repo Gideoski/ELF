@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -162,7 +161,7 @@ export default function AdminPage() {
       addDoc(collection(firestore, 'documents'), data)
         .then(() => {
           toast({ title: "Upload Successful!", description: `"${savedTitle}" has been published.` });
-          // Instant Reset
+          // Resetting everything
           setDocTitle(''); 
           setDocUrl(''); 
           setDocFile(null);
@@ -171,6 +170,7 @@ export default function AdminPage() {
         })
         .catch((err) => {
           setIsSubmitting(false);
+          toast({ variant: "destructive", title: "Action Denied", description: "You don't have permission to write this data." });
           errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'documents', operation: 'create', requestResourceData: data }));
         });
 
@@ -194,8 +194,8 @@ export default function AdminPage() {
 
       addDoc(collection(firestore, 'gallery'), data)
         .then(() => {
-          toast({ title: "Gallery Updated!", description: "Image successfully added." });
-          // Instant Reset
+          toast({ title: "Gallery Updated!", description: "The image is now live." });
+          // Resetting everything
           setGalleryCaption(''); 
           setGalleryFile(null);
           setGalleryFileKey(prev => prev + 1);
@@ -203,12 +203,13 @@ export default function AdminPage() {
         })
         .catch((err) => {
           setIsSubmitting(false);
+          toast({ variant: "destructive", title: "Action Denied", description: "You don't have permission to update the gallery." });
           errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'gallery', operation: 'create', requestResourceData: data }));
         });
 
     } catch (err) {
       setIsSubmitting(false);
-      toast({ variant: "destructive", title: "Upload Failed", description: "Ensure file is under 1MB." });
+      toast({ variant: "destructive", title: "Upload Failed", description: "Ensure image is under 1MB." });
     }
   };
 
@@ -216,7 +217,7 @@ export default function AdminPage() {
     if (!firestore || !itemToDelete) return;
     deleteDoc(doc(firestore, itemToDelete.col, itemToDelete.id))
       .then(() => {
-        toast({ title: "Removed" });
+        toast({ title: "Removed Successfully" });
         setItemToDelete(null);
       })
       .catch(() => {
@@ -229,7 +230,7 @@ export default function AdminPage() {
     if (!firestore || !userToDelete) return;
     try {
       await deleteDoc(doc(firestore, 'users', userToDelete.id));
-      toast({ title: "User document removed" });
+      toast({ title: "User profile removed" });
       setUserToDelete(null);
     } catch (error) {
        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `users/${userToDelete.id}`, operation: 'delete' }));
@@ -313,11 +314,9 @@ export default function AdminPage() {
         <div className="flex justify-between items-center mb-12">
           <div>
             <h1 className="text-4xl font-headline text-elf-green-dark font-bold">Dashboard</h1>
-            <p className="text-elf-text-mid">Logged in: <b>{user.email}</b></p>
+            <p className="text-elf-text-mid">Admin: <b>{user.email}</b></p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" className="rounded-full" onClick={() => setIsSignOutDialogOpen(true)}><LogOut size={16} className="mr-2" /> Logout</Button>
-          </div>
+          <Button variant="outline" className="rounded-full" onClick={() => setIsSignOutDialogOpen(true)}><LogOut size={16} className="mr-2" /> Logout</Button>
         </div>
 
         <Tabs defaultValue="archive" className="w-full">
@@ -340,15 +339,6 @@ export default function AdminPage() {
                   {archiveMode === 'link' ? (
                     <div className="space-y-2">
                       <Input placeholder="Google Drive URL" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} />
-                      <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                        <p className="text-[11px] font-bold text-blue-800 uppercase tracking-widest mb-2">Instructions</p>
-                        <ol className="text-[10px] text-blue-600 space-y-1 list-decimal ml-3">
-                          <li>Upload PDF to Google Drive.</li>
-                          <li>Right-click file {'>'} Share {'>'} Share.</li>
-                          <li>Change "Restricted" to "Anyone with the link".</li>
-                          <li>Copy link and paste above.</li>
-                        </ol>
-                      </div>
                     </div>
                   ) : (
                     <div className="flex gap-2">
@@ -427,7 +417,7 @@ export default function AdminPage() {
                     <div className="flex gap-2">
                       {u.email !== SUPER_ADMIN_EMAIL && (
                         <Button variant="outline" size="sm" className="rounded-full px-6" onClick={() => toggleAdmin(u.id, u.role)}>
-                          {u.role === 'admin' ? 'Revoke Admin' : 'Approve Admin'}
+                          {u.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
                         </Button>
                       )}
                       {u.email !== SUPER_ADMIN_EMAIL && (
@@ -443,14 +433,14 @@ export default function AdminPage() {
 
         <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
           <AlertDialogContent className="rounded-2xl">
-            <AlertDialogHeader><AlertDialogTitle>Confirm Deletion</AlertDialogTitle><AlertDialogDescription>Delete "{itemToDelete?.title}"? This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogHeader><AlertDialogTitle>Confirm Deletion</AlertDialogTitle><AlertDialogDescription>Delete "{itemToDelete?.title}"? This cannot be undone.</AlertDialogDescription></AlertDialogHeader>
             <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive">Delete</AlertDialogAction></AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
         <AlertDialog open={!!userToDelete} onOpenChange={() => setUserToDelete(null)}>
           <AlertDialogContent className="rounded-2xl">
-            <AlertDialogHeader><AlertDialogTitle>Remove User Profile?</AlertDialogTitle><AlertDialogDescription>Remove {userToDelete?.email} from the Firestore profile list? (Note: They will still exist in Authentication until removed from the console).</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogHeader><AlertDialogTitle>Remove User Profile?</AlertDialogTitle><AlertDialogDescription>Remove {userToDelete?.email} from the Firestore profile list?</AlertDialogDescription></AlertDialogHeader>
             <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteUser} className="bg-destructive">Confirm</AlertDialogAction></AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
