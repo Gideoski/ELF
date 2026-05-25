@@ -290,20 +290,20 @@ export default function AdminPage() {
     if (!firestore || !userToDelete) return;
     
     try {
-      // Delete Firestore profile
+      // 1. Delete Firestore profile
       await deleteDoc(doc(firestore, 'users', userToDelete.id));
       
       toast({ title: "Account removed", description: `${userToDelete.email} has been deleted.` });
       
-      // If deleting self
+      // 2. If deleting self, handle sign out and optional auth deletion
       if (user?.uid === userToDelete.id) {
-        // We attempt to delete the auth account, but it usually requires a recent login.
-        // If it fails, we at least sign them out since their profile is gone.
         if (auth?.currentUser) {
           try {
+            // Attempt to delete auth account (requires recent login)
             await deleteAuthUser(auth.currentUser);
           } catch (e) {
-            console.log("Auth user deletion skipped or requires re-auth. Signing out instead.");
+            // If sensitive operation fails (needs re-auth), at least sign them out
+            console.log("Auth user deletion skipped. Signing out instead.");
             await signOut(auth);
           }
         }
