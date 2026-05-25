@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -17,8 +16,7 @@ import {
   orderBy, 
   deleteDoc,
   addDoc,
-  updateDoc,
-  serverTimestamp
+  updateDoc
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,44 +24,26 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   FileText, 
-  Image as ImageIcon, 
   LogOut, 
   Trash2, 
-  Plus, 
   Eye, 
   EyeOff, 
   Loader2, 
   Lock, 
-  UserPlus, 
-  LogIn, 
-  AlertCircle, 
-  RefreshCcw, 
   Copy, 
   Check, 
-  ShieldAlert,
   Users as UsersIcon,
   ShieldCheck,
-  ShieldX,
-  Upload,
-  Info,
-  Link as LinkIcon,
-  FileUp,
   X,
-  UserCircle
+  UserCircle,
+  UserMinus
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -84,14 +64,13 @@ export default function AdminPage() {
   const { user, loading: authLoading } = useUser();
   
   const userProfileRef = useMemo(() => (firestore && user) ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
-  const { data: profile, loading: profileLoading } = useDoc(userProfileRef);
+  const { data: profile } = useDoc(userProfileRef);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   
   // Archive States
@@ -110,7 +89,7 @@ export default function AdminPage() {
   const [itemToDelete, setItemToDelete] = useState<{ col: string, id: string, title?: string } | null>(null);
   const [userToDelete, setUserToDelete] = useState<{ id: string, email: string } | null>(null);
 
-  // Queries - Removed orderBy from users to ensure manually created docs without timestamps appear
+  // Queries
   const docsQuery = useMemo(() => firestore ? query(collection(firestore, 'documents'), orderBy('uploadedAt', 'desc')) : null, [firestore]);
   const galleryQuery = useMemo(() => firestore ? query(collection(firestore, 'gallery'), orderBy('createdAt', 'desc')) : null, [firestore]);
   const usersQuery = useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
@@ -132,7 +111,6 @@ export default function AdminPage() {
     e.preventDefault();
     if (!auth) return;
     setIsSubmitting(true);
-    setAuthError(null);
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
@@ -161,12 +139,10 @@ export default function AdminPage() {
         toast({ title: "Account created", description: "Authentication successful." });
       }
     } catch (error: any) {
-      const friendlyMessage = getErrorMessage(error);
-      setAuthError(friendlyMessage);
       toast({ 
         variant: "destructive", 
         title: "Authentication Failed", 
-        description: friendlyMessage 
+        description: getErrorMessage(error) 
       });
     } finally {
       setIsSubmitting(false);
@@ -245,12 +221,17 @@ export default function AdminPage() {
 
   const confirmDeleteUser = async () => {
     if (!firestore || !userToDelete) return;
+    const isSelf = user?.uid === userToDelete.id;
     try {
       await deleteDoc(doc(firestore, 'users', userToDelete.id));
-      toast({ title: "Account removed" });
-      if (user?.uid === userToDelete.id) {
-        if (auth?.currentUser) {
-          try { await deleteAuthUser(auth.currentUser); } catch (e) { await signOut(auth); }
+      toast({ title: "Account data removed from database" });
+      
+      if (isSelf && auth?.currentUser) {
+        try { 
+          await deleteAuthUser(auth.currentUser);
+          toast({ title: "Authentication account deleted" });
+        } catch (e) { 
+          await signOut(auth); 
         }
       }
       setUserToDelete(null);
@@ -281,7 +262,6 @@ export default function AdminPage() {
     return profile?.role === 'admin';
   }, [user, profile]);
 
-  // Create Profile Helper for Super Admin if missing
   const createSuperAdminProfile = () => {
     if (!firestore || !user || user.email !== SUPER_ADMIN_EMAIL) return;
     const data = {
@@ -349,11 +329,10 @@ export default function AdminPage() {
           </div>
           <h2 className="text-3xl font-headline font-bold text-elf-green-dark mb-4">Access Restricted</h2>
           <p className="text-elf-text-mid mb-8">
-            Your account is verified, but you need administrative permissions. 
-            If you are <strong>{SUPER_ADMIN_EMAIL}</strong>, ensure you have created your profile in the console.
+            Your account is verified, but you need administrative permissions to view the dashboard. 
           </p>
           <div className="text-left bg-elf-cream/50 p-6 rounded-2xl border border-elf-gold/10 mb-8">
-            <p className="text-xs font-bold uppercase tracking-widest text-elf-text-light mb-2">Your UID</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-elf-text-light mb-2">Your Profile ID</p>
             <div className="bg-white px-3 py-2 rounded-lg border text-[10px] font-mono break-all flex justify-between items-center" onClick={() => copyToClipboard(user.uid)}>
               <span className="truncate">{user.uid}</span>
               {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} className="opacity-40" />}
@@ -368,6 +347,17 @@ export default function AdminPage() {
             <Button variant="ghost" className="text-elf-text-light" onClick={() => auth && signOut(auth)}>
               <LogOut size={16} className="mr-2" /> Sign out
             </Button>
+            
+            <div className="pt-6 border-t mt-4">
+              <p className="text-xs text-elf-text-light mb-4 italic">No longer wish to be a member?</p>
+              <Button 
+                variant="outline" 
+                className="rounded-full w-full h-12 text-destructive border-destructive/20"
+                onClick={() => setUserToDelete({ id: user.uid, email: user.email! })}
+              >
+                <UserMinus size={18} className="mr-2" /> Delete My Account
+              </Button>
+            </div>
           </div>
         </Card>
       </div>
@@ -382,20 +372,30 @@ export default function AdminPage() {
             <h1 className="text-4xl font-headline text-elf-green-dark font-bold">Admin Dashboard</h1>
             <p className="text-elf-text-mid flex items-center gap-2 mt-1">Logged in as <span className="font-bold">{user.email}</span></p>
           </div>
-          <AlertDialog open={isSignOutDialogOpen} onOpenChange={setIsSignOutDialogOpen}>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" className="text-destructive border-destructive/20 rounded-full px-6">
-                <LogOut size={18} className="mr-2" /> End Session
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="rounded-2xl">
-              <AlertDialogHeader><AlertDialogTitle>Log out?</AlertDialogTitle></AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleSignOut} className="bg-destructive text-white rounded-full">Sign Out</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <div className="flex gap-3">
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="text-destructive border-destructive/20 rounded-full px-4 h-10"
+              onClick={() => setUserToDelete({ id: user.uid, email: user.email! })}
+            >
+              <UserMinus size={16} className="mr-2" /> Delete My Account
+            </Button>
+            <AlertDialog open={isSignOutDialogOpen} onOpenChange={setIsSignOutDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" className="text-elf-text-mid border-elf-gold/20 rounded-full px-6 h-10">
+                  <LogOut size={18} className="mr-2" /> End Session
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="rounded-2xl">
+                <AlertDialogHeader><AlertDialogTitle>Log out?</AlertDialogTitle></AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleSignOut} className="bg-destructive text-white rounded-full">Sign Out</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
 
         <Tabs defaultValue="archive" className="w-full">
@@ -504,11 +504,6 @@ export default function AdminPage() {
                     </div>
                   </div>
                 ))}
-                {(!allUsers || allUsers.length === 0) && (
-                  <div className="text-center py-20 text-elf-text-light italic border-2 border-dashed border-elf-gold/10 rounded-3xl">
-                    No users found. If you created your profile manually, ensure the "users" collection exists.
-                  </div>
-                )}
               </div>
             )}
           </TabsContent>
@@ -527,10 +522,15 @@ export default function AdminPage() {
 
         <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
           <AlertDialogContent className="rounded-2xl">
-            <AlertDialogHeader><AlertDialogTitle>Delete account for {userToDelete?.email}?</AlertDialogTitle></AlertDialogHeader>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete account for {userToDelete?.email}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action is permanent and cannot be undone. All your profile data will be removed from the NiMSA-AMSA ELF database.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDeleteUser} className="bg-destructive text-white rounded-full">Delete User</AlertDialogAction>
+              <AlertDialogAction onClick={confirmDeleteUser} className="bg-destructive text-white rounded-full">Confirm Deletion</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
