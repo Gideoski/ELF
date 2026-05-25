@@ -37,7 +37,7 @@ import {
   UserCircle,
   UserMinus
 } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -61,6 +61,7 @@ export default function AdminPage() {
   const auth = useAuth();
   const firestore = useFirestore();
   const { user, loading: authLoading } = useUser();
+  const { toast } = useToast();
   
   const userProfileRef = useMemo(() => (firestore && user) ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: profile } = useDoc(userProfileRef);
@@ -175,13 +176,12 @@ export default function AdminPage() {
 
       addDoc(collection(firestore, 'documents'), data)
         .then(() => {
-          // Success Feedback
           toast({ 
             title: "Upload Successful!", 
             description: `"${savedTitle}" is now available in the archive.` 
           });
           
-          // Automatic Form Reset
+          // Clear and reset form
           setDocTitle(''); 
           setDocUrl(''); 
           setDocFile(null);
@@ -190,6 +190,7 @@ export default function AdminPage() {
         })
         .catch(err => {
           setIsSubmitting(false);
+          toast({ variant: "destructive", title: "Upload Failed", description: "You don't have permission to post resources." });
           errorEmitter.emit('permission-error', new FirestorePermissionError({ 
             path: 'documents', 
             operation: 'create', 
@@ -223,13 +224,12 @@ export default function AdminPage() {
 
       addDoc(collection(firestore, 'gallery'), data)
         .then(() => {
-          // Success Feedback
           toast({ 
             title: "Gallery Updated!", 
             description: `"${savedCaption}" has been published to the gallery.` 
           });
 
-          // Automatic Form Reset
+          // Clear and reset form
           setGalleryCaption(''); 
           setGalleryFile(null);
           setGalleryFileKey(prev => prev + 1);
@@ -237,6 +237,7 @@ export default function AdminPage() {
         })
         .catch(err => {
           setIsSubmitting(false);
+          toast({ variant: "destructive", title: "Upload Failed", description: "You don't have permission to update the gallery." });
           errorEmitter.emit('permission-error', new FirestorePermissionError({ 
             path: 'gallery', 
             operation: 'create', 
@@ -486,7 +487,12 @@ export default function AdminPage() {
                     </div>
                   )}
                 </div>
-                <div className="flex justify-end"><Button onClick={addDocument} disabled={isSubmitting || !docTitle || (archiveMode === 'file' && !docFile) || (archiveMode === 'link' && !docUrl)} className="bg-elf-gold text-elf-green-dark font-bold rounded-full px-8">Publish</Button></div>
+                <div className="flex justify-end">
+                  <Button onClick={addDocument} disabled={isSubmitting || !docTitle || (archiveMode === 'file' && !docFile) || (archiveMode === 'link' && !docUrl)} className="bg-elf-gold text-elf-green-dark font-bold rounded-full px-8">
+                    {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : null}
+                    Publish
+                  </Button>
+                </div>
               </CardContent>
             </Card>
             
@@ -545,7 +551,10 @@ export default function AdminPage() {
                   </div>
                 </div>
                 <div className="flex items-end">
-                  <Button onClick={addGalleryImage} disabled={isSubmitting || !galleryFile} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold">Publish</Button>
+                  <Button onClick={addGalleryImage} disabled={isSubmitting || !galleryFile} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold">
+                    {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : null}
+                    Publish
+                  </Button>
                 </div>
               </CardContent>
             </Card>
