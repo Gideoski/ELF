@@ -143,7 +143,7 @@ export default function AdminPage() {
         uploadedAt: new Date().toISOString()
       };
       
-      // Reset form instantly for a smooth experience
+      // Reset form instantly
       setDocTitle('');
       setDocUrl('');
       setDocFile(null);
@@ -381,7 +381,7 @@ export default function AdminPage() {
 
           <TabsContent value="users" className="space-y-6">
             <div className="flex justify-between items-center mb-4">
-               <h3 className="font-headline text-3xl text-elf-green-dark italic">Manage Members</h3>
+               <h3 className="font-headline text-3xl text-elf-green-dark italic">Registered Members</h3>
             </div>
             {usersLoading ? (
               <div className="flex justify-center py-20"><Loader2 className="animate-spin text-elf-gold" size={40} /></div>
@@ -398,9 +398,9 @@ export default function AdminPage() {
                       <div className={`w-14 h-14 rounded-full flex items-center justify-center ${u.role === 'admin' ? 'bg-elf-gold/10 text-elf-gold' : 'bg-elf-green-dark/5 text-elf-text-mid'}`}>
                         <UsersIcon size={24} />
                       </div>
-                      <div>
-                        <p className="font-bold text-elf-green-dark text-lg flex items-center gap-2">
-                          {u.email} {u.role === 'admin' && <ShieldCheck size={18} className="text-elf-gold" />}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-elf-green-dark text-lg flex items-center gap-2 truncate">
+                          {u.email} {u.role === 'admin' && <ShieldCheck size={18} className="text-elf-gold shrink-0" />}
                         </p>
                         <div className="flex items-center gap-3 mt-1">
                           <span className={`px-3 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-widest ${u.role === 'admin' ? 'bg-elf-gold text-white' : 'bg-elf-green-dark/10 text-elf-green-dark'}`}>
@@ -409,14 +409,16 @@ export default function AdminPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex items-center gap-3">
                       {u.email !== SUPER_ADMIN_EMAIL && (
                         <Button variant={u.role === 'admin' ? "outline" : "default"} size="sm" className="rounded-full px-6 font-bold" onClick={() => toggleAdmin(u.id, u.role)}>
                           {u.role === 'admin' ? 'Revoke Admin' : 'Approve Admin'}
                         </Button>
                       )}
                       {u.email !== SUPER_ADMIN_EMAIL && (
-                        <Button variant="ghost" size="icon" onClick={() => setUserToDelete({ id: u.id, email: u.email })} className="text-destructive hover:bg-destructive/10"><Trash2 size={20} /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => setUserToDelete({ id: u.id, email: u.email })} className="text-destructive hover:bg-destructive/10">
+                          <Trash2 size={20} />
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -435,8 +437,8 @@ export default function AdminPage() {
 
         <AlertDialog open={!!userToDelete} onOpenChange={() => setUserToDelete(null)}>
           <AlertDialogContent className="rounded-3xl">
-            <AlertDialogHeader><AlertDialogTitle>Remove User Record?</AlertDialogTitle><AlertDialogDescription>This will delete {userToDelete?.email}'s profile from the list. They will reappear if they log in again.</AlertDialogDescription></AlertDialogHeader>
-            <AlertDialogFooter><AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteUser} className="bg-destructive hover:bg-destructive/90 rounded-full px-8">Remove Profile</AlertDialogAction></AlertDialogFooter>
+            <AlertDialogHeader><AlertDialogTitle>Delete User Profile?</AlertDialogTitle><AlertDialogDescription>This will permanently remove {userToDelete?.email}'s account metadata from the dashboard list. Note: This does not delete their login credentials, only their access record.</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogFooter><AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteUser} className="bg-destructive hover:bg-destructive/90 rounded-full px-8">Delete Account</AlertDialogAction></AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
