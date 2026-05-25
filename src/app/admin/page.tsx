@@ -69,11 +69,9 @@ export default function AdminPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Forms Keys for instant resets
   const [docFormKey, setDocFormKey] = useState(Date.now());
   const [galleryFormKey, setGalleryFormKey] = useState(Date.now() + 1);
 
-  // Form States
   const [docTitle, setDocTitle] = useState('');
   const [docUrl, setDocUrl] = useState('');
   const [docFile, setDocFile] = useState<File | null>(null);
@@ -82,12 +80,10 @@ export default function AdminPage() {
   const [galleryCaption, setGalleryCaption] = useState('');
   const [galleryFile, setGalleryFile] = useState<File | null>(null);
 
-  // Deletion States
   const [isSignOutDialogOpen, setIsSignOutDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ col: string, id: string, title?: string } | null>(null);
   const [userToDelete, setUserToDelete] = useState<{ id: string, email: string } | null>(null);
 
-  // Queries
   const docsQuery = useMemo(() => firestore ? query(collection(firestore, 'documents'), orderBy('uploadedAt', 'desc')) : null, [firestore]);
   const galleryQuery = useMemo(() => firestore ? query(collection(firestore, 'gallery'), orderBy('createdAt', 'desc')) : null, [firestore]);
   const usersQuery = useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
@@ -153,7 +149,6 @@ export default function AdminPage() {
       
       toast({ title: "Upload Successful!", description: "The resource is now live in the archive." });
       
-      // Instant Reset
       setDocTitle('');
       setDocUrl('');
       setDocFile(null);
@@ -185,7 +180,6 @@ export default function AdminPage() {
       
       toast({ title: "Gallery Updated!", description: "The image has been published to the gallery." });
       
-      // Instant Reset
       setGalleryCaption('');
       setGalleryFile(null);
       setGalleryFormKey(Date.now() + 1);
@@ -287,7 +281,7 @@ export default function AdminPage() {
         <Card className="max-w-xl w-full text-center p-12 rounded-3xl bg-white shadow-2xl">
           <div className="w-20 h-20 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto mb-6"><Lock size={40} /></div>
           <h2 className="text-3xl font-headline font-bold text-elf-green-dark mb-4">Admin Access Required</h2>
-          <p className="text-elf-text-mid mb-8">Your account is registered, but you need admin approval. Contact {SUPER_ADMIN_EMAIL} to activate your dashboard.</p>
+          <p className="text-elf-text-mid mb-8">Your account is registered, but you need admin approval. Contact the administrator to activate your dashboard.</p>
           <Button variant="outline" onClick={() => auth && signOut(auth)} className="rounded-full">Sign Out</Button>
         </Card>
       </div>
@@ -430,7 +424,6 @@ export default function AdminPage() {
           </TabsContent>
         </Tabs>
 
-        {/* Delete Confirmation */}
         <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
           <AlertDialogContent className="rounded-3xl">
             <AlertDialogHeader><AlertDialogTitle>Confirm Removal</AlertDialogTitle><AlertDialogDescription>Are you sure you want to remove "{itemToDelete?.title}"? This action is permanent.</AlertDialogDescription></AlertDialogHeader>
@@ -438,7 +431,6 @@ export default function AdminPage() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* User Delete Confirmation */}
         <AlertDialog open={!!userToDelete} onOpenChange={() => setUserToDelete(null)}>
           <AlertDialogContent className="rounded-3xl">
             <AlertDialogHeader><AlertDialogTitle>Remove User Record?</AlertDialogTitle><AlertDialogDescription>This will delete {userToDelete?.email}'s profile from the list. They will reappear if they log in again.</AlertDialogDescription></AlertDialogHeader>
@@ -446,7 +438,6 @@ export default function AdminPage() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Sign Out Confirmation */}
         <AlertDialog open={isSignOutDialogOpen} onOpenChange={setIsSignOutDialogOpen}>
           <AlertDialogContent className="rounded-3xl">
             <AlertDialogHeader><AlertDialogTitle>End Session?</AlertDialogTitle><AlertDialogDescription>You will be logged out of the administrative dashboard.</AlertDialogDescription></AlertDialogHeader>
