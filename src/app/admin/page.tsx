@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -17,6 +16,7 @@ import {
   deleteDoc,
   addDoc,
   updateDoc,
+  serverTimestamp
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,7 +32,8 @@ import {
   Lock, 
   Users as UsersIcon,
   ShieldCheck,
-  X
+  X,
+  Plus
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
@@ -68,19 +69,20 @@ export default function AdminPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Archive States
+  // Forms Keys for instant resets
+  const [docFormKey, setDocFormKey] = useState(Date.now());
+  const [galleryFormKey, setGalleryFormKey] = useState(Date.now() + 1);
+
+  // Form States
   const [docTitle, setDocTitle] = useState('');
   const [docUrl, setDocUrl] = useState('');
   const [docFile, setDocFile] = useState<File | null>(null);
   const [archiveMode, setArchiveMode] = useState<'link' | 'file'>('link');
-  const [docFileKey, setDocFileKey] = useState(Date.now());
   
-  // Gallery States
   const [galleryCaption, setGalleryCaption] = useState('');
   const [galleryFile, setGalleryFile] = useState<File | null>(null);
-  const [galleryFileKey, setGalleryFileKey] = useState(Date.now() + 1);
 
-  // Confirmation States
+  // Deletion States
   const [isSignOutDialogOpen, setIsSignOutDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ col: string, id: string, title?: string } | null>(null);
   const [userToDelete, setUserToDelete] = useState<{ id: string, email: string } | null>(null);
@@ -93,19 +95,6 @@ export default function AdminPage() {
   const { data: documents } = useCollection(docsQuery);
   const { data: galleryItems } = useCollection(galleryQuery);
   const { data: allUsers, loading: usersLoading } = useCollection(usersQuery);
-
-  // Sync current user profile
-  useEffect(() => {
-    if (user && firestore && !authLoading) {
-      const userRef = doc(firestore, 'users', user.uid);
-      setDoc(userRef, {
-        email: user.email,
-        role: user.email === SUPER_ADMIN_EMAIL ? 'admin' : (profile?.role || 'user'),
-        displayName: user.email?.split('@')[0],
-        lastActive: new Date().toISOString()
-      }, { merge: true });
-    }
-  }, [user, firestore, authLoading, profile?.role]);
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -122,13 +111,7 @@ export default function AdminPage() {
     setIsSubmitting(true);
     try {
       if (isLogin) {
-        const res = await signInWithEmailAndPassword(auth, email, password);
-        const userRef = doc(firestore, 'users', res.user.uid);
-        await setDoc(userRef, {
-          email: res.user.email,
-          displayName: res.user.email?.split('@')[0],
-          lastLogin: new Date().toISOString(),
-        }, { merge: true });
+        await signInWithEmailAndPassword(auth, email, password);
         toast({ title: "Welcome back", description: "Access granted." });
       } else {
         if (password.length < 6) throw { code: 'auth/weak-password' };
@@ -137,7 +120,8 @@ export default function AdminPage() {
           email: res.user.email,
           role: res.user.email === SUPER_ADMIN_EMAIL ? 'admin' : 'user',
           displayName: email.split('@')[0],
-          createdAt: new Date().toISOString()
+          createdAt: serverTimestamp(),
+          lastActive: serverTimestamp()
         };
         await setDoc(doc(firestore, 'users', res.user.uid), userData);
         toast({ title: "Account created", description: "Authentication successful." });
@@ -146,13 +130,6 @@ export default function AdminPage() {
       toast({ variant: "destructive", title: "Auth Failed", description: getErrorMessage(error) });
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleSignOut = async () => {
-    if (auth) {
-      await signOut(auth);
-      toast({ title: "Signed out" });
     }
   };
 
@@ -174,20 +151,20 @@ export default function AdminPage() {
       
       await addDoc(collection(firestore, 'documents'), data);
       
-      toast({ title: "Upload Successful!", description: "The resource is now live." });
+      toast({ title: "Upload Successful!", description: "The resource is now live in the archive." });
       
-      setDocTitle(''); 
-      setDocUrl(''); 
+      // Instant Reset
+      setDocTitle('');
+      setDocUrl('');
       setDocFile(null);
-      setDocFileKey(Date.now());
+      setDocFormKey(Date.now());
       setIsSubmitting(false);
-
     } catch (err: any) {
       setIsSubmitting(false);
       if (err.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'documents', operation: 'create' }));
       } else {
-        toast({ variant: "destructive", title: "Upload Error", description: "Error saving document." });
+        toast({ variant: "destructive", title: "Upload Error", description: "Could not save document." });
       }
     }
   };
@@ -206,28 +183,36 @@ export default function AdminPage() {
 
       await addDoc(collection(firestore, 'gallery'), data);
       
-      toast({ title: "Gallery Updated!", description: "Moment successfully published." });
+      toast({ title: "Gallery Updated!", description: "The image has been published to the gallery." });
       
-      setGalleryCaption(''); 
+      // Instant Reset
+      setGalleryCaption('');
       setGalleryFile(null);
-      setGalleryFileKey(Date.now() + 1);
+      setGalleryFormKey(Date.now() + 1);
       setIsSubmitting(false);
-
     } catch (err: any) {
       setIsSubmitting(false);
       if (err.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'gallery', operation: 'create' }));
       } else {
-        toast({ variant: "destructive", title: "Upload Error", description: "Error saving image." });
+        toast({ variant: "destructive", title: "Upload Error", description: "Could not save gallery item." });
       }
     }
+  };
+
+  const toggleAdmin = (userId: string, currentRole: string) => {
+    if (!firestore) return;
+    const newRole = currentRole === 'admin' ? 'user' : 'admin';
+    updateDoc(doc(firestore, 'users', userId), { role: newRole })
+      .then(() => toast({ title: `Updated to ${newRole}` }))
+      .catch(() => errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `users/${userId}`, operation: 'update' })));
   };
 
   const confirmDelete = () => {
     if (!firestore || !itemToDelete) return;
     deleteDoc(doc(firestore, itemToDelete.col, itemToDelete.id))
       .then(() => {
-        toast({ title: "Removed Successfully" });
+        toast({ title: "Removed successfully" });
         setItemToDelete(null);
       })
       .catch(() => {
@@ -236,7 +221,7 @@ export default function AdminPage() {
       });
   };
 
-  const confirmDeleteUser = async () => {
+  const confirmDeleteUser = () => {
     if (!firestore || !userToDelete) return;
     deleteDoc(doc(firestore, 'users', userToDelete.id))
       .then(() => {
@@ -247,14 +232,6 @@ export default function AdminPage() {
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `users/${userToDelete.id}`, operation: 'delete' }));
         setUserToDelete(null);
       });
-  };
-
-  const toggleAdmin = (userId: string, currentRole: string) => {
-    if (!firestore) return;
-    const newRole = currentRole === 'admin' ? 'user' : 'admin';
-    updateDoc(doc(firestore, 'users', userId), { role: newRole })
-      .then(() => toast({ title: `Role updated to ${newRole}` }))
-      .catch(() => errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `users/${userId}`, operation: 'update', requestResourceData: { role: newRole } })));
   };
 
   const hasAdminAccess = useMemo(() => {
@@ -268,8 +245,8 @@ export default function AdminPage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-elf-green-dark flex flex-col items-center justify-center p-6 pt-32 pb-20">
-        <Card className="w-full max-w-md bg-white rounded-3xl overflow-hidden border-none animate-fade-in-up">
-          <CardHeader className="text-center pb-6 pt-10 border-b border-elf-gold/10">
+        <Card className="w-full max-w-md bg-white rounded-3xl overflow-hidden border-none shadow-2xl">
+          <CardHeader className="text-center pb-6 pt-10">
             <CardTitle className="text-3xl font-headline italic text-elf-green-dark">
               {isLogin ? 'Admin Portal' : 'Register Admin'}
             </CardTitle>
@@ -277,7 +254,7 @@ export default function AdminPage() {
           <CardContent className="pt-8 px-8 pb-10 space-y-6">
             <form onSubmit={handleAuth} className="space-y-4">
               <div className="space-y-1">
-                <Label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Email</Label>
+                <Label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Email Address</Label>
                 <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="rounded-xl h-12" />
               </div>
               <div className="space-y-1">
@@ -289,12 +266,12 @@ export default function AdminPage() {
                   </button>
                 </div>
               </div>
-              <Button type="submit" disabled={isSubmitting} className="w-full bg-elf-gold text-elf-green-dark h-12 rounded-full font-bold mt-4 shadow-lg">
-                {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : isLogin ? 'Sign In' : 'Create Account'}
+              <Button type="submit" disabled={isSubmitting} className="w-full bg-elf-gold text-elf-green-dark h-12 rounded-full font-bold mt-4">
+                {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : isLogin ? 'Sign In' : 'Register'}
               </Button>
               <div className="text-center pt-4">
                 <button type="button" className="text-sm text-elf-text-light hover:underline" onClick={() => setIsLogin(!isLogin)}>
-                  {isLogin ? "New here? Register" : "Already registered? Sign in"}
+                  {isLogin ? "Need an account? Register" : "Already have an account? Sign in"}
                 </button>
               </div>
             </form>
@@ -307,13 +284,11 @@ export default function AdminPage() {
   if (!hasAdminAccess) {
     return (
       <div className="min-h-screen bg-elf-cream flex flex-col items-center justify-center p-6 pt-32 pb-20">
-        <Card className="max-w-xl w-full text-center p-12 rounded-3xl bg-white shadow-2xl animate-fade-in-up">
+        <Card className="max-w-xl w-full text-center p-12 rounded-3xl bg-white shadow-2xl">
           <div className="w-20 h-20 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto mb-6"><Lock size={40} /></div>
-          <h2 className="text-3xl font-headline font-bold text-elf-green-dark mb-4">Verification Pending</h2>
-          <p className="text-elf-text-mid mb-8">Your account is registered, but you need admin approval. Contact {SUPER_ADMIN_EMAIL} for access.</p>
-          <div className="flex flex-col gap-3">
-             <Button variant="ghost" onClick={() => auth && signOut(auth)}>Sign Out</Button>
-          </div>
+          <h2 className="text-3xl font-headline font-bold text-elf-green-dark mb-4">Admin Access Required</h2>
+          <p className="text-elf-text-mid mb-8">Your account is registered, but you need admin approval. Contact {SUPER_ADMIN_EMAIL} to activate your dashboard.</p>
+          <Button variant="outline" onClick={() => auth && signOut(auth)} className="rounded-full">Sign Out</Button>
         </Card>
       </div>
     );
@@ -324,125 +299,128 @@ export default function AdminPage() {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-12">
           <div>
-            <h1 className="text-4xl font-headline text-elf-green-dark font-bold">Admin Dashboard</h1>
-            <p className="text-elf-text-mid">Welcome, <b>{user.email}</b></p>
+            <h1 className="text-4xl font-headline text-elf-green-dark font-bold italic">ELF Dashboard</h1>
+            <p className="text-elf-text-mid">Logged in as: <b>{user.email}</b></p>
           </div>
           <Button variant="outline" className="rounded-full" onClick={() => setIsSignOutDialogOpen(true)}><LogOut size={16} className="mr-2" /> Logout</Button>
         </div>
 
         <Tabs defaultValue="archive" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8 h-14 bg-white border border-elf-gold/10 p-1 rounded-full shadow-sm">
+          <TabsList className="grid w-full grid-cols-3 mb-10 h-14 bg-white border border-elf-gold/10 p-1 rounded-full shadow-sm">
             <TabsTrigger value="archive" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold">Archive</TabsTrigger>
             <TabsTrigger value="gallery" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold">Gallery</TabsTrigger>
             <TabsTrigger value="users" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold">Users</TabsTrigger>
           </TabsList>
 
           <TabsContent value="archive" className="space-y-8 animate-fade-in-up">
-            <Card className="rounded-2xl border-elf-gold/10">
-              <CardHeader className="border-b p-6"><CardTitle className="text-lg">Publish New Resource</CardTitle></CardHeader>
-              <CardContent className="p-8 space-y-6">
+            <Card className="rounded-2xl border-elf-gold/10 overflow-hidden" key={docFormKey}>
+              <CardHeader className="bg-white border-b p-6">
+                <CardTitle className="text-lg font-headline italic">Publish New Resource</CardTitle>
+              </CardHeader>
+              <CardContent className="p-8 space-y-6 bg-white/50">
                 <div className="space-y-4">
-                  <div className="space-y-1"><Label>Title</Label><Input placeholder="E.g. Preclinical Study Guide" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} /></div>
-                  <RadioGroup value={archiveMode} onValueChange={(val: 'link' | 'file') => setArchiveMode(val)} className="flex gap-6">
-                    <div className="flex items-center space-x-2"><RadioGroupItem value="file" id="f" /><Label htmlFor="f">Direct Upload (PDF)</Label></div>
-                    <div className="flex items-center space-x-2"><RadioGroupItem value="link" id="l" /><Label htmlFor="l">External Link (Drive)</Label></div>
+                  <div className="space-y-1"><Label>Document Title</Label><Input placeholder="E.g. Preclinical Study Guide" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} /></div>
+                  <RadioGroup value={archiveMode} onValueChange={(val: 'link' | 'file') => setArchiveMode(val)} className="flex gap-6 pb-2">
+                    <div className="flex items-center space-x-2"><RadioGroupItem value="file" id="f" /><Label htmlFor="f">PDF Upload</Label></div>
+                    <div className="flex items-center space-x-2"><RadioGroupItem value="link" id="l" /><Label htmlFor="l">External Link</Label></div>
                   </RadioGroup>
                   {archiveMode === 'link' ? (
-                    <div className="space-y-2">
-                      <Input placeholder="URL (e.g. Google Drive link)" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} />
-                    </div>
+                    <Input placeholder="URL (e.g. Google Drive link)" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} />
                   ) : (
                     <div className="flex gap-2">
-                      <input key={docFileKey} type="file" accept="application/pdf" className="hidden" id="pdf-in" onChange={(e) => setDocFile(e.target.files?.[0] || null)} />
-                      <Button asChild variant="outline" className="flex-grow h-12 justify-start font-normal text-left overflow-hidden"><label htmlFor="pdf-in" className="cursor-pointer truncate block">{docFile ? docFile.name : 'Choose PDF File'}</label></Button>
-                      {docFile && <Button variant="ghost" size="icon" onClick={() => { setDocFile(null); setDocFileKey(Date.now()); }}><X size={18}/></Button>}
+                      <Input type="file" accept="application/pdf" onChange={(e) => setDocFile(e.target.files?.[0] || null)} className="h-12 pt-2.5" />
                     </div>
                   )}
                 </div>
-                <Button onClick={addDocument} disabled={isSubmitting || !docTitle || (archiveMode === 'file' && !docFile) || (archiveMode === 'link' && !docUrl)} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold">
+                <Button onClick={addDocument} disabled={isSubmitting || !docTitle || (archiveMode === 'file' && !docFile) || (archiveMode === 'link' && !docUrl)} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold shadow-lg">
                   {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : null} Publish to Archive
                 </Button>
               </CardContent>
             </Card>
             
             <div className="grid gap-3">
+              <h3 className="font-headline text-2xl text-elf-green-dark italic mb-2">Recent Uploads</h3>
               {documents?.map(d => (
-                <div key={d.id} className="bg-white p-4 rounded-xl border border-elf-gold/10 flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <FileText className="text-elf-gold" size={20} />
-                    <p className="font-bold text-elf-green-dark">{d.title}</p>
+                <div key={d.id} className="bg-white p-5 rounded-2xl border border-elf-gold/10 flex justify-between items-center shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-elf-gold/10 rounded-xl flex items-center justify-center text-elf-gold"><FileText size={20} /></div>
+                    <div>
+                      <p className="font-bold text-elf-green-dark">{d.title}</p>
+                      <p className="text-[10px] text-elf-text-light uppercase tracking-widest">{new Date(d.uploadedAt).toLocaleDateString()}</p>
+                    </div>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => setItemToDelete({ col: 'documents', id: d.id, title: d.title })} className="text-destructive"><Trash2 size={18} /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => setItemToDelete({ col: 'documents', id: d.id, title: d.title })} className="text-destructive hover:bg-destructive/10"><Trash2 size={18} /></Button>
                 </div>
               ))}
             </div>
           </TabsContent>
 
           <TabsContent value="gallery" className="space-y-8 animate-fade-in-up">
-            <Card className="rounded-2xl border-elf-gold/10">
-              <CardHeader className="border-b p-6"><CardTitle className="text-lg">Add Gallery Moment</CardTitle></CardHeader>
-              <CardContent className="p-8 space-y-6">
+            <Card className="rounded-2xl border-elf-gold/10 overflow-hidden" key={galleryFormKey}>
+              <CardHeader className="bg-white border-b p-6">
+                <CardTitle className="text-lg font-headline italic">Add Gallery Moment</CardTitle>
+              </CardHeader>
+              <CardContent className="p-8 space-y-6 bg-white/50">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-1"><Label>Caption (Optional)</Label><Input placeholder="Event description..." value={galleryCaption} onChange={(e) => setGalleryCaption(e.target.value)} /></div>
-                  <div className="space-y-1">
-                    <Label>Image (Max 1MB)</Label>
-                    <div className="flex gap-2">
-                      <input key={galleryFileKey} type="file" accept="image/*" className="hidden" id="img-in" onChange={(e) => setGalleryFile(e.target.files?.[0] || null)} />
-                      <Button asChild variant="outline" className="flex-grow h-12 justify-start font-normal text-left overflow-hidden"><label htmlFor="img-in" className="cursor-pointer truncate block">{galleryFile ? galleryFile.name : 'Choose Image File'}</label></Button>
-                      {galleryFile && <Button variant="ghost" size="icon" onClick={() => { setGalleryFile(null); setGalleryFileKey(Date.now() + 1); }}><X size={18}/></Button>}
-                    </div>
-                  </div>
+                  <div className="space-y-1"><Label>Select Image</Label><Input type="file" accept="image/*" onChange={(e) => setGalleryFile(e.target.files?.[0] || null)} className="h-12 pt-2.5" /></div>
                 </div>
-                <Button onClick={addGalleryImage} disabled={isSubmitting || !galleryFile} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold">
+                <Button onClick={addGalleryImage} disabled={isSubmitting || !galleryFile} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold shadow-lg">
                   {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : null} Publish to Gallery
                 </Button>
               </CardContent>
             </Card>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {galleryItems?.map(g => (
-                <div key={g.id} className="bg-white rounded-xl overflow-hidden border relative">
-                  <img src={g.imageUrl} className="w-full aspect-video object-cover" alt="" />
-                  <Button variant="destructive" size="icon" onClick={() => setItemToDelete({ col: 'gallery', id: g.id, title: 'Gallery Item' })} className="absolute top-2 right-2 h-8 w-8 rounded-full"><Trash2 size={14} /></Button>
+                <div key={g.id} className="bg-white rounded-2xl overflow-hidden border border-elf-gold/10 relative group shadow-sm">
+                  <img src={g.imageUrl} className="w-full aspect-square object-cover" alt="" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Button variant="destructive" size="icon" onClick={() => setItemToDelete({ col: 'gallery', id: g.id, title: 'Gallery Image' })} className="h-10 w-10 rounded-full"><Trash2 size={18} /></Button>
+                  </div>
                 </div>
               ))}
             </div>
           </TabsContent>
 
-          <TabsContent value="users" className="space-y-4 animate-fade-in-up">
+          <TabsContent value="users" className="space-y-6 animate-fade-in-up">
             <div className="flex justify-between items-center mb-4">
-               <h3 className="font-headline text-2xl text-elf-green-dark italic">Manage Registered Users</h3>
+               <h3 className="font-headline text-3xl text-elf-green-dark italic">Manage Members</h3>
             </div>
             {usersLoading ? (
-              <div className="flex justify-center py-20"><Loader2 className="animate-spin text-elf-gold" size={32} /></div>
+              <div className="flex justify-center py-20"><Loader2 className="animate-spin text-elf-gold" size={40} /></div>
             ) : !allUsers || allUsers.length === 0 ? (
-              <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-elf-gold/20 text-elf-text-light italic">
+              <div className="bg-white p-16 text-center rounded-3xl border border-dashed border-elf-gold/20 text-elf-text-light italic">
                 No registered user profiles found in the database. 
-                <p className="mt-2 text-xs">Users appear here after their first login.</p>
+                <p className="mt-2 text-xs not-italic">Users appear here automatically after their first login.</p>
               </div>
             ) : (
-              <div className="grid gap-3">
+              <div className="grid gap-4">
                 {allUsers?.map(u => (
-                  <div key={u.id} className="bg-white p-6 rounded-2xl border border-elf-gold/10 flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${u.role === 'admin' ? 'bg-elf-gold/10 text-elf-gold' : 'bg-elf-green-dark/5 text-elf-text-mid'}`}>
-                        <UsersIcon size={20} />
+                  <div key={u.id} className="bg-white p-6 rounded-3xl border border-elf-gold/10 flex flex-col sm:flex-row justify-between items-center gap-6 shadow-sm">
+                    <div className="flex items-center gap-5">
+                      <div className={`w-14 h-14 rounded-full flex items-center justify-center ${u.role === 'admin' ? 'bg-elf-gold/10 text-elf-gold' : 'bg-elf-green-dark/5 text-elf-text-mid'}`}>
+                        <UsersIcon size={24} />
                       </div>
                       <div>
-                        <p className="font-bold text-elf-green-dark flex items-center gap-2">
-                          {u.email} {u.role === 'admin' && <ShieldCheck size={14} className="text-elf-gold" />}
+                        <p className="font-bold text-elf-green-dark text-lg flex items-center gap-2">
+                          {u.email} {u.role === 'admin' && <ShieldCheck size={18} className="text-elf-gold" />}
                         </p>
-                        <p className="text-[10px] text-elf-text-light uppercase tracking-widest font-bold">Role: {u.role || 'user'}</p>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className={`px-3 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-widest ${u.role === 'admin' ? 'bg-elf-gold text-white' : 'bg-elf-green-dark/10 text-elf-green-dark'}`}>
+                            {u.role || 'user'}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-3">
                       {u.email !== SUPER_ADMIN_EMAIL && (
-                        <Button variant="outline" size="sm" className="rounded-full px-6" onClick={() => toggleAdmin(u.id, u.role)}>
-                          {u.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
+                        <Button variant={u.role === 'admin' ? "outline" : "default"} size="sm" className="rounded-full px-6 font-bold" onClick={() => toggleAdmin(u.id, u.role)}>
+                          {u.role === 'admin' ? 'Revoke Admin' : 'Approve Admin'}
                         </Button>
                       )}
                       {u.email !== SUPER_ADMIN_EMAIL && (
-                        <Button variant="ghost" size="icon" onClick={() => setUserToDelete({ id: u.id, email: u.email })} className="text-destructive"><Trash2 size={18} /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => setUserToDelete({ id: u.id, email: u.email })} className="text-destructive hover:bg-destructive/10"><Trash2 size={20} /></Button>
                       )}
                     </div>
                   </div>
@@ -452,24 +430,27 @@ export default function AdminPage() {
           </TabsContent>
         </Tabs>
 
+        {/* Delete Confirmation */}
         <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
-          <AlertDialogContent className="rounded-2xl">
-            <AlertDialogHeader><AlertDialogTitle>Delete Resource?</AlertDialogTitle><AlertDialogDescription>Are you sure you want to remove "{itemToDelete?.title}"? This cannot be undone.</AlertDialogDescription></AlertDialogHeader>
-            <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Delete Forever</AlertDialogAction></AlertDialogFooter>
+          <AlertDialogContent className="rounded-3xl">
+            <AlertDialogHeader><AlertDialogTitle>Confirm Removal</AlertDialogTitle><AlertDialogDescription>Are you sure you want to remove "{itemToDelete?.title}"? This action is permanent.</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogFooter><AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 rounded-full px-8">Delete Forever</AlertDialogAction></AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
+        {/* User Delete Confirmation */}
         <AlertDialog open={!!userToDelete} onOpenChange={() => setUserToDelete(null)}>
-          <AlertDialogContent className="rounded-2xl">
-            <AlertDialogHeader><AlertDialogTitle>Remove User Profile?</AlertDialogTitle><AlertDialogDescription>This will delete {userToDelete?.email}'s record from Firestore. It does NOT delete their login credentials.</AlertDialogDescription></AlertDialogHeader>
-            <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteUser} className="bg-destructive hover:bg-destructive/90">Remove Profile</AlertDialogAction></AlertDialogFooter>
+          <AlertDialogContent className="rounded-3xl">
+            <AlertDialogHeader><AlertDialogTitle>Remove User Record?</AlertDialogTitle><AlertDialogDescription>This will delete {userToDelete?.email}'s profile from the list. They will reappear if they log in again.</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogFooter><AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteUser} className="bg-destructive hover:bg-destructive/90 rounded-full px-8">Remove Profile</AlertDialogAction></AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
+        {/* Sign Out Confirmation */}
         <AlertDialog open={isSignOutDialogOpen} onOpenChange={setIsSignOutDialogOpen}>
-          <AlertDialogContent className="rounded-2xl">
-            <AlertDialogHeader><AlertDialogTitle>End Session?</AlertDialogTitle><AlertDialogDescription>You will be signed out of the Admin Dashboard.</AlertDialogDescription></AlertDialogHeader>
-            <AlertDialogFooter><AlertDialogCancel>Stay</AlertDialogCancel><AlertDialogAction onClick={handleSignOut}>Logout</AlertDialogAction></AlertDialogFooter>
+          <AlertDialogContent className="rounded-3xl">
+            <AlertDialogHeader><AlertDialogTitle>End Session?</AlertDialogTitle><AlertDialogDescription>You will be logged out of the administrative dashboard.</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogFooter><AlertDialogCancel className="rounded-full">Stay</AlertDialogCancel><AlertDialogAction onClick={() => auth && signOut(auth)} className="rounded-full px-8">Sign Out</AlertDialogAction></AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       </div>

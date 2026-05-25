@@ -4,6 +4,7 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { UserSync } from '@/components/UserSync';
 
 export const metadata: Metadata = {
   title: 'NiMSA-AMSA ELF | Investing in Visionaries',
@@ -24,6 +25,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased min-h-screen flex flex-col">
         <FirebaseClientProvider>
+          <UserSync />
           <Navbar />
           <main className="flex-grow">
             {children}

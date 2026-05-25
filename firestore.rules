@@ -17,10 +17,10 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // User profiles: Users can manage their own, admins can see all
+    // User profiles: Users can manage their own, admins can see and list all
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
-      // Allow the specific super-admin email to write any user document for bootstrapping
+      // Allow users to create/update their own profile, admins can edit anyone
       allow write: if isOwner(userId) || isAdmin();
     }
 
