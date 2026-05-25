@@ -174,29 +174,27 @@ export default function AdminPage() {
       
       const savedTitle = docTitle;
 
+      // DO NOT await mutation
       addDoc(collection(firestore, 'documents'), data)
-        .then(() => {
-          toast({ 
-            title: "Upload Successful!", 
-            description: `"${savedTitle}" is now available in the archive.` 
-          });
-          
-          // Clear and reset form
-          setDocTitle(''); 
-          setDocUrl(''); 
-          setDocFile(null);
-          setDocFileKey(prev => prev + 1);
-          setIsSubmitting(false);
-        })
-        .catch(err => {
-          setIsSubmitting(false);
-          toast({ variant: "destructive", title: "Upload Failed", description: "You don't have permission to post resources." });
+        .catch(async (err) => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({ 
             path: 'documents', 
             operation: 'create', 
             requestResourceData: data 
           }));
         });
+
+      // OPTIMISTIC RESET - Form clears immediately
+      setDocTitle(''); 
+      setDocUrl(''); 
+      setDocFile(null);
+      setDocFileKey(prev => prev + 1);
+      setIsSubmitting(false);
+      
+      toast({ 
+        title: "Upload Successful!", 
+        description: `"${savedTitle}" is now available in the archive.` 
+      });
 
     } catch (err) {
       setIsSubmitting(false);
@@ -222,28 +220,26 @@ export default function AdminPage() {
 
       const savedCaption = galleryCaption || "New moment";
 
+      // DO NOT await mutation
       addDoc(collection(firestore, 'gallery'), data)
-        .then(() => {
-          toast({ 
-            title: "Gallery Updated!", 
-            description: `"${savedCaption}" has been published to the gallery.` 
-          });
-
-          // Clear and reset form
-          setGalleryCaption(''); 
-          setGalleryFile(null);
-          setGalleryFileKey(prev => prev + 1);
-          setIsSubmitting(false);
-        })
-        .catch(err => {
-          setIsSubmitting(false);
-          toast({ variant: "destructive", title: "Upload Failed", description: "You don't have permission to update the gallery." });
+        .catch(async (err) => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({ 
             path: 'gallery', 
             operation: 'create', 
             requestResourceData: data 
           }));
         });
+
+      // OPTIMISTIC RESET - Form clears immediately
+      setGalleryCaption(''); 
+      setGalleryFile(null);
+      setGalleryFileKey(prev => prev + 1);
+      setIsSubmitting(false);
+
+      toast({ 
+        title: "Gallery Updated!", 
+        description: `"${savedCaption}" has been published to the gallery.` 
+      });
 
     } catch (err) {
       setIsSubmitting(false);
