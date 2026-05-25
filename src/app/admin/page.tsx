@@ -17,7 +17,6 @@ import {
   deleteDoc,
   addDoc,
   updateDoc,
-  serverTimestamp
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -95,7 +94,7 @@ export default function AdminPage() {
   const { data: galleryItems } = useCollection(galleryQuery);
   const { data: allUsers, loading: usersLoading } = useCollection(usersQuery);
 
-  // Aggressive Sync: Ensure any logged in user has a Firestore profile
+  // Sync current user profile
   useEffect(() => {
     if (user && firestore && !authLoading) {
       const userRef = doc(firestore, 'users', user.uid);
@@ -177,11 +176,10 @@ export default function AdminPage() {
       
       toast({ title: "Upload Successful!", description: "The resource is now live." });
       
-      // INSTANT FORM RESET
       setDocTitle(''); 
       setDocUrl(''); 
       setDocFile(null);
-      setDocFileKey(Date.now()); // Forces file input to reset to "Choose File"
+      setDocFileKey(Date.now());
       setIsSubmitting(false);
 
     } catch (err: any) {
@@ -210,10 +208,9 @@ export default function AdminPage() {
       
       toast({ title: "Gallery Updated!", description: "Moment successfully published." });
       
-      // INSTANT FORM RESET
       setGalleryCaption(''); 
       setGalleryFile(null);
-      setGalleryFileKey(Date.now() + 1); // Forces file input to reset to "Choose Image"
+      setGalleryFileKey(Date.now() + 1);
       setIsSubmitting(false);
 
     } catch (err: any) {
