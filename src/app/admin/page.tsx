@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -71,7 +72,7 @@ export default function AdminPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = false;
   
   // Archive States
   const [docTitle, setDocTitle] = useState('');
@@ -80,7 +81,7 @@ export default function AdminPage() {
   const [archiveMode, setArchiveMode] = useState<'link' | 'file'>('link');
   
   // Gallery States
-  const [galleryTitle, setGalleryTitle] = useState('');
+  const [galleryCaption, setGalleryCaption] = useState('');
   const [galleryFile, setGalleryFile] = useState<File | null>(null);
 
   // Confirmation States
@@ -158,24 +159,43 @@ export default function AdminPage() {
   const addDocument = async () => {
     if (!firestore || !docTitle) return;
     setIsSubmitting(true);
+    
     try {
       let finalUrl = docUrl;
       if (archiveMode === 'file' && docFile) {
         finalUrl = await fileToBase64(docFile);
       }
+      
       const data = {
         title: docTitle,
         fileUrl: finalUrl,
         uploadedAt: new Date().toISOString()
       };
+      
+      // Perform write (optimistic)
       addDoc(collection(firestore, 'documents'), data)
-        .then(() => {
-          setDocTitle(''); setDocUrl(''); setDocFile(null);
-          toast({ title: "Resource published" });
-        })
-        .catch(err => errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'documents', operation: 'create', requestResourceData: data })));
+        .catch(err => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({ 
+            path: 'documents', 
+            operation: 'create', 
+            requestResourceData: data 
+          }));
+        });
+
+      // Clear form immediately
+      setDocTitle(''); 
+      setDocUrl(''); 
+      setDocFile(null);
+      toast({ 
+        title: "Success!", 
+        description: "Your resource has been published to the archive." 
+      });
     } catch (err) {
-      toast({ variant: "destructive", title: "Upload Failed" });
+      toast({ 
+        variant: "destructive", 
+        title: "Publishing Failed", 
+        description: "There was an error processing your file. Please try again." 
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -184,21 +204,38 @@ export default function AdminPage() {
   const addGalleryImage = async () => {
     if (!firestore || !galleryFile) return;
     setIsSubmitting(true);
+    
     try {
       const base64 = await fileToBase64(galleryFile);
       const data = {
-        title: galleryTitle,
+        title: galleryCaption,
         imageUrl: base64,
         createdAt: new Date().toISOString()
       };
+      
+      // Perform write (optimistic)
       addDoc(collection(firestore, 'gallery'), data)
-        .then(() => {
-          setGalleryTitle(''); setGalleryFile(null);
-          toast({ title: "Image published to Gallery" });
-        })
-        .catch(err => errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'gallery', operation: 'create', requestResourceData: data })));
+        .catch(err => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({ 
+            path: 'gallery', 
+            operation: 'create', 
+            requestResourceData: data 
+          }));
+        });
+
+      // Clear form immediately
+      setGalleryCaption(''); 
+      setGalleryFile(null);
+      toast({ 
+        title: "Success!", 
+        description: "Image has been published to the gallery." 
+      });
     } catch (err) {
-      toast({ variant: "destructive", title: "Upload Failed" });
+      toast({ 
+        variant: "destructive", 
+        title: "Upload Failed", 
+        description: "There was an error processing your picture." 
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -245,13 +282,6 @@ export default function AdminPage() {
     updateDoc(doc(firestore, 'users', userId), { role: newRole })
       .then(() => toast({ title: `Role updated to ${newRole}` }))
       .catch(() => errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `users/${userId}`, operation: 'update', requestResourceData: { role: newRole } })));
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast({ title: "ID copied" });
   };
 
   const hasAdminAccess = useMemo(() => {
@@ -329,13 +359,6 @@ export default function AdminPage() {
           <p className="text-elf-text-mid mb-8">
             Your account is verified, but you need administrative permissions to view the dashboard. 
           </p>
-          <div className="text-left bg-elf-cream/50 p-6 rounded-2xl border border-elf-gold/10 mb-8">
-            <p className="text-xs font-bold uppercase tracking-widest text-elf-text-light mb-2">Your Profile ID</p>
-            <div className="bg-white px-3 py-2 rounded-lg border text-[10px] font-mono break-all flex justify-between items-center" onClick={() => copyToClipboard(user.uid)}>
-              <span className="truncate">{user.uid}</span>
-              {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} className="opacity-40" />}
-            </div>
-          </div>
           <div className="flex flex-col gap-3">
             {user.email === SUPER_ADMIN_EMAIL && (
               <Button className="rounded-full w-full h-12 bg-elf-gold text-elf-green-dark font-bold" onClick={createSuperAdminProfile}>
@@ -417,7 +440,18 @@ export default function AdminPage() {
                     <div className="flex items-center space-x-2"><RadioGroupItem value="link" id="m-link" /><Label htmlFor="m-link">Drive Link</Label></div>
                   </RadioGroup>
                   {archiveMode === 'link' ? (
-                    <Input placeholder="Google Drive URL" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl" />
+                    <div className="space-y-3">
+                      <Input placeholder="Google Drive URL" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl" />
+                      <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <p className="text-xs font-bold text-blue-700 uppercase mb-2">How to get link:</p>
+                        <ol className="text-[10px] text-blue-600 space-y-1 list-decimal ml-3">
+                          <li>Upload PDF to Google Drive.</li>
+                          <li>Right-click file > Share > Share.</li>
+                          <li>Change "Restricted" to "Anyone with the link".</li>
+                          <li>Copy link and paste above.</li>
+                        </ol>
+                      </div>
+                    </div>
                   ) : (
                     <div className="flex gap-2">
                       <input type="file" accept="application/pdf" className="hidden" id="a-up" onChange={(e) => {
@@ -430,7 +464,7 @@ export default function AdminPage() {
                     </div>
                   )}
                 </div>
-                <div className="flex justify-end"><Button onClick={addDocument} disabled={isSubmitting || !docTitle} className="bg-elf-gold text-elf-green-dark font-bold rounded-full px-8">Publish</Button></div>
+                <div className="flex justify-end"><Button onClick={addDocument} disabled={isSubmitting || !docTitle || (archiveMode === 'file' && !docFile) || (archiveMode === 'link' && !docUrl)} className="bg-elf-gold text-elf-green-dark font-bold rounded-full px-8">Publish</Button></div>
               </CardContent>
             </Card>
             <div className="grid gap-4">
@@ -449,7 +483,7 @@ export default function AdminPage() {
               <CardContent className="grid md:grid-cols-3 gap-6 pt-8 pb-8 px-6">
                 <div className="space-y-2">
                   <Label>Add Caption (optional)</Label>
-                  <Input placeholder="Moment description..." value={galleryTitle} onChange={(e) => setGalleryTitle(e.target.value)} className="rounded-xl" />
+                  <Input placeholder="Moment description..." value={galleryCaption} onChange={(e) => setGalleryCaption(e.target.value)} className="rounded-xl" />
                 </div>
                 <div className="space-y-2">
                   <Label>Image File</Label>
@@ -457,7 +491,7 @@ export default function AdminPage() {
                     <input type="file" accept="image/*" className="hidden" id="g-up" onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) setGalleryFile(file);
-                      e.target.value = ''; // Reset input
+                      e.target.value = ''; // Reset input to allow re-selection
                     }} />
                     <Button asChild variant="outline" className="flex-grow rounded-xl h-12"><label htmlFor="g-up" className="truncate cursor-pointer">{galleryFile ? galleryFile.name : 'Choose Image'}</label></Button>
                     {galleryFile && <Button variant="ghost" onClick={() => setGalleryFile(null)} className="h-12 border"><X size={16}/></Button>}
@@ -472,7 +506,7 @@ export default function AdminPage() {
               {galleryItems?.map(g => (
                 <div key={g.id} className="bg-white rounded-2xl overflow-hidden border border-elf-gold/10 group relative">
                   <img src={g.imageUrl} className="w-full aspect-video object-cover" alt="" />
-                  <div className="p-4"><p className="font-bold text-sm truncate">{g.title || 'Untitled'}</p></div>
+                  <div className="p-4"><p className="font-bold text-sm truncate">{g.title || 'Untitled Moment'}</p></div>
                   <Button variant="destructive" size="icon" onClick={() => setItemToDelete({ col: 'gallery', id: g.id, title: g.title || 'Moment' })} className="absolute top-2 right-2 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 shadow-lg"><Trash2 size={14} /></Button>
                 </div>
               ))}
