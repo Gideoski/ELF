@@ -35,7 +35,6 @@ import {
   UserPlus, 
   LogIn, 
   AlertCircle, 
-  ExternalLink, 
   RefreshCcw, 
   Copy, 
   Check, 
@@ -45,7 +44,8 @@ import {
   ShieldX,
   Upload,
   Info,
-  Link as LinkIcon
+  Link as LinkIcon,
+  FileUp
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
@@ -58,6 +58,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 const SUPER_ADMIN_EMAIL = 'gideonjackbara@gmail.com';
 
@@ -77,10 +79,13 @@ export default function AdminPage() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   
-  // Form States
+  // Archive States
   const [docTitle, setDocTitle] = useState('');
   const [docUrl, setDocUrl] = useState('');
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [archiveMode, setArchiveMode] = useState<'link' | 'file'>('link');
   
+  // Gallery States
   const [galleryTitle, setGalleryTitle] = useState('');
   const [galleryFile, setGalleryFile] = useState<File | null>(null);
   const [galleryCat, setGalleryCat] = useState('Workshops');
@@ -149,32 +154,59 @@ export default function AdminPage() {
   };
 
   const addDocument = async () => {
-    if (!firestore || !docTitle || !docUrl) {
-      toast({ variant: "destructive", title: "Missing Information", description: "Please provide both a title and a link." });
+    if (!firestore || !docTitle) {
+      toast({ variant: "destructive", title: "Missing Information", description: "Please provide a title." });
+      return;
+    }
+
+    if (archiveMode === 'link' && !docUrl) {
+      toast({ variant: "destructive", title: "Link Missing", description: "Please provide a URL." });
+      return;
+    }
+
+    if (archiveMode === 'file' && !docFile) {
+      toast({ variant: "destructive", title: "File Missing", description: "Please select a PDF file." });
       return;
     }
     
     setIsSubmitting(true);
-    const data = {
-      title: docTitle,
-      fileUrl: docUrl,
-      uploadedAt: new Date().toISOString()
-    };
-    
-    addDoc(collection(firestore, 'documents'), data)
-      .then(() => {
-        setDocTitle('');
-        setDocUrl('');
-        toast({ title: "Resource published", description: "The resource link is now available in the archive." });
-      })
-      .catch((err) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: 'documents',
-          operation: 'create',
-          requestResourceData: data
-        }));
-      })
-      .finally(() => setIsSubmitting(false));
+    try {
+      let finalUrl = docUrl;
+      
+      if (archiveMode === 'file' && docFile) {
+        if (docFile.size > 1024 * 1024) {
+          toast({ variant: "destructive", title: "File too large", description: "Document exceeds 1MB. Please use the 'Link' option instead." });
+          setIsSubmitting(false);
+          return;
+        }
+        finalUrl = await fileToBase64(docFile);
+      }
+
+      const data = {
+        title: docTitle,
+        fileUrl: finalUrl,
+        uploadedAt: new Date().toISOString()
+      };
+      
+      addDoc(collection(firestore, 'documents'), data)
+        .then(() => {
+          setDocTitle('');
+          setDocUrl('');
+          setDocFile(null);
+          toast({ title: "Resource published", description: "The resource is now available in the archive." });
+        })
+        .catch((err) => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: 'documents',
+            operation: 'create',
+            requestResourceData: data
+          }));
+        });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Upload Failed", description: "Could not process the selected file." });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const addGalleryImage = async () => {
@@ -420,35 +452,74 @@ export default function AdminPage() {
           <TabsContent value="archive" className="space-y-8 animate-fade-in-up">
             <Card className="border-elf-gold/10 shadow-sm overflow-hidden rounded-2xl">
               <CardHeader className="bg-white/50 border-b border-elf-gold/5 p-6">
-                <CardTitle className="text-lg font-bold text-elf-green-dark">Post Resource Link</CardTitle>
+                <CardTitle className="text-lg font-bold text-elf-green-dark">Post Resource</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6 pt-8 px-6 pb-8">
-                <Alert className="bg-blue-50/50 border-blue-200">
-                  <Info className="h-4 w-4 text-blue-600" />
-                  <AlertTitle className="text-blue-800 text-sm font-bold">Large File Management</AlertTitle>
-                  <AlertDescription className="text-blue-700 text-xs leading-relaxed">
-                    To avoid document size limits (1MB), please upload your PDFs to <strong>Google Drive</strong>, set sharing to <strong>"Anyone with the link"</strong>, and paste the link below.
-                  </AlertDescription>
-                </Alert>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Title</label>
+                    <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Resource Title</label>
                     <Input placeholder="e.g. Preclinical Guide" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} className="rounded-xl" />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Google Drive Link</label>
-                    <div className="relative">
-                      <Input placeholder="https://drive.google.com/..." value={docUrl} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl pl-10" />
-                      <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-elf-text-light" size={16} />
-                    </div>
+
+                  <div className="space-y-4 border-t border-elf-gold/5 pt-4">
+                    <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light block mb-2">Upload Type</label>
+                    <RadioGroup value={archiveMode} onValueChange={(val: 'link' | 'file') => setArchiveMode(val)} className="flex flex-col sm:flex-row gap-6">
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="file" id="mode-file" />
+                        <Label htmlFor="mode-file" className="cursor-pointer">Direct Upload (Max 1MB)</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="link" id="mode-link" />
+                        <Label htmlFor="mode-link" className="cursor-pointer">External Link (Google Drive)</Label>
+                      </div>
+                    </RadioGroup>
                   </div>
+
+                  {archiveMode === 'link' ? (
+                    <div className="space-y-2 animate-in fade-in duration-300">
+                      <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Google Drive Link</label>
+                      <div className="relative">
+                        <Input placeholder="https://drive.google.com/..." value={docUrl} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl pl-10" />
+                        <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-elf-text-light" size={16} />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 animate-in fade-in duration-300">
+                      <label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Select PDF File</label>
+                      <div className="relative">
+                        <input 
+                          type="file" 
+                          accept="application/pdf" 
+                          className="hidden" 
+                          id="archive-upload" 
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file && file.size > 1024 * 1024) {
+                              toast({ variant: "destructive", title: "File too large", description: "This file exceeds 1MB. Please use the 'Link' option." });
+                              return;
+                            }
+                            setDocFile(file || null);
+                          }}
+                        />
+                        <Button 
+                          asChild 
+                          variant="outline" 
+                          className={`w-full h-12 rounded-xl justify-start px-3 font-normal ${docFile ? 'text-elf-green-dark border-elf-gold' : 'text-muted-foreground'}`}
+                        >
+                          <label htmlFor="archive-upload" className="cursor-pointer flex items-center gap-2">
+                            <FileUp size={18} />
+                            <span className="truncate">{docFile ? docFile.name : 'Choose PDF'}</span>
+                          </label>
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-end pt-4">
                   <Button 
                     onClick={addDocument} 
-                    disabled={isSubmitting || !docUrl || !docTitle}
+                    disabled={isSubmitting || !docTitle || (archiveMode === 'link' ? !docUrl : !docFile)}
                     className="bg-elf-gold text-elf-green-dark font-bold px-10 h-12 rounded-full"
                   >
                     {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18}/> : <Plus size={18} className="mr-2"/>}
@@ -456,19 +527,21 @@ export default function AdminPage() {
                   </Button>
                 </div>
 
-                <Accordion type="single" collapsible className="mt-6">
-                  <AccordionItem value="drive-guide" className="border-none bg-elf-cream/30 px-4 rounded-xl">
-                    <AccordionTrigger className="text-xs font-bold uppercase tracking-widest text-elf-text-light py-4 hover:no-underline">
-                      How to get a direct Google Drive link
-                    </AccordionTrigger>
-                    <AccordionContent className="text-xs text-elf-text-mid space-y-2 pb-4">
-                      <p>1. Upload your PDF to Google Drive.</p>
-                      <p>2. Right-click the file and select <strong>Share</strong>.</p>
-                      <p>3. Under "General Access", change "Restricted" to <strong>"Anyone with the link"</strong>.</p>
-                      <p>4. Click <strong>"Copy link"</strong> and paste it into the field above.</p>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
+                {archiveMode === 'link' && (
+                  <Accordion type="single" collapsible className="mt-6">
+                    <AccordionItem value="drive-guide" className="border-none bg-elf-cream/30 px-4 rounded-xl">
+                      <AccordionTrigger className="text-xs font-bold uppercase tracking-widest text-elf-text-light py-4 hover:no-underline">
+                        How to get a direct Google Drive link
+                      </AccordionTrigger>
+                      <AccordionContent className="text-xs text-elf-text-mid space-y-2 pb-4">
+                        <p>1. Upload your PDF to Google Drive.</p>
+                        <p>2. Right-click the file and select <strong>Share</strong>.</p>
+                        <p>3. Under "General Access", change "Restricted" to <strong>"Anyone with the link"</strong>.</p>
+                        <p>4. Click <strong>"Copy link"</strong> and paste it into the field above.</p>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                )}
               </CardContent>
             </Card>
 
@@ -479,7 +552,9 @@ export default function AdminPage() {
                     <FileText className="text-elf-gold" size={24} />
                     <div>
                       <p className="font-bold text-elf-green-dark">{d.title}</p>
-                      <p className="text-[10px] text-elf-text-light uppercase tracking-widest truncate max-w-[200px] md:max-w-md">{d.fileUrl}</p>
+                      <p className="text-[10px] text-elf-text-light uppercase tracking-widest truncate max-w-[200px] md:max-w-md">
+                        {d.fileUrl.startsWith('data:') ? 'Direct Upload' : d.fileUrl}
+                      </p>
                     </div>
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => deleteItem('documents', d.id)} className="text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
@@ -487,6 +562,11 @@ export default function AdminPage() {
                   </Button>
                 </div>
               ))}
+              {!documents?.length && (
+                <div className="text-center py-20 text-elf-text-light italic border-2 border-dashed border-elf-gold/10 rounded-3xl">
+                  No archive resources found.
+                </div>
+              )}
             </div>
           </TabsContent>
 
@@ -551,15 +631,23 @@ export default function AdminPage() {
               </CardContent>
             </Card>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {galleryItems?.map(g => (
-                <div key={g.id} className="relative group rounded-2xl overflow-hidden aspect-square border border-elf-gold/10 bg-white">
-                  <img src={g.imageUrl} className="w-full h-full object-cover" alt={g.title} />
-                  <div className="absolute inset-0 bg-elf-green-dark/80 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity p-4 text-center">
-                    <p className="text-white text-[10px] uppercase font-bold mb-2 line-clamp-2">{g.title}</p>
-                    <Button variant="ghost" size="icon" onClick={() => deleteItem('gallery', g.id)} className="text-white hover:text-destructive hover:bg-white/10 rounded-full">
-                      <Trash2 size={20} />
-                    </Button>
+                <div key={g.id} className="relative group rounded-2xl overflow-hidden border border-elf-gold/10 bg-white shadow-sm flex flex-col">
+                  <div className="aspect-video relative overflow-hidden">
+                    <img src={g.imageUrl} className="w-full h-full object-cover" alt={g.title} />
+                    <div className="absolute top-2 right-2">
+                      <Button variant="destructive" size="icon" onClick={() => deleteItem('gallery', g.id)} className="rounded-full shadow-lg h-8 w-8">
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="p-4 bg-white flex-grow">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-[10px] uppercase font-bold text-elf-gold tracking-widest bg-elf-gold/5 px-2 py-0.5 rounded-full">{g.category}</span>
+                      <span className="text-[10px] text-elf-text-light">{new Date(g.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <h4 className="font-bold text-elf-green-dark text-sm line-clamp-2">{g.title}</h4>
                   </div>
                 </div>
               ))}
