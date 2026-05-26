@@ -8,8 +8,7 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 const SUPER_ADMIN_EMAIL = 'nimsaamsaelf@gmail.com';
 
 /**
- * Global component that ensures the admin user has a corresponding
- * document in the 'users' Firestore collection.
+ * Ensures the admin user has a correctly structured document in 'users' collection.
  */
 export function UserSync() {
   const { user, loading } = useUser();
@@ -21,17 +20,20 @@ export function UserSync() {
       
       const updates: any = {
         email: user.email,
-        displayName: user.displayName || user.email?.split('@')[0],
+        displayName: user.displayName || user.email?.split('@')[0] || "Administrator",
         lastActive: serverTimestamp(),
       };
 
-      // Always force admin role for the designated admin email
+      // Always enforce admin role for the designated email
       if (user.email === SUPER_ADMIN_EMAIL) {
         updates.role = 'admin';
+      } else {
+        updates.role = 'user';
       }
 
-      setDoc(userRef, updates, { merge: true }).catch(() => {
-        // Silent catch for initial permission checks
+      // Add createdAt only if it doesn't exist
+      setDoc(userRef, { ...updates, createdAt: serverTimestamp() }, { merge: true }).catch((err) => {
+        // Silent catch: Permissions will handle it if not logged in
       });
     }
   }, [user, loading, firestore]);

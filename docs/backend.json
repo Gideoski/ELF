@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -8,7 +9,8 @@
         "email": { "type": "string", "format": "email" },
         "role": { "type": "string", "enum": ["admin", "user"] },
         "displayName": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastActive": { "type": "string", "format": "date-time" }
       },
       "required": ["email", "role"]
     },
