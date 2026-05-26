@@ -1,8 +1,7 @@
-
 "use client";
 
 import React, { useState, useMemo, useRef } from 'react';
-import { useAuth, useUser, useFirestore, useCollection } from '@/firebase';
+import { useAuth, useUser, useFirestore, useStorage, useCollection } from '@/firebase';
 import { 
   signInWithEmailAndPassword, 
   signOut,
@@ -16,6 +15,11 @@ import {
   deleteDoc,
   addDoc,
 } from 'firebase/firestore';
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL
+} from 'firebase/storage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -51,6 +55,7 @@ const ADMIN_EMAIL = 'nimsaamsaelf@gmail.com';
 export default function AdminPage() {
   const auth = useAuth();
   const firestore = useFirestore();
+  const storage = useStorage();
   const { user, loading: authLoading } = useUser();
   const { toast } = useToast();
   
@@ -79,15 +84,6 @@ export default function AdminPage() {
   
   const { data: documents } = useCollection(docsQuery);
   const { data: galleryItems } = useCollection(galleryQuery);
-
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
-    });
-  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,29 +114,29 @@ export default function AdminPage() {
   };
 
   const addDocument = async () => {
-    if (!firestore || !docTitle) return;
+    if (!firestore || !storage || !docTitle) return;
     setIsSubmitting(true);
     try {
       let finalUrl = docUrl;
       
-      // Step 2: Prepare the file if needed
+      // Step 1: Upload to Storage if a file was selected
       if (archiveMode === 'file' && docFile) {
-        if (docFile.size > 700000) {
-          throw new Error("File is too large for Firestore (max ~700KB for Base64).");
-        }
-        finalUrl = await fileToBase64(docFile);
+        const storagePath = `documents/${Date.now()}_${docFile.name}`;
+        const storageRef = ref(storage, storagePath);
+        const uploadResult = await uploadBytes(storageRef, docFile);
+        finalUrl = await getDownloadURL(uploadResult.ref);
       }
 
+      // Step 2: Save metadata to Firestore
       const payload = {
         title: docTitle,
         fileUrl: finalUrl,
         uploadedAt: new Date().toISOString()
       };
       
-      // Step 3: Await the Firestore save
       await addDoc(collection(firestore, 'documents'), payload);
       
-      // Step 4: Show Toast and Reset Form
+      // Step 3: Success Toast and Form Reset
       toast({ title: "Published Successfully", description: `${docTitle} has been saved to the archive.` });
       
       setDocTitle('');
@@ -148,42 +144,42 @@ export default function AdminPage() {
       setDocFile(null);
       if (docFileInputRef.current) docFileInputRef.current.value = "";
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Upload Failed", description: err.message || getErrorMessage(err) });
+      toast({ variant: "destructive", title: "Upload Failed", description: getErrorMessage(err) });
     } finally {
-      // Step 5: Always clear loading state
+      // Step 4: Always stop loading
       setIsSubmitting(false);
     }
   };
 
   const addGalleryImage = async () => {
-    if (!firestore || !galleryFile) return;
+    if (!firestore || !storage || !galleryFile) return;
     setIsSubmitting(true);
     try {
-      // Step 2: Prepare the image (Base64)
-      if (galleryFile.size > 700000) {
-        throw new Error("Image is too large for Firestore (max ~700KB for Base64).");
-      }
-      const base64 = await fileToBase64(galleryFile);
+      // Step 1: Upload Image to Storage
+      const storagePath = `gallery/${Date.now()}_${galleryFile.name}`;
+      const storageRef = ref(storage, storagePath);
+      const uploadResult = await uploadBytes(storageRef, galleryFile);
+      const imageUrl = await getDownloadURL(uploadResult.ref);
       
+      // Step 2: Save to Firestore
       const payload = {
         title: galleryCaption || "",
-        imageUrl: base64,
+        imageUrl: imageUrl,
         createdAt: new Date().toISOString()
       };
 
-      // Step 3: Await the Firestore save
       await addDoc(collection(firestore, 'gallery'), payload);
 
-      // Step 4: Show Toast and Reset Form
+      // Step 3: Success Toast and Reset
       toast({ title: "Saved Successfully", description: "The photo has been added to the gallery." });
       
       setGalleryCaption('');
       setGalleryFile(null);
       if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Upload Failed", description: err.message || getErrorMessage(err) });
+      toast({ variant: "destructive", title: "Upload Failed", description: getErrorMessage(err) });
     } finally {
-      // Step 5: Always clear loading state
+      // Step 4: Always stop loading
       setIsSubmitting(false);
     }
   };
@@ -214,12 +210,12 @@ export default function AdminPage() {
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-1">
                 <Label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Email</Label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="rounded-xl h-12" placeholder="Email address" />
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="rounded-xl h-12" placeholder="admin@example.com" />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Password</Label>
                 <div className="relative">
-                  <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required className="rounded-xl h-12 pr-12" placeholder="Password" />
+                  <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required className="rounded-xl h-12 pr-12" placeholder="••••••••" />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-elf-text-light">
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
