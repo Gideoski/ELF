@@ -98,8 +98,8 @@ export default function AdminPage() {
     if (email.toLowerCase().trim() !== ADMIN_EMAIL) {
       toast({ 
         variant: "destructive", 
-        title: "Unauthorized Account", 
-        description: "Login is restricted to the administrator account." 
+        title: "Access Restricted", 
+        description: "Please contact the administrator for access." 
       });
       return;
     }
@@ -108,7 +108,7 @@ export default function AdminPage() {
     try {
       await signInWithEmailAndPassword(auth, email.toLowerCase().trim(), password);
       toast({ 
-        title: "Welcome back", 
+        title: "Success", 
         description: "Administrative access granted." 
       });
     } catch (error: any) {
@@ -125,14 +125,13 @@ export default function AdminPage() {
   const handleForgotPassword = async () => {
     if (!auth) return;
 
-    // Default to admin email if input is empty
     const targetEmail = email.toLowerCase().trim() || ADMIN_EMAIL;
 
     if (targetEmail !== ADMIN_EMAIL) {
       toast({ 
         variant: "destructive", 
-        title: "Invalid Email", 
-        description: "Password reset is only available for the administrator account." 
+        title: "Action Restricted", 
+        description: "Password recovery is only available for the administrator account." 
       });
       return;
     }
@@ -142,7 +141,7 @@ export default function AdminPage() {
       await sendPasswordResetEmail(auth, targetEmail);
       toast({ 
         title: "Reset Email Sent", 
-        description: `Instructions have been sent to ${targetEmail}. Please check your inbox and spam folder. If you don't receive it, ensure the account exists in the Firebase Console.` 
+        description: `Instructions have been sent to ${targetEmail}. Please check your inbox and spam folder.` 
       });
     } catch (error: any) {
       toast({ 
@@ -174,8 +173,8 @@ export default function AdminPage() {
       await addDoc(collection(firestore, 'documents'), data);
       
       toast({ 
-        title: "Resource Published", 
-        description: "The document has been added to the archive successfully.",
+        title: "Published Successfully", 
+        description: "The document has been added to the archive.",
       });
       
       setDocTitle('');
@@ -188,7 +187,7 @@ export default function AdminPage() {
       if (err.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'documents', operation: 'create' }));
       } else {
-        toast({ variant: "destructive", title: "Publication Error", description: "An unexpected error occurred during upload." });
+        toast({ variant: "destructive", title: "Error", description: "Could not save the document." });
       }
     }
   };
@@ -208,8 +207,8 @@ export default function AdminPage() {
       await addDoc(collection(firestore, 'gallery'), data);
       
       toast({ 
-        title: "Image Published", 
-        description: "The photo has been added to the gallery successfully.",
+        title: "Published Successfully", 
+        description: "The photo has been added to the gallery.",
       });
       
       setGalleryCaption('');
@@ -221,7 +220,7 @@ export default function AdminPage() {
       if (err.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'gallery', operation: 'create' }));
       } else {
-        toast({ variant: "destructive", title: "Publication Error", description: "An unexpected error occurred during upload." });
+        toast({ variant: "destructive", title: "Error", description: "Could not save the image." });
       }
     }
   };
@@ -230,7 +229,7 @@ export default function AdminPage() {
     if (!firestore || !itemToDelete) return;
     deleteDoc(doc(firestore, itemToDelete.col, itemToDelete.id))
       .then(() => {
-        toast({ title: "Removed successfully" });
+        toast({ title: "Removed Successfully" });
         setItemToDelete(null);
       })
       .catch(() => {
@@ -266,7 +265,7 @@ export default function AdminPage() {
                   onChange={(e) => setEmail(e.target.value)} 
                   required 
                   className="rounded-xl h-12" 
-                  placeholder="Enter email address" 
+                  placeholder="Enter your email address" 
                 />
               </div>
               <div className="space-y-1">
@@ -278,7 +277,7 @@ export default function AdminPage() {
                     onChange={(e) => setPassword(e.target.value)} 
                     required 
                     className="rounded-xl h-12 pr-12" 
-                    placeholder="Enter password" 
+                    placeholder="Enter your password" 
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-elf-text-light">
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -306,7 +305,7 @@ export default function AdminPage() {
         <Card className="max-w-xl w-full text-center p-12 rounded-3xl bg-white shadow-2xl">
           <div className="w-20 h-20 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto mb-6"><Lock size={40} /></div>
           <h2 className="text-3xl font-headline font-bold text-elf-green-dark mb-4">Access Denied</h2>
-          <p className="text-elf-text-mid mb-8">This portal is restricted to the administrator. Please contact the administrator for access.</p>
+          <p className="text-elf-text-mid mb-8">This portal is restricted. Please contact the administrator for access.</p>
           <Button variant="outline" onClick={() => auth && signOut(auth)} className="rounded-full px-10 h-12 border-elf-gold text-elf-gold hover:bg-elf-gold hover:text-white transition-all">Return to Login</Button>
         </Card>
       </div>
@@ -319,7 +318,7 @@ export default function AdminPage() {
         <div className="flex justify-between items-center mb-12">
           <div>
             <h1 className="text-4xl font-headline text-elf-green-dark font-bold italic">ELF Dashboard</h1>
-            <p className="text-elf-text-mid">Signed in as Administrator</p>
+            <p className="text-elf-text-mid">Administrative Control Panel</p>
           </div>
           <Button variant="outline" className="rounded-full border-elf-gold text-elf-gold hover:bg-elf-gold hover:text-white" onClick={() => setIsSignOutDialogOpen(true)}>
             <LogOut size={16} className="mr-2" /> Logout
@@ -361,7 +360,7 @@ export default function AdminPage() {
             </Card>
             
             <div className="grid gap-3">
-              <h3 className="font-headline text-2xl text-elf-green-dark italic mb-2">Recent Archives</h3>
+              <h3 className="font-headline text-2xl text-elf-green-dark italic mb-2">Saved Archives</h3>
               {documents?.map(d => (
                 <div key={d.id} className="bg-white p-5 rounded-2xl border border-elf-gold/10 flex justify-between items-center shadow-sm hover:border-elf-gold/30 transition-all">
                   <div className="flex items-center gap-4">
@@ -416,15 +415,15 @@ export default function AdminPage() {
 
         <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
           <AlertDialogContent className="rounded-3xl">
-            <AlertDialogHeader><AlertDialogTitle>Delete Permanent</AlertDialogTitle><AlertDialogDescription>Are you sure you want to remove "{itemToDelete?.title}"? This cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogHeader><AlertDialogTitle>Confirm Removal</AlertDialogTitle><AlertDialogDescription>Are you sure you want to delete "{itemToDelete?.title}"? This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
             <AlertDialogFooter><AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 rounded-full px-8">Delete</AlertDialogAction></AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
         <AlertDialog open={isSignOutDialogOpen} onOpenChange={setIsSignOutDialogOpen}>
           <AlertDialogContent className="rounded-3xl">
-            <AlertDialogHeader><AlertDialogTitle>Logout?</AlertDialogTitle><AlertDialogDescription>Confirming logout will end your current administrative session.</AlertDialogDescription></AlertDialogHeader>
-            <AlertDialogFooter><AlertDialogCancel className="rounded-full">Stay</AlertDialogCancel><AlertDialogAction onClick={() => auth && signOut(auth)} className="rounded-full px-8">Logout</AlertDialogAction></AlertDialogFooter>
+            <AlertDialogHeader><AlertDialogTitle>Logout?</AlertDialogTitle><AlertDialogDescription>Are you sure you want to end your session?</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogFooter><AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel><AlertDialogAction onClick={() => auth && signOut(auth)} className="rounded-full px-8">Logout</AlertDialogAction></AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       </div>
