@@ -61,7 +61,6 @@ export default function AdminPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   
-  // Keys to force reset components (like file inputs)
   const [docFormKey, setDocFormKey] = useState(Date.now());
   const [galleryFormKey, setGalleryFormKey] = useState(Date.now() + 1);
 
@@ -123,15 +122,12 @@ export default function AdminPage() {
   };
 
   const handleForgotPassword = async () => {
-    if (!auth || !email) {
-      toast({ 
-        variant: "destructive", 
-        title: "Email Required", 
-        description: "Please enter your administrator email address first." 
-      });
-      return;
-    }
-    if (email !== ADMIN_EMAIL) {
+    if (!auth) return;
+
+    // Use the admin email if the field is empty, otherwise check if they entered the right one
+    const targetEmail = email || ADMIN_EMAIL;
+
+    if (targetEmail !== ADMIN_EMAIL) {
       toast({ 
         variant: "destructive", 
         title: "Invalid Email", 
@@ -142,10 +138,10 @@ export default function AdminPage() {
 
     setIsResetting(true);
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(auth, targetEmail);
       toast({ 
         title: "Reset Email Sent", 
-        description: "Check your inbox for instructions to reset your password." 
+        description: `Instructions have been sent to ${targetEmail}. Please check your inbox and spam folder.` 
       });
     } catch (error: any) {
       toast({ 
@@ -180,7 +176,6 @@ export default function AdminPage() {
             title: "Success", 
             description: "Resource published to archive.",
           });
-          // Reset form automatically
           setDocTitle('');
           setDocUrl('');
           setDocFile(null);
@@ -215,7 +210,6 @@ export default function AdminPage() {
             title: "Success", 
             description: "Image added to gallery.",
           });
-          // Reset form automatically
           setGalleryCaption('');
           setGalleryFile(null);
           setGalleryFormKey(Date.now() + 1);
