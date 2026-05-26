@@ -113,13 +113,24 @@ export default function AdminPage() {
     }
   };
 
+  /**
+   * Follows the 5-step sequence:
+   * 1. Loading true
+   * 2. Await Storage
+   * 3. Await Firestore
+   * 4. Success toast & Form Reset
+   * 5. Finally Loading false
+   */
   const addDocument = async () => {
     if (!firestore || !storage || !docTitle) return;
+    
+    // 1. Set Loading
     setIsSubmitting(true);
+    
     try {
       let finalUrl = docUrl;
       
-      // Step 1: Upload to Storage if a file was selected
+      // 2. Await Storage Upload
       if (archiveMode === 'file' && docFile) {
         const storagePath = `documents/${Date.now()}_${docFile.name}`;
         const storageRef = ref(storage, storagePath);
@@ -127,7 +138,7 @@ export default function AdminPage() {
         finalUrl = await getDownloadURL(uploadResult.ref);
       }
 
-      // Step 2: Save metadata to Firestore
+      // 3. Await Firestore Save
       const payload = {
         title: docTitle,
         fileUrl: finalUrl,
@@ -136,32 +147,48 @@ export default function AdminPage() {
       
       await addDoc(collection(firestore, 'documents'), payload);
       
-      // Step 3: Success Toast and Form Reset
+      // 4. Success Toast & Reset Form
       toast({ title: "Published Successfully", description: `${docTitle} has been saved to the archive.` });
       
       setDocTitle('');
       setDocUrl('');
       setDocFile(null);
       if (docFileInputRef.current) docFileInputRef.current.value = "";
+      
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Upload Failed", description: getErrorMessage(err) });
+      toast({ 
+        variant: "destructive", 
+        title: "Upload Failed", 
+        description: getErrorMessage(err) 
+      });
     } finally {
-      // Step 4: Always stop loading
+      // 5. Always Stop Loading
       setIsSubmitting(false);
     }
   };
 
+  /**
+   * Follows the 5-step sequence for Gallery:
+   * 1. Loading true
+   * 2. Await Storage
+   * 3. Await Firestore
+   * 4. Success toast & Form Reset
+   * 5. Finally Loading false
+   */
   const addGalleryImage = async () => {
     if (!firestore || !storage || !galleryFile) return;
+    
+    // 1. Set Loading
     setIsSubmitting(true);
+    
     try {
-      // Step 1: Upload Image to Storage
+      // 2. Await Storage Upload
       const storagePath = `gallery/${Date.now()}_${galleryFile.name}`;
       const storageRef = ref(storage, storagePath);
       const uploadResult = await uploadBytes(storageRef, galleryFile);
       const imageUrl = await getDownloadURL(uploadResult.ref);
       
-      // Step 2: Save to Firestore
+      // 3. Await Firestore Save
       const payload = {
         title: galleryCaption || "",
         imageUrl: imageUrl,
@@ -170,16 +197,21 @@ export default function AdminPage() {
 
       await addDoc(collection(firestore, 'gallery'), payload);
 
-      // Step 3: Success Toast and Reset
+      // 4. Success Toast & Reset Form
       toast({ title: "Saved Successfully", description: "The photo has been added to the gallery." });
       
       setGalleryCaption('');
       setGalleryFile(null);
       if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
+      
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Upload Failed", description: getErrorMessage(err) });
+      toast({ 
+        variant: "destructive", 
+        title: "Upload Failed", 
+        description: getErrorMessage(err) 
+      });
     } finally {
-      // Step 4: Always stop loading
+      // 5. Always Stop Loading
       setIsSubmitting(false);
     }
   };
