@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo, useRef } from 'react';
@@ -34,8 +33,6 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
@@ -152,6 +149,12 @@ export default function AdminPage() {
     try {
       let finalUrl = docUrl;
       if (archiveMode === 'file' && docFile) {
+        // Document size check (Firestore doc limit is 1MB, so we limit base64 source)
+        if (docFile.size > 800000) {
+          toast({ variant: "destructive", title: "File too large", description: "Please upload a PDF under 800KB." });
+          setIsSubmitting(false);
+          return;
+        }
         finalUrl = await fileToBase64(docFile);
       }
       
@@ -161,20 +164,10 @@ export default function AdminPage() {
         uploadedAt: new Date().toISOString()
       };
       
-      // NON-BLOCKING WRITE: Guidelines state do NOT await mutation calls
-      addDoc(collection(firestore, 'documents'), data).catch((err: any) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ 
-          path: 'documents', 
-          operation: 'create',
-          requestResourceData: data
-        }));
-      });
+      // Await the write to ensure persistence is confirmed by server
+      await addDoc(collection(firestore, 'documents'), data);
 
-      // Optimistic Success Handling
-      toast({ 
-        title: "Published Successfully", 
-        description: `${docTitle} has been added to the archive.`,
-      });
+      toast({ title: "Published Successfully", description: `${docTitle} has been saved.` });
       
       setDocTitle('');
       setDocUrl('');
@@ -197,6 +190,13 @@ export default function AdminPage() {
     setIsSubmitting(true);
     
     try {
+      // Image size check for Firestore 1MB limit
+      if (galleryFile.size > 800000) {
+        toast({ variant: "destructive", title: "Image too large", description: "Please upload a smaller image (under 800KB)." });
+        setIsSubmitting(false);
+        return;
+      }
+
       const base64 = await fileToBase64(galleryFile);
       const data = {
         title: galleryCaption || "",
@@ -204,20 +204,10 @@ export default function AdminPage() {
         createdAt: new Date().toISOString()
       };
 
-      // NON-BLOCKING WRITE
-      addDoc(collection(firestore, 'gallery'), data).catch((err: any) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ 
-          path: 'gallery', 
-          operation: 'create',
-          requestResourceData: data
-        }));
-      });
+      // Await the write to ensure persistence is confirmed by server
+      await addDoc(collection(firestore, 'gallery'), data);
 
-      // Optimistic Success Handling
-      toast({ 
-        title: "Published Successfully", 
-        description: "The photo has been added to the gallery.",
-      });
+      toast({ title: "Published Successfully", description: "Photo saved to gallery." });
       
       setGalleryCaption('');
       setGalleryFile(null);
@@ -234,20 +224,16 @@ export default function AdminPage() {
     }
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!firestore || !itemToDelete) return;
-    deleteDoc(doc(firestore, itemToDelete.col, itemToDelete.id))
-      .then(() => {
-        toast({ title: "Removed Successfully" });
-        setItemToDelete(null);
-      })
-      .catch((err) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ 
-          path: `${itemToDelete.col}/${itemToDelete.id}`, 
-          operation: 'delete' 
-        }));
-        setItemToDelete(null);
-      });
+    try {
+      await deleteDoc(doc(firestore, itemToDelete.col, itemToDelete.id));
+      toast({ title: "Removed Successfully" });
+      setItemToDelete(null);
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error", description: getErrorMessage(err) });
+      setItemToDelete(null);
+    }
   };
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center pt-24"><Loader2 className="animate-spin text-elf-gold" size={48} /></div>;
