@@ -122,21 +122,25 @@ export default function AdminPage() {
     setIsSubmitting(true);
     try {
       let finalUrl = docUrl;
+      
+      // Step 2: Prepare the file if needed
       if (archiveMode === 'file' && docFile) {
-        if (docFile.size > 800000) {
-          throw new Error("File is too large. Please keep it under 800KB.");
+        if (docFile.size > 700000) {
+          throw new Error("File is too large for Firestore (max ~700KB for Base64).");
         }
         finalUrl = await fileToBase64(docFile);
       }
-      
+
       const payload = {
         title: docTitle,
         fileUrl: finalUrl,
         uploadedAt: new Date().toISOString()
       };
       
+      // Step 3: Await the Firestore save
       await addDoc(collection(firestore, 'documents'), payload);
       
+      // Step 4: Show Toast and Reset Form
       toast({ title: "Published Successfully", description: `${docTitle} has been saved to the archive.` });
       
       setDocTitle('');
@@ -146,6 +150,7 @@ export default function AdminPage() {
     } catch (err: any) {
       toast({ variant: "destructive", title: "Upload Failed", description: err.message || getErrorMessage(err) });
     } finally {
+      // Step 5: Always clear loading state
       setIsSubmitting(false);
     }
   };
@@ -154,8 +159,9 @@ export default function AdminPage() {
     if (!firestore || !galleryFile) return;
     setIsSubmitting(true);
     try {
-      if (galleryFile.size > 800000) {
-        throw new Error("Image is too large. Please keep it under 800KB.");
+      // Step 2: Prepare the image (Base64)
+      if (galleryFile.size > 700000) {
+        throw new Error("Image is too large for Firestore (max ~700KB for Base64).");
       }
       const base64 = await fileToBase64(galleryFile);
       
@@ -165,8 +171,10 @@ export default function AdminPage() {
         createdAt: new Date().toISOString()
       };
 
+      // Step 3: Await the Firestore save
       await addDoc(collection(firestore, 'gallery'), payload);
 
+      // Step 4: Show Toast and Reset Form
       toast({ title: "Saved Successfully", description: "The photo has been added to the gallery." });
       
       setGalleryCaption('');
@@ -175,14 +183,15 @@ export default function AdminPage() {
     } catch (err: any) {
       toast({ variant: "destructive", title: "Upload Failed", description: err.message || getErrorMessage(err) });
     } finally {
+      // Step 5: Always clear loading state
       setIsSubmitting(false);
     }
   };
 
-  const confirmDelete = async () => {
-    if (!firestore || !itemToDelete) return;
+  const confirmDelete = async (col: string, id: string) => {
+    if (!firestore) return;
     try {
-      await deleteDoc(doc(firestore, itemToDelete.col, itemToDelete.id));
+      await deleteDoc(doc(firestore, col, id));
       toast({ title: "Removed Successfully" });
       setItemToDelete(null);
     } catch (err: any) {
@@ -205,12 +214,12 @@ export default function AdminPage() {
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-1">
                 <Label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Email</Label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="rounded-xl h-12" placeholder="administrator@email.com" />
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="rounded-xl h-12" placeholder="Email address" />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Password</Label>
                 <div className="relative">
-                  <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required className="rounded-xl h-12 pr-12" placeholder="••••••••" />
+                  <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required className="rounded-xl h-12 pr-12" placeholder="Password" />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-elf-text-light">
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -354,7 +363,7 @@ export default function AdminPage() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 rounded-full px-8">Delete</AlertDialogAction>
+              <AlertDialogAction onClick={() => itemToDelete && confirmDelete(itemToDelete.col, itemToDelete.id)} className="bg-destructive hover:bg-destructive/90 rounded-full px-8">Delete</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

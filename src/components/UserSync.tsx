@@ -18,22 +18,18 @@ export function UserSync() {
     if (!loading && user && firestore) {
       const userRef = doc(firestore, 'users', user.uid);
       
-      const updates: any = {
+      const role = user.email === SUPER_ADMIN_EMAIL ? 'admin' : 'user';
+
+      const data = {
         email: user.email,
-        displayName: user.displayName || user.email?.split('@')[0] || "Administrator",
+        displayName: user.displayName || user.email?.split('@')[0] || "User",
+        role: role,
         lastActive: serverTimestamp(),
       };
 
-      // Always enforce admin role for the designated email
-      if (user.email === SUPER_ADMIN_EMAIL) {
-        updates.role = 'admin';
-      } else {
-        updates.role = 'user';
-      }
-
-      // Add createdAt only if it doesn't exist
-      setDoc(userRef, { ...updates, createdAt: serverTimestamp() }, { merge: true }).catch((err) => {
-        // Silent catch: Permissions will handle it if not logged in
+      // Set user document and merge
+      setDoc(userRef, { ...data, createdAt: serverTimestamp() }, { merge: true }).catch((err) => {
+        // Silent catch: Security rules for nimsaamsaelf@gmail.com should allow this
       });
     }
   }, [user, loading, firestore]);
