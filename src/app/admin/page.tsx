@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useAuth, useUser, useFirestore, useCollection } from '@/firebase';
 import { 
   signInWithEmailAndPassword, 
@@ -57,16 +57,17 @@ export default function AdminPage() {
   const { user, loading: authLoading } = useUser();
   const { toast } = useToast();
   
+  // Refs for file inputs to handle explicit clearing
+  const docFileInputRef = useRef<HTMLInputElement>(null);
+  const galleryFileInputRef = useRef<HTMLInputElement>(null);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
-  
-  // Use keys to force-reset the file input fields (clears the browser's "Choose File" text)
-  const [docFormKey, setDocFormKey] = useState(Date.now());
-  const [galleryFormKey, setGalleryFormKey] = useState(Date.now() + 1);
 
+  // Form State
   const [docTitle, setDocTitle] = useState('');
   const [docUrl, setDocUrl] = useState('');
   const [docFile, setDocFile] = useState<File | null>(null);
@@ -145,6 +146,12 @@ export default function AdminPage() {
     }
   };
 
+  /**
+   * BUG 1, 2, 3 FIXED:
+   * 1. Added toast notification on success.
+   * 2. Explicitly resets form fields and file input value via ref.
+   * 3. Loading state managed in finally block.
+   */
   const addDocument = async () => {
     if (!firestore || !docTitle) return;
     if (archiveMode === 'file' && !docFile) return;
@@ -166,29 +173,41 @@ export default function AdminPage() {
       
       await addDoc(collection(firestore, 'documents'), data);
       
-      // BUG 1 FIX: Show toast
+      // Fix 1: Show Success Toast
       toast({ 
         title: "Published Successfully", 
         description: `${docTitle} has been added to the archive.`,
       });
       
-      // BUG 2 FIX: Explicitly clear all fields
+      // Fix 2: Explicit Form Reset
       setDocTitle('');
       setDocUrl('');
       setDocFile(null);
-      setDocFormKey(Date.now()); // Reset file input component key
+      if (docFileInputRef.current) {
+        docFileInputRef.current.value = "";
+      }
     } catch (err: any) {
       if (err.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'documents', operation: 'create' }));
       } else {
-        toast({ variant: "destructive", title: "Upload Error", description: getErrorMessage(err) });
+        toast({ 
+          variant: "destructive", 
+          title: "Upload Error", 
+          description: getErrorMessage(err) 
+        });
       }
     } finally {
-      // BUG 3 FIX: Reset loading state in finally block
+      // Fix 3: Guaranteed Reset of Loading State
       setIsSubmitting(false);
     }
   };
 
+  /**
+   * BUG 1, 2, 3 FIXED:
+   * 1. Added toast notification on success.
+   * 2. Explicitly resets form fields and file input value via ref.
+   * 3. Loading state managed in finally block.
+   */
   const addGalleryImage = async () => {
     if (!firestore || !galleryFile) return;
     setIsSubmitting(true);
@@ -203,24 +222,30 @@ export default function AdminPage() {
 
       await addDoc(collection(firestore, 'gallery'), data);
       
-      // BUG 1 FIX: Show toast
+      // Fix 1: Show Success Toast
       toast({ 
         title: "Published Successfully", 
         description: "The photo has been added to the gallery.",
       });
       
-      // BUG 2 FIX: Explicitly clear all fields
+      // Fix 2: Explicit Form Reset
       setGalleryCaption('');
       setGalleryFile(null);
-      setGalleryFormKey(Date.now() + 1); // Reset file input component key
+      if (galleryFileInputRef.current) {
+        galleryFileInputRef.current.value = "";
+      }
     } catch (err: any) {
       if (err.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'gallery', operation: 'create' }));
       } else {
-        toast({ variant: "destructive", title: "Upload Error", description: getErrorMessage(err) });
+        toast({ 
+          variant: "destructive", 
+          title: "Upload Error", 
+          description: getErrorMessage(err) 
+        });
       }
     } finally {
-      // BUG 3 FIX: Reset loading state in finally block
+      // Fix 3: Guaranteed Reset of Loading State
       setIsSubmitting(false);
     }
   };
@@ -340,8 +365,9 @@ export default function AdminPage() {
                   {archiveMode === 'link' ? (
                     <Input placeholder="Enter URL" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl" />
                   ) : (
-                    <div className="flex items-center gap-2" key={docFormKey}>
+                    <div className="flex items-center gap-2">
                       <Input 
+                        ref={docFileInputRef}
                         type="file" 
                         accept="application/pdf" 
                         onChange={(e) => setDocFile(e.target.files?.[0] || null)} 
@@ -351,7 +377,10 @@ export default function AdminPage() {
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          onClick={() => {setDocFile(null); setDocFormKey(Date.now());}} 
+                          onClick={() => {
+                            setDocFile(null); 
+                            if (docFileInputRef.current) docFileInputRef.current.value = "";
+                          }} 
                           className="text-destructive hover:bg-destructive/10"
                         >
                           <X size={20} />
@@ -360,6 +389,7 @@ export default function AdminPage() {
                     </div>
                   )}
                 </div>
+                {/* Publish Button for Archive */}
                 <Button 
                   onClick={addDocument} 
                   disabled={isSubmitting || !docTitle || (archiveMode === 'file' && !docFile) || (archiveMode === 'link' && !docUrl)} 
@@ -409,8 +439,9 @@ export default function AdminPage() {
                   </div>
                   <div className="space-y-1">
                     <Label>Choose Image</Label>
-                    <div className="flex items-center gap-2" key={galleryFormKey}>
+                    <div className="flex items-center gap-2">
                       <Input 
+                        ref={galleryFileInputRef}
                         type="file" 
                         accept="image/*" 
                         onChange={(e) => setGalleryFile(e.target.files?.[0] || null)} 
@@ -420,7 +451,10 @@ export default function AdminPage() {
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          onClick={() => {setGalleryFile(null); setGalleryFormKey(Date.now() + 1);}} 
+                          onClick={() => {
+                            setGalleryFile(null); 
+                            if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
+                          }} 
                           className="text-destructive hover:bg-destructive/10"
                         >
                           <X size={20} />
@@ -429,6 +463,7 @@ export default function AdminPage() {
                     </div>
                   </div>
                 </div>
+                {/* Publish Button for Gallery */}
                 <Button 
                   onClick={addGalleryImage} 
                   disabled={isSubmitting || !galleryFile} 
