@@ -9,7 +9,7 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && (
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-        request.auth.token.email == 'gideonjackbara@gmail.com'
+        request.auth.token.email == 'nimsaamsaelf@gmail.com'
       );
     }
     
@@ -20,7 +20,6 @@ service cloud.firestore {
     // User profiles: Users can manage their own, admins can see and list all
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
-      // Allow users to create/update their own profile, admins can edit anyone
       allow write: if isOwner(userId) || isAdmin();
     }
 

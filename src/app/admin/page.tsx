@@ -4,19 +4,16 @@ import React, { useState, useMemo } from 'react';
 import { useAuth, useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { 
   signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut
+  signOut,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { 
   doc, 
-  setDoc, 
   collection, 
   query, 
   orderBy, 
   deleteDoc,
   addDoc,
-  updateDoc,
-  serverTimestamp
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,8 +27,7 @@ import {
   EyeOff, 
   Loader2, 
   Lock, 
-  Users as UsersIcon,
-  ShieldCheck
+  KeyRound
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
@@ -50,7 +46,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const SUPER_ADMIN_EMAIL = 'gideonjackbara@gmail.com';
+const ADMIN_EMAIL = 'nimsaamsaelf@gmail.com';
 
 export default function AdminPage() {
   const auth = useAuth();
@@ -64,8 +60,8 @@ export default function AdminPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLogin, setIsLogin] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   
   const [docFormKey, setDocFormKey] = useState(Date.now());
   const [galleryFormKey, setGalleryFormKey] = useState(Date.now() + 1);
@@ -80,15 +76,12 @@ export default function AdminPage() {
 
   const [isSignOutDialogOpen, setIsSignOutDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ col: string, id: string, title?: string } | null>(null);
-  const [userToDelete, setUserToDelete] = useState<{ id: string, email: string } | null>(null);
 
   const docsQuery = useMemo(() => firestore ? query(collection(firestore, 'documents'), orderBy('uploadedAt', 'desc')) : null, [firestore]);
   const galleryQuery = useMemo(() => firestore ? query(collection(firestore, 'gallery'), orderBy('createdAt', 'desc')) : null, [firestore]);
-  const usersQuery = useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   
   const { data: documents } = useCollection(docsQuery);
   const { data: galleryItems } = useCollection(galleryQuery);
-  const { data: allUsers, loading: usersLoading } = useCollection(usersQuery);
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -99,31 +92,44 @@ export default function AdminPage() {
     });
   };
 
-  const handleAuth = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth || !firestore) return;
+    if (!auth) return;
+    
+    if (email !== ADMIN_EMAIL) {
+      toast({ variant: "destructive", title: "Access Denied", description: "This portal is reserved for the primary administrator account." });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
-        toast({ title: "Welcome back", description: "Access granted." });
-      } else {
-        if (password.length < 6) throw { code: 'auth/weak-password' };
-        const res = await createUserWithEmailAndPassword(auth, email, password);
-        const userData = {
-          email: res.user.email,
-          role: res.user.email === SUPER_ADMIN_EMAIL ? 'admin' : 'user',
-          displayName: email.split('@')[0],
-          createdAt: serverTimestamp(),
-          lastActive: serverTimestamp()
-        };
-        await setDoc(doc(firestore, 'users', res.user.uid), userData);
-        toast({ title: "Account created", description: "Authentication successful." });
-      }
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({ title: "Welcome back", description: "Administrative access granted." });
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Auth Failed", description: getErrorMessage(error) });
+      toast({ variant: "destructive", title: "Login Failed", description: getErrorMessage(error) });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!auth || !email) {
+      toast({ variant: "destructive", title: "Email Required", description: "Please enter the admin email address first." });
+      return;
+    }
+    if (email !== ADMIN_EMAIL) {
+      toast({ variant: "destructive", title: "Invalid Email", description: "Reset is only available for the administrator account." });
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast({ title: "Reset Email Sent", description: "Check your inbox for instructions to reset your password." });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Reset Failed", description: getErrorMessage(error) });
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -143,7 +149,6 @@ export default function AdminPage() {
         uploadedAt: new Date().toISOString()
       };
       
-      // Reset form instantly
       setDocTitle('');
       setDocUrl('');
       setDocFile(null);
@@ -176,7 +181,6 @@ export default function AdminPage() {
         createdAt: new Date().toISOString()
       };
 
-      // Reset form instantly
       setGalleryCaption('');
       setGalleryFile(null);
       setGalleryFormKey(Date.now() + 1);
@@ -196,14 +200,6 @@ export default function AdminPage() {
     }
   };
 
-  const toggleAdmin = (userId: string, currentRole: string) => {
-    if (!firestore) return;
-    const newRole = currentRole === 'admin' ? 'user' : 'admin';
-    updateDoc(doc(firestore, 'users', userId), { role: newRole })
-      .then(() => toast({ title: `Updated to ${newRole}` }))
-      .catch(() => errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `users/${userId}`, operation: 'update' })));
-  };
-
   const confirmDelete = () => {
     if (!firestore || !itemToDelete) return;
     deleteDoc(doc(firestore, itemToDelete.col, itemToDelete.id))
@@ -217,24 +213,10 @@ export default function AdminPage() {
       });
   };
 
-  const confirmDeleteUser = () => {
-    if (!firestore || !userToDelete) return;
-    deleteDoc(doc(firestore, 'users', userToDelete.id))
-      .then(() => {
-        toast({ title: "User profile removed" });
-        setUserToDelete(null);
-      })
-      .catch(() => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `users/${userToDelete.id}`, operation: 'delete' }));
-        setUserToDelete(null);
-      });
-  };
-
   const hasAdminAccess = useMemo(() => {
     if (!user) return false;
-    if (user.email === SUPER_ADMIN_EMAIL) return true;
-    return profile?.role === 'admin';
-  }, [user, profile]);
+    return user.email === ADMIN_EMAIL;
+  }, [user]);
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center pt-24"><Loader2 className="animate-spin text-elf-gold" size={48} /></div>;
 
@@ -244,14 +226,14 @@ export default function AdminPage() {
         <Card className="w-full max-w-md bg-white rounded-3xl overflow-hidden border-none shadow-2xl">
           <CardHeader className="text-center pb-6 pt-10">
             <CardTitle className="text-3xl font-headline italic text-elf-green-dark">
-              {isLogin ? 'Admin Portal' : 'Register Admin'}
+              Admin Portal
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-8 px-8 pb-10 space-y-6">
-            <form onSubmit={handleAuth} className="space-y-4">
+            <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-1">
-                <Label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Email Address</Label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="rounded-xl h-12" />
+                <Label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Admin Email</Label>
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="rounded-xl h-12" placeholder={ADMIN_EMAIL} />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Password</Label>
@@ -263,11 +245,11 @@ export default function AdminPage() {
                 </div>
               </div>
               <Button type="submit" disabled={isSubmitting} className="w-full bg-elf-gold text-elf-green-dark h-12 rounded-full font-bold mt-4">
-                {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : isLogin ? 'Sign In' : 'Register'}
+                {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : 'Sign In'}
               </Button>
-              <div className="text-center pt-4">
-                <button type="button" className="text-sm text-elf-text-light hover:underline" onClick={() => setIsLogin(!isLogin)}>
-                  {isLogin ? "Need an account? Register" : "Already have an account? Sign in"}
+              <div className="text-center pt-2">
+                <button type="button" onClick={handleForgotPassword} disabled={isResetting} className="text-sm text-elf-text-light hover:underline inline-flex items-center gap-1">
+                  {isResetting ? <Loader2 className="animate-spin" size={12} /> : <KeyRound size={12} />} Forgot Password?
                 </button>
               </div>
             </form>
@@ -282,8 +264,8 @@ export default function AdminPage() {
       <div className="min-h-screen bg-elf-cream flex flex-col items-center justify-center p-6 pt-32 pb-20">
         <Card className="max-w-xl w-full text-center p-12 rounded-3xl bg-white shadow-2xl">
           <div className="w-20 h-20 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto mb-6"><Lock size={40} /></div>
-          <h2 className="text-3xl font-headline font-bold text-elf-green-dark mb-4">Admin Access Required</h2>
-          <p className="text-elf-text-mid mb-8">Your account is registered, but you need admin approval. Contact the administrator to activate your dashboard.</p>
+          <h2 className="text-3xl font-headline font-bold text-elf-green-dark mb-4">Unauthorized Access</h2>
+          <p className="text-elf-text-mid mb-8">This dashboard is only accessible to the primary administrator.</p>
           <Button variant="outline" onClick={() => auth && signOut(auth)} className="rounded-full">Sign Out</Button>
         </Card>
       </div>
@@ -295,17 +277,16 @@ export default function AdminPage() {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-12">
           <div>
-            <h1 className="text-4xl font-headline text-elf-green-dark font-bold italic">ELF Dashboard</h1>
-            <p className="text-elf-text-mid">Logged in as: <b>{user.email}</b></p>
+            <h1 className="text-4xl font-headline text-elf-green-dark font-bold italic">ELF Management</h1>
+            <p className="text-elf-text-mid">Administrator Session: <b>{user.email}</b></p>
           </div>
           <Button variant="outline" className="rounded-full" onClick={() => setIsSignOutDialogOpen(true)}><LogOut size={16} className="mr-2" /> Logout</Button>
         </div>
 
         <Tabs defaultValue="archive" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-10 h-14 bg-white border border-elf-gold/10 p-1 rounded-full shadow-sm">
+          <TabsList className="grid w-full grid-cols-2 mb-10 h-14 bg-white border border-elf-gold/10 p-1 rounded-full shadow-sm">
             <TabsTrigger value="archive" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold">Archive</TabsTrigger>
             <TabsTrigger value="gallery" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold">Gallery</TabsTrigger>
-            <TabsTrigger value="users" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold">Users</TabsTrigger>
           </TabsList>
 
           <TabsContent value="archive" className="space-y-8">
@@ -378,67 +359,12 @@ export default function AdminPage() {
               ))}
             </div>
           </TabsContent>
-
-          <TabsContent value="users" className="space-y-6">
-            <div className="flex justify-between items-center mb-4">
-               <h3 className="font-headline text-3xl text-elf-green-dark italic">Registered Members</h3>
-            </div>
-            {usersLoading ? (
-              <div className="flex justify-center py-20"><Loader2 className="animate-spin text-elf-gold" size={40} /></div>
-            ) : !allUsers || allUsers.length === 0 ? (
-              <div className="bg-white p-16 text-center rounded-3xl border border-dashed border-elf-gold/20 text-elf-text-light italic">
-                No registered user profiles found in the database. 
-                <p className="mt-2 text-xs not-italic">Users appear here automatically after their first login.</p>
-              </div>
-            ) : (
-              <div className="grid gap-4">
-                {allUsers?.map(u => (
-                  <div key={u.id} className="bg-white p-6 rounded-3xl border border-elf-gold/10 flex flex-col sm:flex-row justify-between items-center gap-6 shadow-sm">
-                    <div className="flex items-center gap-5">
-                      <div className={`w-14 h-14 rounded-full flex items-center justify-center ${u.role === 'admin' ? 'bg-elf-gold/10 text-elf-gold' : 'bg-elf-green-dark/5 text-elf-text-mid'}`}>
-                        <UsersIcon size={24} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-elf-green-dark text-lg flex items-center gap-2 truncate">
-                          {u.email} {u.role === 'admin' && <ShieldCheck size={18} className="text-elf-gold shrink-0" />}
-                        </p>
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className={`px-3 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-widest ${u.role === 'admin' ? 'bg-elf-gold text-white' : 'bg-elf-green-dark/10 text-elf-green-dark'}`}>
-                            {u.role || 'user'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {u.email !== SUPER_ADMIN_EMAIL && (
-                        <Button variant={u.role === 'admin' ? "outline" : "default"} size="sm" className="rounded-full px-6 font-bold" onClick={() => toggleAdmin(u.id, u.role)}>
-                          {u.role === 'admin' ? 'Revoke Admin' : 'Approve Admin'}
-                        </Button>
-                      )}
-                      {u.email !== SUPER_ADMIN_EMAIL && (
-                        <Button variant="ghost" size="icon" onClick={() => setUserToDelete({ id: u.id, email: u.email })} className="text-destructive hover:bg-destructive/10">
-                          <Trash2 size={20} />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </TabsContent>
         </Tabs>
 
         <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
           <AlertDialogContent className="rounded-3xl">
             <AlertDialogHeader><AlertDialogTitle>Confirm Removal</AlertDialogTitle><AlertDialogDescription>Are you sure you want to remove "{itemToDelete?.title}"? This action is permanent.</AlertDialogDescription></AlertDialogHeader>
             <AlertDialogFooter><AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 rounded-full px-8">Delete Forever</AlertDialogAction></AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        <AlertDialog open={!!userToDelete} onOpenChange={() => setUserToDelete(null)}>
-          <AlertDialogContent className="rounded-3xl">
-            <AlertDialogHeader><AlertDialogTitle>Delete User Profile?</AlertDialogTitle><AlertDialogDescription>This will permanently remove {userToDelete?.email}'s account metadata from the dashboard list. Note: This does not delete their login credentials, only their access record.</AlertDialogDescription></AlertDialogHeader>
-            <AlertDialogFooter><AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDeleteUser} className="bg-destructive hover:bg-destructive/90 rounded-full px-8">Delete Account</AlertDialogAction></AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
