@@ -29,7 +29,8 @@ import {
   Loader2, 
   Lock, 
   KeyRound,
-  UploadCloud
+  UploadCloud,
+  X
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
@@ -124,24 +125,13 @@ export default function AdminPage() {
 
   const handleForgotPassword = async () => {
     if (!auth) return;
-
     const targetEmail = email.toLowerCase().trim() || ADMIN_EMAIL;
-
-    if (targetEmail !== ADMIN_EMAIL) {
-      toast({ 
-        variant: "destructive", 
-        title: "Action Restricted", 
-        description: "Password recovery is only available for the administrator account." 
-      });
-      return;
-    }
-
     setIsResetting(true);
     try {
       await sendPasswordResetEmail(auth, targetEmail);
       toast({ 
         title: "Reset Email Sent", 
-        description: `Instructions have been sent to ${targetEmail}. Please check your inbox and spam folder.` 
+        description: `Instructions have been sent to ${targetEmail}.` 
       });
     } catch (error: any) {
       toast({ 
@@ -181,14 +171,14 @@ export default function AdminPage() {
       setDocUrl('');
       setDocFile(null);
       setDocFormKey(Date.now());
-      setIsSubmitting(false);
     } catch (err: any) {
-      setIsSubmitting(false);
       if (err.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'documents', operation: 'create' }));
       } else {
         toast({ variant: "destructive", title: "Error", description: "Could not save the document." });
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -214,14 +204,14 @@ export default function AdminPage() {
       setGalleryCaption('');
       setGalleryFile(null);
       setGalleryFormKey(Date.now() + 1);
-      setIsSubmitting(false);
     } catch (err: any) {
-      setIsSubmitting(false);
       if (err.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'gallery', operation: 'create' }));
       } else {
         toast({ variant: "destructive", title: "Error", description: "Could not save the image." });
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -238,14 +228,9 @@ export default function AdminPage() {
       });
   };
 
-  const hasAdminAccess = useMemo(() => {
-    if (!user) return false;
-    return user.email === ADMIN_EMAIL;
-  }, [user]);
-
   if (authLoading) return <div className="min-h-screen flex items-center justify-center pt-24"><Loader2 className="animate-spin text-elf-gold" size={48} /></div>;
 
-  if (!user) {
+  if (!user || user.email !== ADMIN_EMAIL) {
     return (
       <div className="min-h-screen bg-elf-green-dark flex flex-col items-center justify-center p-6 pt-32 pb-20">
         <Card className="w-full max-w-md bg-white rounded-3xl overflow-hidden border-none shadow-2xl">
@@ -258,18 +243,18 @@ export default function AdminPage() {
           <CardContent className="pt-8 px-8 pb-10 space-y-6">
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-1">
-                <Label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Email</Label>
+                <Label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Email Address</Label>
                 <Input 
                   type="email" 
                   value={email} 
                   onChange={(e) => setEmail(e.target.value)} 
                   required 
                   className="rounded-xl h-12" 
-                  placeholder="Enter your email address" 
+                  placeholder="Email" 
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Password</Label>
+                <Label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Access Password</Label>
                 <div className="relative">
                   <Input 
                     type={showPassword ? "text" : "password"} 
@@ -277,7 +262,7 @@ export default function AdminPage() {
                     onChange={(e) => setPassword(e.target.value)} 
                     required 
                     className="rounded-xl h-12 pr-12" 
-                    placeholder="Enter your password" 
+                    placeholder="Password" 
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-elf-text-light">
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -294,19 +279,6 @@ export default function AdminPage() {
               </div>
             </form>
           </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!hasAdminAccess) {
-    return (
-      <div className="min-h-screen bg-elf-cream flex flex-col items-center justify-center p-6 pt-32 pb-20">
-        <Card className="max-w-xl w-full text-center p-12 rounded-3xl bg-white shadow-2xl">
-          <div className="w-20 h-20 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto mb-6"><Lock size={40} /></div>
-          <h2 className="text-3xl font-headline font-bold text-elf-green-dark mb-4">Access Denied</h2>
-          <p className="text-elf-text-mid mb-8">This portal is restricted. Please contact the administrator for access.</p>
-          <Button variant="outline" onClick={() => auth && signOut(auth)} className="rounded-full px-10 h-12 border-elf-gold text-elf-gold hover:bg-elf-gold hover:text-white transition-all">Return to Login</Button>
         </Card>
       </div>
     );
@@ -332,7 +304,7 @@ export default function AdminPage() {
           </TabsList>
 
           <TabsContent value="archive" className="space-y-8">
-            <Card className="rounded-2xl border-elf-gold/10 overflow-hidden shadow-sm" key={docFormKey}>
+            <Card className="rounded-2xl border-elf-gold/10 overflow-hidden shadow-sm">
               <CardHeader className="bg-white border-b p-6">
                 <CardTitle className="text-lg font-headline italic flex items-center gap-2">
                   <UploadCloud size={20} className="text-elf-gold" /> Publish Resource
@@ -341,20 +313,25 @@ export default function AdminPage() {
               <CardContent className="p-8 space-y-6 bg-white/50">
                 <div className="space-y-4">
                   <div className="space-y-1"><Label>Title</Label><Input placeholder="E.g. Study Guide 2026" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} className="rounded-xl" /></div>
-                  <RadioGroup value={archiveMode} onValueChange={(val: 'link' | 'file') => setArchiveMode(val)} className="flex gap-6 pb-2">
+                  <RadioGroup value={archiveMode} onValueChange={(val: 'link' | 'file') => {setArchiveMode(val); setDocFile(null); setDocUrl('');}} className="flex gap-6 pb-2">
                     <div className="flex items-center space-x-2"><RadioGroupItem value="file" id="f" /><Label htmlFor="f">Upload PDF</Label></div>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="link" id="l" /><Label htmlFor="l">Link (URL)</Label></div>
                   </RadioGroup>
                   {archiveMode === 'link' ? (
                     <Input placeholder="Enter URL" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl" />
                   ) : (
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2" key={docFormKey}>
                       <Input type="file" accept="application/pdf" onChange={(e) => setDocFile(e.target.files?.[0] || null)} className="h-12 pt-2.5 rounded-xl bg-white cursor-pointer" />
+                      {docFile && (
+                        <Button variant="ghost" size="icon" onClick={() => {setDocFile(null); setDocFormKey(Date.now());}} className="text-destructive hover:bg-destructive/10">
+                          <X size={20} />
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
                 <Button onClick={addDocument} disabled={isSubmitting || !docTitle || (archiveMode === 'file' && !docFile) || (archiveMode === 'link' && !docUrl)} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold shadow-lg hover:bg-elf-gold/90 transition-all">
-                  {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : null} Publish to Archive
+                  {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : 'Publish to Archive'}
                 </Button>
               </CardContent>
             </Card>
@@ -380,7 +357,7 @@ export default function AdminPage() {
           </TabsContent>
 
           <TabsContent value="gallery" className="space-y-8">
-            <Card className="rounded-2xl border-elf-gold/10 overflow-hidden shadow-sm" key={galleryFormKey}>
+            <Card className="rounded-2xl border-elf-gold/10 overflow-hidden shadow-sm">
               <CardHeader className="bg-white border-b p-6">
                 <CardTitle className="text-lg font-headline italic flex items-center gap-2">
                   <UploadCloud size={20} className="text-elf-gold" /> Add Photo
@@ -389,10 +366,20 @@ export default function AdminPage() {
               <CardContent className="p-8 space-y-6 bg-white/50">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-1"><Label>Caption (Optional)</Label><Input placeholder="Event description..." value={galleryCaption} onChange={(e) => setGalleryCaption(e.target.value)} className="rounded-xl" /></div>
-                  <div className="space-y-1"><Label>Choose Image</Label><Input type="file" accept="image/*" onChange={(e) => setGalleryFile(e.target.files?.[0] || null)} className="h-12 pt-2.5 rounded-xl bg-white cursor-pointer" /></div>
+                  <div className="space-y-1">
+                    <Label>Choose Image</Label>
+                    <div className="flex items-center gap-2" key={galleryFormKey}>
+                      <Input type="file" accept="image/*" onChange={(e) => setGalleryFile(e.target.files?.[0] || null)} className="h-12 pt-2.5 rounded-xl bg-white cursor-pointer" />
+                      {galleryFile && (
+                        <Button variant="ghost" size="icon" onClick={() => {setGalleryFile(null); setGalleryFormKey(Date.now() + 1);}} className="text-destructive hover:bg-destructive/10">
+                          <X size={20} />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <Button onClick={addGalleryImage} disabled={isSubmitting || !galleryFile} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold shadow-lg hover:bg-elf-gold/90 transition-all">
-                  {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : null} Publish to Gallery
+                  {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : 'Publish to Gallery'}
                 </Button>
               </CardContent>
             </Card>
@@ -415,7 +402,7 @@ export default function AdminPage() {
 
         <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
           <AlertDialogContent className="rounded-3xl">
-            <AlertDialogHeader><AlertDialogTitle>Confirm Removal</AlertDialogTitle><AlertDialogDescription>Are you sure you want to delete "{itemToDelete?.title}"? This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogHeader><AlertDialogTitle>Confirm Removal</AlertDialogTitle><AlertDialogDescription>Are you sure you want to delete "{itemToDelete?.title}"?</AlertDialogDescription></AlertDialogHeader>
             <AlertDialogFooter><AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 rounded-full px-8">Delete</AlertDialogAction></AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
