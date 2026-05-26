@@ -57,7 +57,6 @@ export default function AdminPage() {
   const { user, loading: authLoading } = useUser();
   const { toast } = useToast();
   
-  // Refs for file inputs to handle explicit clearing
   const docFileInputRef = useRef<HTMLInputElement>(null);
   const galleryFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -110,10 +109,7 @@ export default function AdminPage() {
     setIsSubmitting(true);
     try {
       await signInWithEmailAndPassword(auth, email.toLowerCase().trim(), password);
-      toast({ 
-        title: "Success", 
-        description: "Administrative access granted." 
-      });
+      toast({ title: "Success", description: "Administrative access granted." });
     } catch (error: any) {
       toast({ 
         variant: "destructive", 
@@ -146,12 +142,6 @@ export default function AdminPage() {
     }
   };
 
-  /**
-   * BUG 1, 2, 3 FIXED:
-   * 1. Added toast notification on success.
-   * 2. Explicitly resets form fields and file input value via ref.
-   * 3. Loading state managed in finally block.
-   */
   const addDocument = async () => {
     if (!firestore || !docTitle) return;
     if (archiveMode === 'file' && !docFile) return;
@@ -171,43 +161,37 @@ export default function AdminPage() {
         uploadedAt: new Date().toISOString()
       };
       
-      await addDoc(collection(firestore, 'documents'), data);
-      
-      // Fix 1: Show Success Toast
+      // NON-BLOCKING WRITE: Guidelines state do NOT await mutation calls
+      addDoc(collection(firestore, 'documents'), data).catch((err: any) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ 
+          path: 'documents', 
+          operation: 'create',
+          requestResourceData: data
+        }));
+      });
+
+      // Optimistic Success Handling
       toast({ 
         title: "Published Successfully", 
         description: `${docTitle} has been added to the archive.`,
       });
       
-      // Fix 2: Explicit Form Reset
       setDocTitle('');
       setDocUrl('');
       setDocFile(null);
-      if (docFileInputRef.current) {
-        docFileInputRef.current.value = "";
-      }
+      if (docFileInputRef.current) docFileInputRef.current.value = "";
+      
     } catch (err: any) {
-      if (err.code === 'permission-denied') {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'documents', operation: 'create' }));
-      } else {
-        toast({ 
-          variant: "destructive", 
-          title: "Upload Error", 
-          description: getErrorMessage(err) 
-        });
-      }
+      toast({ 
+        variant: "destructive", 
+        title: "Upload Error", 
+        description: getErrorMessage(err) 
+      });
     } finally {
-      // Fix 3: Guaranteed Reset of Loading State
       setIsSubmitting(false);
     }
   };
 
-  /**
-   * BUG 1, 2, 3 FIXED:
-   * 1. Added toast notification on success.
-   * 2. Explicitly resets form fields and file input value via ref.
-   * 3. Loading state managed in finally block.
-   */
   const addGalleryImage = async () => {
     if (!firestore || !galleryFile) return;
     setIsSubmitting(true);
@@ -220,32 +204,32 @@ export default function AdminPage() {
         createdAt: new Date().toISOString()
       };
 
-      await addDoc(collection(firestore, 'gallery'), data);
-      
-      // Fix 1: Show Success Toast
+      // NON-BLOCKING WRITE
+      addDoc(collection(firestore, 'gallery'), data).catch((err: any) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ 
+          path: 'gallery', 
+          operation: 'create',
+          requestResourceData: data
+        }));
+      });
+
+      // Optimistic Success Handling
       toast({ 
         title: "Published Successfully", 
         description: "The photo has been added to the gallery.",
       });
       
-      // Fix 2: Explicit Form Reset
       setGalleryCaption('');
       setGalleryFile(null);
-      if (galleryFileInputRef.current) {
-        galleryFileInputRef.current.value = "";
-      }
+      if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
+
     } catch (err: any) {
-      if (err.code === 'permission-denied') {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'gallery', operation: 'create' }));
-      } else {
-        toast({ 
-          variant: "destructive", 
-          title: "Upload Error", 
-          description: getErrorMessage(err) 
-        });
-      }
+      toast({ 
+        variant: "destructive", 
+        title: "Upload Error", 
+        description: getErrorMessage(err) 
+      });
     } finally {
-      // Fix 3: Guaranteed Reset of Loading State
       setIsSubmitting(false);
     }
   };
@@ -258,7 +242,10 @@ export default function AdminPage() {
         setItemToDelete(null);
       })
       .catch((err) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `${itemToDelete.col}/${itemToDelete.id}`, operation: 'delete' }));
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ 
+          path: `${itemToDelete.col}/${itemToDelete.id}`, 
+          operation: 'delete' 
+        }));
         setItemToDelete(null);
       });
   };
@@ -374,22 +361,13 @@ export default function AdminPage() {
                         className="h-12 pt-2.5 rounded-xl bg-white cursor-pointer" 
                       />
                       {docFile && (
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => {
-                            setDocFile(null); 
-                            if (docFileInputRef.current) docFileInputRef.current.value = "";
-                          }} 
-                          className="text-destructive hover:bg-destructive/10"
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => { setDocFile(null); if (docFileInputRef.current) docFileInputRef.current.value = ""; }} className="text-destructive hover:bg-destructive/10">
                           <X size={20} />
                         </Button>
                       )}
                     </div>
                   )}
                 </div>
-                {/* Publish Button for Archive */}
                 <Button 
                   onClick={addDocument} 
                   disabled={isSubmitting || !docTitle || (archiveMode === 'file' && !docFile) || (archiveMode === 'link' && !docUrl)} 
@@ -448,22 +426,13 @@ export default function AdminPage() {
                         className="h-12 pt-2.5 rounded-xl bg-white cursor-pointer" 
                       />
                       {galleryFile && (
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => {
-                            setGalleryFile(null); 
-                            if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
-                          }} 
-                          className="text-destructive hover:bg-destructive/10"
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => { setGalleryFile(null); if (galleryFileInputRef.current) galleryFileInputRef.current.value = ""; }} className="text-destructive hover:bg-destructive/10">
                           <X size={20} />
                         </Button>
                       )}
                     </div>
                   </div>
                 </div>
-                {/* Publish Button for Gallery */}
                 <Button 
                   onClick={addGalleryImage} 
                   disabled={isSubmitting || !galleryFile} 
