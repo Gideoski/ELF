@@ -94,15 +94,6 @@ export default function AdminPage() {
     e.preventDefault();
     if (!auth) return;
     
-    if (email.toLowerCase().trim() !== ADMIN_EMAIL) {
-      toast({ 
-        variant: "destructive", 
-        title: "Access Restricted", 
-        description: "Please contact the administrator for access." 
-      });
-      return;
-    }
-
     setIsSubmitting(true);
     try {
       await signInWithEmailAndPassword(auth, email.toLowerCase().trim(), password);
@@ -126,7 +117,7 @@ export default function AdminPage() {
       await sendPasswordResetEmail(auth, targetEmail);
       toast({ 
         title: "Reset Email Sent", 
-        description: "Instructions have been sent to your email." 
+        description: "Check your inbox for password recovery instructions." 
       });
     } catch (error: any) {
       toast({ 
@@ -149,7 +140,6 @@ export default function AdminPage() {
     try {
       let finalUrl = docUrl;
       if (archiveMode === 'file' && docFile) {
-        // Document size check (Firestore doc limit is 1MB, so we limit base64 source)
         if (docFile.size > 800000) {
           toast({ variant: "destructive", title: "File too large", description: "Please upload a PDF under 800KB." });
           setIsSubmitting(false);
@@ -164,9 +154,10 @@ export default function AdminPage() {
         uploadedAt: new Date().toISOString()
       };
       
-      // Await the write to ensure persistence is confirmed by server
+      // STEP: Await the save to Firestore
       await addDoc(collection(firestore, 'documents'), data);
 
+      // STEP: Success notification and reset
       toast({ title: "Published Successfully", description: `${docTitle} has been saved.` });
       
       setDocTitle('');
@@ -181,6 +172,7 @@ export default function AdminPage() {
         description: getErrorMessage(err) 
       });
     } finally {
+      // STEP: loading state back to false in finally block
       setIsSubmitting(false);
     }
   };
@@ -190,23 +182,25 @@ export default function AdminPage() {
     setIsSubmitting(true);
     
     try {
-      // Image size check for Firestore 1MB limit
       if (galleryFile.size > 800000) {
         toast({ variant: "destructive", title: "Image too large", description: "Please upload a smaller image (under 800KB)." });
         setIsSubmitting(false);
         return;
       }
 
+      // STEP: Await file conversion (or upload simulation)
       const base64 = await fileToBase64(galleryFile);
+      
       const data = {
         title: galleryCaption || "",
         imageUrl: base64,
         createdAt: new Date().toISOString()
       };
 
-      // Await the write to ensure persistence is confirmed by server
+      // STEP: Await the save to Firestore
       await addDoc(collection(firestore, 'gallery'), data);
 
+      // STEP: Success notification and reset
       toast({ title: "Published Successfully", description: "Photo saved to gallery." });
       
       setGalleryCaption('');
@@ -220,6 +214,7 @@ export default function AdminPage() {
         description: getErrorMessage(err) 
       });
     } finally {
+      // STEP: loading state back to false in finally block
       setIsSubmitting(false);
     }
   };
@@ -258,7 +253,7 @@ export default function AdminPage() {
                   onChange={(e) => setEmail(e.target.value)} 
                   required 
                   className="rounded-xl h-12" 
-                  placeholder="Administrator Email" 
+                  placeholder="name@example.com" 
                 />
               </div>
               <div className="space-y-1">
@@ -270,7 +265,7 @@ export default function AdminPage() {
                     onChange={(e) => setPassword(e.target.value)} 
                     required 
                     className="rounded-xl h-12 pr-12" 
-                    placeholder="Enter Password" 
+                    placeholder="••••••••" 
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-elf-text-light">
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -293,7 +288,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-elf-cream pt-32 pb-20 px-6">
+    <div className="min-h-screen bg-elf-cream pt-32 pb-24 px-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-12">
           <div>
