@@ -132,7 +132,7 @@ export default function AdminPage() {
       await sendPasswordResetEmail(auth, targetEmail);
       toast({ 
         title: "Reset Email Sent", 
-        description: `Instructions have been sent to ${targetEmail}.` 
+        description: "Instructions have been sent to your email." 
       });
     } catch (error: any) {
       toast({ 
@@ -147,6 +147,9 @@ export default function AdminPage() {
 
   const addDocument = async () => {
     if (!firestore || !docTitle) return;
+    if (archiveMode === 'file' && !docFile) return;
+    if (archiveMode === 'link' && !docUrl) return;
+
     setIsSubmitting(true);
     
     try {
@@ -165,10 +168,10 @@ export default function AdminPage() {
       
       toast({ 
         title: "Published Successfully", 
-        description: "The document has been added to the archive.",
+        description: `${docTitle} has been added to the archive.`,
       });
       
-      // Clear all fields
+      // Explicitly clear all fields
       setDocTitle('');
       setDocUrl('');
       setDocFile(null);
@@ -178,7 +181,7 @@ export default function AdminPage() {
       if (err.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'documents', operation: 'create' }));
       } else {
-        toast({ variant: "destructive", title: "Error", description: "Could not save the document." });
+        toast({ variant: "destructive", title: "Upload Error", description: getErrorMessage(err) });
       }
     } finally {
       setIsSubmitting(false);
@@ -204,7 +207,7 @@ export default function AdminPage() {
         description: "The photo has been added to the gallery.",
       });
       
-      // Clear all fields
+      // Explicitly clear all fields
       setGalleryCaption('');
       setGalleryFile(null);
       // Reset the file input key to clear the "Choose Image" text
@@ -213,7 +216,7 @@ export default function AdminPage() {
       if (err.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'gallery', operation: 'create' }));
       } else {
-        toast({ variant: "destructive", title: "Error", description: "Could not save the image." });
+        toast({ variant: "destructive", title: "Upload Error", description: getErrorMessage(err) });
       }
     } finally {
       setIsSubmitting(false);
@@ -227,7 +230,7 @@ export default function AdminPage() {
         toast({ title: "Removed Successfully" });
         setItemToDelete(null);
       })
-      .catch(() => {
+      .catch((err) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `${itemToDelete.col}/${itemToDelete.id}`, operation: 'delete' }));
         setItemToDelete(null);
       });
@@ -255,7 +258,7 @@ export default function AdminPage() {
                   onChange={(e) => setEmail(e.target.value)} 
                   required 
                   className="rounded-xl h-12" 
-                  placeholder="Email" 
+                  placeholder="Administrator Email" 
                 />
               </div>
               <div className="space-y-1">
@@ -267,7 +270,7 @@ export default function AdminPage() {
                     onChange={(e) => setPassword(e.target.value)} 
                     required 
                     className="rounded-xl h-12 pr-12" 
-                    placeholder="Password" 
+                    placeholder="Enter Password" 
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-elf-text-light">
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
