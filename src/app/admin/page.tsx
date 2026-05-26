@@ -63,6 +63,7 @@ export default function AdminPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   
+  // Use keys to force-reset the file input fields
   const [docFormKey, setDocFormKey] = useState(Date.now());
   const [galleryFormKey, setGalleryFormKey] = useState(Date.now() + 1);
 
@@ -167,9 +168,11 @@ export default function AdminPage() {
         description: "The document has been added to the archive.",
       });
       
+      // Clear all fields
       setDocTitle('');
       setDocUrl('');
       setDocFile(null);
+      // Reset the file input key to clear the "Choose File" text
       setDocFormKey(Date.now());
     } catch (err: any) {
       if (err.code === 'permission-denied') {
@@ -201,8 +204,10 @@ export default function AdminPage() {
         description: "The photo has been added to the gallery.",
       });
       
+      // Clear all fields
       setGalleryCaption('');
       setGalleryFile(null);
+      // Reset the file input key to clear the "Choose Image" text
       setGalleryFormKey(Date.now() + 1);
     } catch (err: any) {
       if (err.code === 'permission-denied') {
@@ -312,25 +317,49 @@ export default function AdminPage() {
               </CardHeader>
               <CardContent className="p-8 space-y-6 bg-white/50">
                 <div className="space-y-4">
-                  <div className="space-y-1"><Label>Title</Label><Input placeholder="E.g. Study Guide 2026" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} className="rounded-xl" /></div>
+                  <div className="space-y-1">
+                    <Label>Title</Label>
+                    <Input placeholder="E.g. Study Guide 2026" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} className="rounded-xl" />
+                  </div>
                   <RadioGroup value={archiveMode} onValueChange={(val: 'link' | 'file') => {setArchiveMode(val); setDocFile(null); setDocUrl('');}} className="flex gap-6 pb-2">
-                    <div className="flex items-center space-x-2"><RadioGroupItem value="file" id="f" /><Label htmlFor="f">Upload PDF</Label></div>
-                    <div className="flex items-center space-x-2"><RadioGroupItem value="link" id="l" /><Label htmlFor="l">Link (URL)</Label></div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="file" id="f" />
+                      <Label htmlFor="f">Upload PDF</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="link" id="l" />
+                      <Label htmlFor="l">Link (URL)</Label>
+                    </div>
                   </RadioGroup>
+                  
                   {archiveMode === 'link' ? (
                     <Input placeholder="Enter URL" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl" />
                   ) : (
                     <div className="flex items-center gap-2" key={docFormKey}>
-                      <Input type="file" accept="application/pdf" onChange={(e) => setDocFile(e.target.files?.[0] || null)} className="h-12 pt-2.5 rounded-xl bg-white cursor-pointer" />
+                      <Input 
+                        type="file" 
+                        accept="application/pdf" 
+                        onChange={(e) => setDocFile(e.target.files?.[0] || null)} 
+                        className="h-12 pt-2.5 rounded-xl bg-white cursor-pointer" 
+                      />
                       {docFile && (
-                        <Button variant="ghost" size="icon" onClick={() => {setDocFile(null); setDocFormKey(Date.now());}} className="text-destructive hover:bg-destructive/10">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => {setDocFile(null); setDocFormKey(Date.now());}} 
+                          className="text-destructive hover:bg-destructive/10"
+                        >
                           <X size={20} />
                         </Button>
                       )}
                     </div>
                   )}
                 </div>
-                <Button onClick={addDocument} disabled={isSubmitting || !docTitle || (archiveMode === 'file' && !docFile) || (archiveMode === 'link' && !docUrl)} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold shadow-lg hover:bg-elf-gold/90 transition-all">
+                <Button 
+                  onClick={addDocument} 
+                  disabled={isSubmitting || !docTitle || (archiveMode === 'file' && !docFile) || (archiveMode === 'link' && !docUrl)} 
+                  className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold shadow-lg hover:bg-elf-gold/90 transition-all"
+                >
                   {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : 'Publish to Archive'}
                 </Button>
               </CardContent>
@@ -341,13 +370,17 @@ export default function AdminPage() {
               {documents?.map(d => (
                 <div key={d.id} className="bg-white p-5 rounded-2xl border border-elf-gold/10 flex justify-between items-center shadow-sm hover:border-elf-gold/30 transition-all">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-elf-gold/10 rounded-xl flex items-center justify-center text-elf-gold"><FileText size={20} /></div>
+                    <div className="w-10 h-10 bg-elf-gold/10 rounded-xl flex items-center justify-center text-elf-gold">
+                      <FileText size={20} />
+                    </div>
                     <div>
                       <p className="font-bold text-elf-green-dark">{d.title}</p>
                       <p className="text-[10px] text-elf-text-light uppercase tracking-widest">{new Date(d.uploadedAt).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => setItemToDelete({ col: 'documents', id: d.id, title: d.title })} className="text-destructive hover:bg-destructive/10"><Trash2 size={18} /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => setItemToDelete({ col: 'documents', id: d.id, title: d.title })} className="text-destructive hover:bg-destructive/10">
+                    <Trash2 size={18} />
+                  </Button>
                 </div>
               ))}
               {(!documents || documents.length === 0) && (
@@ -365,20 +398,37 @@ export default function AdminPage() {
               </CardHeader>
               <CardContent className="p-8 space-y-6 bg-white/50">
                 <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-1"><Label>Caption (Optional)</Label><Input placeholder="Event description..." value={galleryCaption} onChange={(e) => setGalleryCaption(e.target.value)} className="rounded-xl" /></div>
+                  <div className="space-y-1">
+                    <Label>Caption (Optional)</Label>
+                    <Input placeholder="Event description..." value={galleryCaption} onChange={(e) => setGalleryCaption(e.target.value)} className="rounded-xl" />
+                  </div>
                   <div className="space-y-1">
                     <Label>Choose Image</Label>
                     <div className="flex items-center gap-2" key={galleryFormKey}>
-                      <Input type="file" accept="image/*" onChange={(e) => setGalleryFile(e.target.files?.[0] || null)} className="h-12 pt-2.5 rounded-xl bg-white cursor-pointer" />
+                      <Input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => setGalleryFile(e.target.files?.[0] || null)} 
+                        className="h-12 pt-2.5 rounded-xl bg-white cursor-pointer" 
+                      />
                       {galleryFile && (
-                        <Button variant="ghost" size="icon" onClick={() => {setGalleryFile(null); setGalleryFormKey(Date.now() + 1);}} className="text-destructive hover:bg-destructive/10">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => {setGalleryFile(null); setGalleryFormKey(Date.now() + 1);}} 
+                          className="text-destructive hover:bg-destructive/10"
+                        >
                           <X size={20} />
                         </Button>
                       )}
                     </div>
                   </div>
                 </div>
-                <Button onClick={addGalleryImage} disabled={isSubmitting || !galleryFile} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold shadow-lg hover:bg-elf-gold/90 transition-all">
+                <Button 
+                  onClick={addGalleryImage} 
+                  disabled={isSubmitting || !galleryFile} 
+                  className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold shadow-lg hover:bg-elf-gold/90 transition-all"
+                >
                   {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : 'Publish to Gallery'}
                 </Button>
               </CardContent>
@@ -389,7 +439,9 @@ export default function AdminPage() {
                 <div key={g.id} className="bg-white rounded-2xl overflow-hidden border border-elf-gold/10 relative group shadow-sm">
                   <img src={g.imageUrl} className="w-full aspect-square object-cover" alt="" />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Button variant="destructive" size="icon" onClick={() => setItemToDelete({ col: 'gallery', id: g.id, title: 'Gallery Photo' })} className="h-10 w-10 rounded-full"><Trash2 size={18} /></Button>
+                    <Button variant="destructive" size="icon" onClick={() => setItemToDelete({ col: 'gallery', id: g.id, title: 'Gallery Photo' })} className="h-10 w-10 rounded-full">
+                      <Trash2 size={18} />
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -402,15 +454,27 @@ export default function AdminPage() {
 
         <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
           <AlertDialogContent className="rounded-3xl">
-            <AlertDialogHeader><AlertDialogTitle>Confirm Removal</AlertDialogTitle><AlertDialogDescription>Are you sure you want to delete "{itemToDelete?.title}"?</AlertDialogDescription></AlertDialogHeader>
-            <AlertDialogFooter><AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 rounded-full px-8">Delete</AlertDialogAction></AlertDialogFooter>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Removal</AlertDialogTitle>
+              <AlertDialogDescription>Are you sure you want to delete "{itemToDelete?.title}"?</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 rounded-full px-8">Delete</AlertDialogAction>
+            </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
         <AlertDialog open={isSignOutDialogOpen} onOpenChange={setIsSignOutDialogOpen}>
           <AlertDialogContent className="rounded-3xl">
-            <AlertDialogHeader><AlertDialogTitle>Logout?</AlertDialogTitle><AlertDialogDescription>Are you sure you want to end your session?</AlertDialogDescription></AlertDialogHeader>
-            <AlertDialogFooter><AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel><AlertDialogAction onClick={() => auth && signOut(auth)} className="rounded-full px-8">Logout</AlertDialogAction></AlertDialogFooter>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Logout?</AlertDialogTitle>
+              <AlertDialogDescription>Are you sure you want to end your session?</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => auth && signOut(auth)} className="rounded-full px-8">Logout</AlertDialogAction>
+            </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       </div>
