@@ -114,7 +114,7 @@ export default function AdminPage() {
 
   const handleForgotPassword = async () => {
     if (!auth || !email) {
-      toast({ variant: "destructive", title: "Email Required", description: "Please enter the admin email address first." });
+      toast({ variant: "destructive", title: "Email Required", description: "Please enter your administrator email address first." });
       return;
     }
     if (email !== ADMIN_EMAIL) {
@@ -232,13 +232,13 @@ export default function AdminPage() {
           <CardContent className="pt-8 px-8 pb-10 space-y-6">
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-1">
-                <Label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Admin Email</Label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="rounded-xl h-12" placeholder={ADMIN_EMAIL} />
+                <Label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Email Address</Label>
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="rounded-xl h-12" placeholder="admin@example.com" />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Password</Label>
                 <div className="relative">
-                  <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required className="rounded-xl h-12 pr-12" />
+                  <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required className="rounded-xl h-12 pr-12" placeholder="••••••••" />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-elf-text-light">
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -278,7 +278,7 @@ export default function AdminPage() {
         <div className="flex justify-between items-center mb-12">
           <div>
             <h1 className="text-4xl font-headline text-elf-green-dark font-bold italic">ELF Management</h1>
-            <p className="text-elf-text-mid">Administrator Session: <b>{user.email}</b></p>
+            <p className="text-elf-text-mid">Administrator Session Active</p>
           </div>
           <Button variant="outline" className="rounded-full" onClick={() => setIsSignOutDialogOpen(true)}><LogOut size={16} className="mr-2" /> Logout</Button>
         </div>
