@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { useAuth, useUser, useFirestore, useCollection, useDoc } from '@/firebase';
+import { useAuth, useUser, useFirestore, useCollection } from '@/firebase';
 import { 
   signInWithEmailAndPassword, 
   signOut,
@@ -27,7 +27,8 @@ import {
   EyeOff, 
   Loader2, 
   Lock, 
-  KeyRound
+  KeyRound,
+  CheckCircle2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
@@ -54,15 +55,13 @@ export default function AdminPage() {
   const { user, loading: authLoading } = useUser();
   const { toast } = useToast();
   
-  const userProfileRef = useMemo(() => (firestore && user) ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
-  const { data: profile } = useDoc(userProfileRef);
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   
+  // Keys to force reset components (like file inputs)
   const [docFormKey, setDocFormKey] = useState(Date.now());
   const [galleryFormKey, setGalleryFormKey] = useState(Date.now() + 1);
 
@@ -97,16 +96,27 @@ export default function AdminPage() {
     if (!auth) return;
     
     if (email !== ADMIN_EMAIL) {
-      toast({ variant: "destructive", title: "Access Denied", description: "This portal is reserved for the primary administrator account." });
+      toast({ 
+        variant: "destructive", 
+        title: "Access Denied", 
+        description: "This portal is reserved for the primary administrator account." 
+      });
       return;
     }
 
     setIsSubmitting(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      toast({ title: "Welcome back", description: "Administrative access granted." });
+      toast({ 
+        title: "Welcome back", 
+        description: "Administrative access granted." 
+      });
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Login Failed", description: getErrorMessage(error) });
+      toast({ 
+        variant: "destructive", 
+        title: "Login Failed", 
+        description: getErrorMessage(error) 
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -114,20 +124,35 @@ export default function AdminPage() {
 
   const handleForgotPassword = async () => {
     if (!auth || !email) {
-      toast({ variant: "destructive", title: "Email Required", description: "Please enter your administrator email address first." });
+      toast({ 
+        variant: "destructive", 
+        title: "Email Required", 
+        description: "Please enter your administrator email address first." 
+      });
       return;
     }
     if (email !== ADMIN_EMAIL) {
-      toast({ variant: "destructive", title: "Invalid Email", description: "Reset is only available for the administrator account." });
+      toast({ 
+        variant: "destructive", 
+        title: "Invalid Email", 
+        description: "Password reset is only available for the administrator account." 
+      });
       return;
     }
 
     setIsResetting(true);
     try {
       await sendPasswordResetEmail(auth, email);
-      toast({ title: "Reset Email Sent", description: "Check your inbox for instructions to reset your password." });
+      toast({ 
+        title: "Reset Email Sent", 
+        description: "Check your inbox for instructions to reset your password." 
+      });
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Reset Failed", description: getErrorMessage(error) });
+      toast({ 
+        variant: "destructive", 
+        title: "Reset Failed", 
+        description: getErrorMessage(error) 
+      });
     } finally {
       setIsResetting(false);
     }
@@ -149,14 +174,17 @@ export default function AdminPage() {
         uploadedAt: new Date().toISOString()
       };
       
-      setDocTitle('');
-      setDocUrl('');
-      setDocFile(null);
-      setDocFormKey(Date.now());
-      
       addDoc(collection(firestore, 'documents'), data)
         .then(() => {
-          toast({ title: "Upload Successful!", description: "The resource is now live in the archive." });
+          toast({ 
+            title: "Success", 
+            description: "Resource published to archive.",
+          });
+          // Reset form automatically
+          setDocTitle('');
+          setDocUrl('');
+          setDocFile(null);
+          setDocFormKey(Date.now());
         })
         .catch((err) => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'documents', operation: 'create' }));
@@ -181,13 +209,16 @@ export default function AdminPage() {
         createdAt: new Date().toISOString()
       };
 
-      setGalleryCaption('');
-      setGalleryFile(null);
-      setGalleryFormKey(Date.now() + 1);
-
       addDoc(collection(firestore, 'gallery'), data)
         .then(() => {
-          toast({ title: "Gallery Updated!", description: "The image has been published to the gallery." });
+          toast({ 
+            title: "Success", 
+            description: "Image added to gallery.",
+          });
+          // Reset form automatically
+          setGalleryCaption('');
+          setGalleryFile(null);
+          setGalleryFormKey(Date.now() + 1);
         })
         .catch(() => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'gallery', operation: 'create' }));
@@ -228,23 +259,38 @@ export default function AdminPage() {
             <CardTitle className="text-3xl font-headline italic text-elf-green-dark">
               Admin Portal
             </CardTitle>
+            <p className="text-xs text-elf-text-light uppercase tracking-widest mt-2">Exclusive Access Required</p>
           </CardHeader>
           <CardContent className="pt-8 px-8 pb-10 space-y-6">
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-1">
                 <Label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Email Address</Label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="rounded-xl h-12" placeholder="admin@example.com" />
+                <Input 
+                  type="email" 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)} 
+                  required 
+                  className="rounded-xl h-12" 
+                  placeholder="admin@example.com" 
+                />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Password</Label>
                 <div className="relative">
-                  <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required className="rounded-xl h-12 pr-12" placeholder="••••••••" />
+                  <Input 
+                    type={showPassword ? "text" : "password"} 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    required 
+                    className="rounded-xl h-12 pr-12" 
+                    placeholder="••••••••" 
+                  />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-elf-text-light">
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
-              <Button type="submit" disabled={isSubmitting} className="w-full bg-elf-gold text-elf-green-dark h-12 rounded-full font-bold mt-4">
+              <Button type="submit" disabled={isSubmitting} className="w-full bg-elf-gold text-elf-green-dark h-12 rounded-full font-bold mt-4 shadow-lg hover:bg-elf-gold/90 transition-all">
                 {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : 'Sign In'}
               </Button>
               <div className="text-center pt-2">
@@ -265,8 +311,8 @@ export default function AdminPage() {
         <Card className="max-w-xl w-full text-center p-12 rounded-3xl bg-white shadow-2xl">
           <div className="w-20 h-20 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto mb-6"><Lock size={40} /></div>
           <h2 className="text-3xl font-headline font-bold text-elf-green-dark mb-4">Unauthorized Access</h2>
-          <p className="text-elf-text-mid mb-8">This dashboard is only accessible to the primary administrator.</p>
-          <Button variant="outline" onClick={() => auth && signOut(auth)} className="rounded-full">Sign Out</Button>
+          <p className="text-elf-text-mid mb-8">This portal is restricted to the administrator. Contact the administrator for access.</p>
+          <Button variant="outline" onClick={() => auth && signOut(auth)} className="rounded-full px-10 h-12 border-elf-gold text-elf-gold hover:bg-elf-gold hover:text-white transition-all">Sign Out</Button>
         </Card>
       </div>
     );
@@ -280,36 +326,38 @@ export default function AdminPage() {
             <h1 className="text-4xl font-headline text-elf-green-dark font-bold italic">ELF Management</h1>
             <p className="text-elf-text-mid">Administrator Session Active</p>
           </div>
-          <Button variant="outline" className="rounded-full" onClick={() => setIsSignOutDialogOpen(true)}><LogOut size={16} className="mr-2" /> Logout</Button>
+          <Button variant="outline" className="rounded-full border-elf-gold text-elf-gold hover:bg-elf-gold hover:text-white" onClick={() => setIsSignOutDialogOpen(true)}>
+            <LogOut size={16} className="mr-2" /> Logout
+          </Button>
         </div>
 
         <Tabs defaultValue="archive" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-10 h-14 bg-white border border-elf-gold/10 p-1 rounded-full shadow-sm">
-            <TabsTrigger value="archive" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold">Archive</TabsTrigger>
-            <TabsTrigger value="gallery" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold">Gallery</TabsTrigger>
+            <TabsTrigger value="archive" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold transition-all">Archive</TabsTrigger>
+            <TabsTrigger value="gallery" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold transition-all">Gallery</TabsTrigger>
           </TabsList>
 
           <TabsContent value="archive" className="space-y-8">
-            <Card className="rounded-2xl border-elf-gold/10 overflow-hidden" key={docFormKey}>
+            <Card className="rounded-2xl border-elf-gold/10 overflow-hidden shadow-sm" key={docFormKey}>
               <CardHeader className="bg-white border-b p-6">
                 <CardTitle className="text-lg font-headline italic">Publish New Resource</CardTitle>
               </CardHeader>
               <CardContent className="p-8 space-y-6 bg-white/50">
                 <div className="space-y-4">
-                  <div className="space-y-1"><Label>Document Title</Label><Input placeholder="E.g. Preclinical Study Guide" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} /></div>
+                  <div className="space-y-1"><Label>Document Title</Label><Input placeholder="E.g. Preclinical Study Guide" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} className="rounded-xl" /></div>
                   <RadioGroup value={archiveMode} onValueChange={(val: 'link' | 'file') => setArchiveMode(val)} className="flex gap-6 pb-2">
                     <div className="flex items-center space-x-2"><RadioGroupItem value="file" id="f" /><Label htmlFor="f">PDF Upload</Label></div>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="link" id="l" /><Label htmlFor="l">External Link</Label></div>
                   </RadioGroup>
                   {archiveMode === 'link' ? (
-                    <Input placeholder="URL (e.g. Google Drive link)" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} />
+                    <Input placeholder="URL (e.g. Google Drive link)" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl" />
                   ) : (
                     <div className="flex gap-2">
-                      <Input type="file" accept="application/pdf" onChange={(e) => setDocFile(e.target.files?.[0] || null)} className="h-12 pt-2.5" />
+                      <Input type="file" accept="application/pdf" onChange={(e) => setDocFile(e.target.files?.[0] || null)} className="h-12 pt-2.5 rounded-xl bg-white" />
                     </div>
                   )}
                 </div>
-                <Button onClick={addDocument} disabled={isSubmitting || !docTitle || (archiveMode === 'file' && !docFile) || (archiveMode === 'link' && !docUrl)} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold shadow-lg">
+                <Button onClick={addDocument} disabled={isSubmitting || !docTitle || (archiveMode === 'file' && !docFile) || (archiveMode === 'link' && !docUrl)} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold shadow-lg hover:bg-elf-gold/90 transition-all">
                   {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : null} Publish to Archive
                 </Button>
               </CardContent>
@@ -318,7 +366,7 @@ export default function AdminPage() {
             <div className="grid gap-3">
               <h3 className="font-headline text-2xl text-elf-green-dark italic mb-2">Recent Uploads</h3>
               {documents?.map(d => (
-                <div key={d.id} className="bg-white p-5 rounded-2xl border border-elf-gold/10 flex justify-between items-center shadow-sm">
+                <div key={d.id} className="bg-white p-5 rounded-2xl border border-elf-gold/10 flex justify-between items-center shadow-sm hover:border-elf-gold/30 transition-all">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-elf-gold/10 rounded-xl flex items-center justify-center text-elf-gold"><FileText size={20} /></div>
                     <div>
@@ -329,20 +377,23 @@ export default function AdminPage() {
                   <Button variant="ghost" size="icon" onClick={() => setItemToDelete({ col: 'documents', id: d.id, title: d.title })} className="text-destructive hover:bg-destructive/10"><Trash2 size={18} /></Button>
                 </div>
               ))}
+              {(!documents || documents.length === 0) && (
+                <div className="text-center py-10 text-elf-text-light italic">No resources found in the archive.</div>
+              )}
             </div>
           </TabsContent>
 
           <TabsContent value="gallery" className="space-y-8">
-            <Card className="rounded-2xl border-elf-gold/10 overflow-hidden" key={galleryFormKey}>
+            <Card className="rounded-2xl border-elf-gold/10 overflow-hidden shadow-sm" key={galleryFormKey}>
               <CardHeader className="bg-white border-b p-6">
                 <CardTitle className="text-lg font-headline italic">Add Gallery Moment</CardTitle>
               </CardHeader>
               <CardContent className="p-8 space-y-6 bg-white/50">
                 <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-1"><Label>Caption (Optional)</Label><Input placeholder="Event description..." value={galleryCaption} onChange={(e) => setGalleryCaption(e.target.value)} /></div>
-                  <div className="space-y-1"><Label>Select Image</Label><Input type="file" accept="image/*" onChange={(e) => setGalleryFile(e.target.files?.[0] || null)} className="h-12 pt-2.5" /></div>
+                  <div className="space-y-1"><Label>Caption (Optional)</Label><Input placeholder="Event description..." value={galleryCaption} onChange={(e) => setGalleryCaption(e.target.value)} className="rounded-xl" /></div>
+                  <div className="space-y-1"><Label>Select Image</Label><Input type="file" accept="image/*" onChange={(e) => setGalleryFile(e.target.files?.[0] || null)} className="h-12 pt-2.5 rounded-xl bg-white" /></div>
                 </div>
-                <Button onClick={addGalleryImage} disabled={isSubmitting || !galleryFile} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold shadow-lg">
+                <Button onClick={addGalleryImage} disabled={isSubmitting || !galleryFile} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold shadow-lg hover:bg-elf-gold/90 transition-all">
                   {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : null} Publish to Gallery
                 </Button>
               </CardContent>
@@ -357,6 +408,9 @@ export default function AdminPage() {
                   </div>
                 </div>
               ))}
+              {(!galleryItems || galleryItems.length === 0) && (
+                <div className="col-span-full text-center py-10 text-elf-text-light italic">No moments captured in the gallery yet.</div>
+              )}
             </div>
           </TabsContent>
         </Tabs>
