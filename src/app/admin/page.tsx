@@ -154,10 +154,10 @@ export default function AdminPage() {
         uploadedAt: new Date().toISOString()
       };
       
-      // STEP: Await the save to Firestore
+      // Step: Await the save to Firestore
       await addDoc(collection(firestore, 'documents'), data);
 
-      // STEP: Success notification and reset
+      // Step: Success notification and reset ONLY after success
       toast({ title: "Published Successfully", description: `${docTitle} has been saved.` });
       
       setDocTitle('');
@@ -172,23 +172,25 @@ export default function AdminPage() {
         description: getErrorMessage(err) 
       });
     } finally {
-      // STEP: loading state back to false in finally block
+      // Step: Loading state back to false
       setIsSubmitting(false);
     }
   };
 
   const addGalleryImage = async () => {
     if (!firestore || !galleryFile) return;
+    
     setIsSubmitting(true);
     
     try {
+      // Check file size (Firestore document limit is 1MB)
       if (galleryFile.size > 800000) {
         toast({ variant: "destructive", title: "Image too large", description: "Please upload a smaller image (under 800KB)." });
         setIsSubmitting(false);
         return;
       }
 
-      // STEP: Await file conversion (or upload simulation)
+      // Step: Await file conversion
       const base64 = await fileToBase64(galleryFile);
       
       const data = {
@@ -197,10 +199,10 @@ export default function AdminPage() {
         createdAt: new Date().toISOString()
       };
 
-      // STEP: Await the save to Firestore
+      // Step: Await the save to Firestore
       await addDoc(collection(firestore, 'gallery'), data);
 
-      // STEP: Success notification and reset
+      // Step: Success notification and reset ONLY after success
       toast({ title: "Published Successfully", description: "Photo saved to gallery." });
       
       setGalleryCaption('');
@@ -214,7 +216,7 @@ export default function AdminPage() {
         description: getErrorMessage(err) 
       });
     } finally {
-      // STEP: loading state back to false in finally block
+      // Step: Loading state back to false
       setIsSubmitting(false);
     }
   };
