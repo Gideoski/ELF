@@ -28,7 +28,7 @@ import {
   Loader2, 
   Lock, 
   KeyRound,
-  CheckCircle2
+  UploadCloud
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
@@ -94,18 +94,18 @@ export default function AdminPage() {
     e.preventDefault();
     if (!auth) return;
     
-    if (email !== ADMIN_EMAIL) {
+    if (email.toLowerCase().trim() !== ADMIN_EMAIL) {
       toast({ 
         variant: "destructive", 
-        title: "Access Denied", 
-        description: "This portal is reserved for the primary administrator account." 
+        title: "Unauthorized Account", 
+        description: "Login is restricted to the administrator account." 
       });
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, email.toLowerCase().trim(), password);
       toast({ 
         title: "Welcome back", 
         description: "Administrative access granted." 
@@ -124,8 +124,8 @@ export default function AdminPage() {
   const handleForgotPassword = async () => {
     if (!auth) return;
 
-    // Use the admin email if the field is empty, otherwise check if they entered the right one
-    const targetEmail = email || ADMIN_EMAIL;
+    // Default to admin email if input is empty
+    const targetEmail = email.toLowerCase().trim() || ADMIN_EMAIL;
 
     if (targetEmail !== ADMIN_EMAIL) {
       toast({ 
@@ -141,7 +141,7 @@ export default function AdminPage() {
       await sendPasswordResetEmail(auth, targetEmail);
       toast({ 
         title: "Reset Email Sent", 
-        description: `Instructions have been sent to ${targetEmail}. Please check your inbox and spam folder.` 
+        description: `Instructions have been sent to ${targetEmail}. Please check your inbox and spam folder. If you don't receive it, ensure the account exists in the Firebase Console.` 
       });
     } catch (error: any) {
       toast({ 
@@ -170,25 +170,25 @@ export default function AdminPage() {
         uploadedAt: new Date().toISOString()
       };
       
-      addDoc(collection(firestore, 'documents'), data)
-        .then(() => {
-          toast({ 
-            title: "Success", 
-            description: "Resource published to archive.",
-          });
-          setDocTitle('');
-          setDocUrl('');
-          setDocFile(null);
-          setDocFormKey(Date.now());
-        })
-        .catch((err) => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'documents', operation: 'create' }));
-        })
-        .finally(() => setIsSubmitting(false));
-
+      await addDoc(collection(firestore, 'documents'), data);
+      
+      toast({ 
+        title: "Resource Published", 
+        description: "The document has been added to the archive successfully.",
+      });
+      
+      setDocTitle('');
+      setDocUrl('');
+      setDocFile(null);
+      setDocFormKey(Date.now());
+      setIsSubmitting(false);
     } catch (err: any) {
       setIsSubmitting(false);
-      toast({ variant: "destructive", title: "Process Error", description: "Could not prepare the document." });
+      if (err.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'documents', operation: 'create' }));
+      } else {
+        toast({ variant: "destructive", title: "Publication Error", description: "An unexpected error occurred during upload." });
+      }
     }
   };
 
@@ -204,24 +204,24 @@ export default function AdminPage() {
         createdAt: new Date().toISOString()
       };
 
-      addDoc(collection(firestore, 'gallery'), data)
-        .then(() => {
-          toast({ 
-            title: "Success", 
-            description: "Image added to gallery.",
-          });
-          setGalleryCaption('');
-          setGalleryFile(null);
-          setGalleryFormKey(Date.now() + 1);
-        })
-        .catch(() => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'gallery', operation: 'create' }));
-        })
-        .finally(() => setIsSubmitting(false));
-
+      await addDoc(collection(firestore, 'gallery'), data);
+      
+      toast({ 
+        title: "Image Published", 
+        description: "The photo has been added to the gallery successfully.",
+      });
+      
+      setGalleryCaption('');
+      setGalleryFile(null);
+      setGalleryFormKey(Date.now() + 1);
+      setIsSubmitting(false);
     } catch (err: any) {
       setIsSubmitting(false);
-      toast({ variant: "destructive", title: "Process Error", description: "Could not prepare the image." });
+      if (err.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'gallery', operation: 'create' }));
+      } else {
+        toast({ variant: "destructive", title: "Publication Error", description: "An unexpected error occurred during upload." });
+      }
     }
   };
 
@@ -253,19 +253,19 @@ export default function AdminPage() {
             <CardTitle className="text-3xl font-headline italic text-elf-green-dark">
               Admin Portal
             </CardTitle>
-            <p className="text-xs text-elf-text-light uppercase tracking-widest mt-2">Exclusive Access Required</p>
+            <p className="text-xs text-elf-text-light uppercase tracking-widest mt-2">Administrator Access Only</p>
           </CardHeader>
           <CardContent className="pt-8 px-8 pb-10 space-y-6">
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-1">
-                <Label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Email Address</Label>
+                <Label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Email</Label>
                 <Input 
                   type="email" 
                   value={email} 
                   onChange={(e) => setEmail(e.target.value)} 
                   required 
                   className="rounded-xl h-12" 
-                  placeholder="admin@example.com" 
+                  placeholder="Enter email address" 
                 />
               </div>
               <div className="space-y-1">
@@ -277,7 +277,7 @@ export default function AdminPage() {
                     onChange={(e) => setPassword(e.target.value)} 
                     required 
                     className="rounded-xl h-12 pr-12" 
-                    placeholder="••••••••" 
+                    placeholder="Enter password" 
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-elf-text-light">
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -304,9 +304,9 @@ export default function AdminPage() {
       <div className="min-h-screen bg-elf-cream flex flex-col items-center justify-center p-6 pt-32 pb-20">
         <Card className="max-w-xl w-full text-center p-12 rounded-3xl bg-white shadow-2xl">
           <div className="w-20 h-20 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto mb-6"><Lock size={40} /></div>
-          <h2 className="text-3xl font-headline font-bold text-elf-green-dark mb-4">Unauthorized Access</h2>
-          <p className="text-elf-text-mid mb-8">This portal is restricted to the administrator. Contact the administrator for access.</p>
-          <Button variant="outline" onClick={() => auth && signOut(auth)} className="rounded-full px-10 h-12 border-elf-gold text-elf-gold hover:bg-elf-gold hover:text-white transition-all">Sign Out</Button>
+          <h2 className="text-3xl font-headline font-bold text-elf-green-dark mb-4">Access Denied</h2>
+          <p className="text-elf-text-mid mb-8">This portal is restricted to the administrator. Please contact the administrator for access.</p>
+          <Button variant="outline" onClick={() => auth && signOut(auth)} className="rounded-full px-10 h-12 border-elf-gold text-elf-gold hover:bg-elf-gold hover:text-white transition-all">Return to Login</Button>
         </Card>
       </div>
     );
@@ -317,8 +317,8 @@ export default function AdminPage() {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-12">
           <div>
-            <h1 className="text-4xl font-headline text-elf-green-dark font-bold italic">ELF Management</h1>
-            <p className="text-elf-text-mid">Administrator Session Active</p>
+            <h1 className="text-4xl font-headline text-elf-green-dark font-bold italic">ELF Dashboard</h1>
+            <p className="text-elf-text-mid">Signed in as Administrator</p>
           </div>
           <Button variant="outline" className="rounded-full border-elf-gold text-elf-gold hover:bg-elf-gold hover:text-white" onClick={() => setIsSignOutDialogOpen(true)}>
             <LogOut size={16} className="mr-2" /> Logout
@@ -327,27 +327,29 @@ export default function AdminPage() {
 
         <Tabs defaultValue="archive" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-10 h-14 bg-white border border-elf-gold/10 p-1 rounded-full shadow-sm">
-            <TabsTrigger value="archive" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold transition-all">Archive</TabsTrigger>
-            <TabsTrigger value="gallery" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold transition-all">Gallery</TabsTrigger>
+            <TabsTrigger value="archive" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold transition-all">Resource Archive</TabsTrigger>
+            <TabsTrigger value="gallery" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold transition-all">Photo Gallery</TabsTrigger>
           </TabsList>
 
           <TabsContent value="archive" className="space-y-8">
             <Card className="rounded-2xl border-elf-gold/10 overflow-hidden shadow-sm" key={docFormKey}>
               <CardHeader className="bg-white border-b p-6">
-                <CardTitle className="text-lg font-headline italic">Publish New Resource</CardTitle>
+                <CardTitle className="text-lg font-headline italic flex items-center gap-2">
+                  <UploadCloud size={20} className="text-elf-gold" /> Publish Resource
+                </CardTitle>
               </CardHeader>
               <CardContent className="p-8 space-y-6 bg-white/50">
                 <div className="space-y-4">
-                  <div className="space-y-1"><Label>Document Title</Label><Input placeholder="E.g. Preclinical Study Guide" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} className="rounded-xl" /></div>
+                  <div className="space-y-1"><Label>Title</Label><Input placeholder="E.g. Study Guide 2026" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} className="rounded-xl" /></div>
                   <RadioGroup value={archiveMode} onValueChange={(val: 'link' | 'file') => setArchiveMode(val)} className="flex gap-6 pb-2">
-                    <div className="flex items-center space-x-2"><RadioGroupItem value="file" id="f" /><Label htmlFor="f">PDF Upload</Label></div>
-                    <div className="flex items-center space-x-2"><RadioGroupItem value="link" id="l" /><Label htmlFor="l">External Link</Label></div>
+                    <div className="flex items-center space-x-2"><RadioGroupItem value="file" id="f" /><Label htmlFor="f">Upload PDF</Label></div>
+                    <div className="flex items-center space-x-2"><RadioGroupItem value="link" id="l" /><Label htmlFor="l">Link (URL)</Label></div>
                   </RadioGroup>
                   {archiveMode === 'link' ? (
-                    <Input placeholder="URL (e.g. Google Drive link)" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl" />
+                    <Input placeholder="Enter URL" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl" />
                   ) : (
                     <div className="flex gap-2">
-                      <Input type="file" accept="application/pdf" onChange={(e) => setDocFile(e.target.files?.[0] || null)} className="h-12 pt-2.5 rounded-xl bg-white" />
+                      <Input type="file" accept="application/pdf" onChange={(e) => setDocFile(e.target.files?.[0] || null)} className="h-12 pt-2.5 rounded-xl bg-white cursor-pointer" />
                     </div>
                   )}
                 </div>
@@ -358,7 +360,7 @@ export default function AdminPage() {
             </Card>
             
             <div className="grid gap-3">
-              <h3 className="font-headline text-2xl text-elf-green-dark italic mb-2">Recent Uploads</h3>
+              <h3 className="font-headline text-2xl text-elf-green-dark italic mb-2">Recent Archives</h3>
               {documents?.map(d => (
                 <div key={d.id} className="bg-white p-5 rounded-2xl border border-elf-gold/10 flex justify-between items-center shadow-sm hover:border-elf-gold/30 transition-all">
                   <div className="flex items-center gap-4">
@@ -372,7 +374,7 @@ export default function AdminPage() {
                 </div>
               ))}
               {(!documents || documents.length === 0) && (
-                <div className="text-center py-10 text-elf-text-light italic">No resources found in the archive.</div>
+                <div className="text-center py-10 text-elf-text-light italic">No resources found.</div>
               )}
             </div>
           </TabsContent>
@@ -380,12 +382,14 @@ export default function AdminPage() {
           <TabsContent value="gallery" className="space-y-8">
             <Card className="rounded-2xl border-elf-gold/10 overflow-hidden shadow-sm" key={galleryFormKey}>
               <CardHeader className="bg-white border-b p-6">
-                <CardTitle className="text-lg font-headline italic">Add Gallery Moment</CardTitle>
+                <CardTitle className="text-lg font-headline italic flex items-center gap-2">
+                  <UploadCloud size={20} className="text-elf-gold" /> Add Photo
+                </CardTitle>
               </CardHeader>
               <CardContent className="p-8 space-y-6 bg-white/50">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-1"><Label>Caption (Optional)</Label><Input placeholder="Event description..." value={galleryCaption} onChange={(e) => setGalleryCaption(e.target.value)} className="rounded-xl" /></div>
-                  <div className="space-y-1"><Label>Select Image</Label><Input type="file" accept="image/*" onChange={(e) => setGalleryFile(e.target.files?.[0] || null)} className="h-12 pt-2.5 rounded-xl bg-white" /></div>
+                  <div className="space-y-1"><Label>Choose Image</Label><Input type="file" accept="image/*" onChange={(e) => setGalleryFile(e.target.files?.[0] || null)} className="h-12 pt-2.5 rounded-xl bg-white cursor-pointer" /></div>
                 </div>
                 <Button onClick={addGalleryImage} disabled={isSubmitting || !galleryFile} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold shadow-lg hover:bg-elf-gold/90 transition-all">
                   {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : null} Publish to Gallery
@@ -398,12 +402,12 @@ export default function AdminPage() {
                 <div key={g.id} className="bg-white rounded-2xl overflow-hidden border border-elf-gold/10 relative group shadow-sm">
                   <img src={g.imageUrl} className="w-full aspect-square object-cover" alt="" />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Button variant="destructive" size="icon" onClick={() => setItemToDelete({ col: 'gallery', id: g.id, title: 'Gallery Image' })} className="h-10 w-10 rounded-full"><Trash2 size={18} /></Button>
+                    <Button variant="destructive" size="icon" onClick={() => setItemToDelete({ col: 'gallery', id: g.id, title: 'Gallery Photo' })} className="h-10 w-10 rounded-full"><Trash2 size={18} /></Button>
                   </div>
                 </div>
               ))}
               {(!galleryItems || galleryItems.length === 0) && (
-                <div className="col-span-full text-center py-10 text-elf-text-light italic">No moments captured in the gallery yet.</div>
+                <div className="col-span-full text-center py-10 text-elf-text-light italic">No photos in the gallery.</div>
               )}
             </div>
           </TabsContent>
@@ -411,15 +415,15 @@ export default function AdminPage() {
 
         <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
           <AlertDialogContent className="rounded-3xl">
-            <AlertDialogHeader><AlertDialogTitle>Confirm Removal</AlertDialogTitle><AlertDialogDescription>Are you sure you want to remove "{itemToDelete?.title}"? This action is permanent.</AlertDialogDescription></AlertDialogHeader>
-            <AlertDialogFooter><AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 rounded-full px-8">Delete Forever</AlertDialogAction></AlertDialogFooter>
+            <AlertDialogHeader><AlertDialogTitle>Delete Permanent</AlertDialogTitle><AlertDialogDescription>Are you sure you want to remove "{itemToDelete?.title}"? This cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogFooter><AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 rounded-full px-8">Delete</AlertDialogAction></AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
         <AlertDialog open={isSignOutDialogOpen} onOpenChange={setIsSignOutDialogOpen}>
           <AlertDialogContent className="rounded-3xl">
-            <AlertDialogHeader><AlertDialogTitle>End Session?</AlertDialogTitle><AlertDialogDescription>You will be logged out of the administrative dashboard.</AlertDialogDescription></AlertDialogHeader>
-            <AlertDialogFooter><AlertDialogCancel className="rounded-full">Stay</AlertDialogCancel><AlertDialogAction onClick={() => auth && signOut(auth)} className="rounded-full px-8">Sign Out</AlertDialogAction></AlertDialogFooter>
+            <AlertDialogHeader><AlertDialogTitle>Logout?</AlertDialogTitle><AlertDialogDescription>Confirming logout will end your current administrative session.</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogFooter><AlertDialogCancel className="rounded-full">Stay</AlertDialogCancel><AlertDialogAction onClick={() => auth && signOut(auth)} className="rounded-full px-8">Logout</AlertDialogAction></AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       </div>
