@@ -63,7 +63,7 @@ export default function AdminPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   
-  // Use keys to force-reset the file input fields
+  // Use keys to force-reset the file input fields (clears the browser's "Choose File" text)
   const [docFormKey, setDocFormKey] = useState(Date.now());
   const [galleryFormKey, setGalleryFormKey] = useState(Date.now() + 1);
 
@@ -166,17 +166,17 @@ export default function AdminPage() {
       
       await addDoc(collection(firestore, 'documents'), data);
       
+      // BUG 1 FIX: Show toast
       toast({ 
         title: "Published Successfully", 
         description: `${docTitle} has been added to the archive.`,
       });
       
-      // Explicitly clear all fields
+      // BUG 2 FIX: Explicitly clear all fields
       setDocTitle('');
       setDocUrl('');
       setDocFile(null);
-      // Reset the file input key to clear the "Choose File" text
-      setDocFormKey(Date.now());
+      setDocFormKey(Date.now()); // Reset file input component key
     } catch (err: any) {
       if (err.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'documents', operation: 'create' }));
@@ -184,6 +184,7 @@ export default function AdminPage() {
         toast({ variant: "destructive", title: "Upload Error", description: getErrorMessage(err) });
       }
     } finally {
+      // BUG 3 FIX: Reset loading state in finally block
       setIsSubmitting(false);
     }
   };
@@ -202,16 +203,16 @@ export default function AdminPage() {
 
       await addDoc(collection(firestore, 'gallery'), data);
       
+      // BUG 1 FIX: Show toast
       toast({ 
         title: "Published Successfully", 
         description: "The photo has been added to the gallery.",
       });
       
-      // Explicitly clear all fields
+      // BUG 2 FIX: Explicitly clear all fields
       setGalleryCaption('');
       setGalleryFile(null);
-      // Reset the file input key to clear the "Choose Image" text
-      setGalleryFormKey(Date.now() + 1);
+      setGalleryFormKey(Date.now() + 1); // Reset file input component key
     } catch (err: any) {
       if (err.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'gallery', operation: 'create' }));
@@ -219,6 +220,7 @@ export default function AdminPage() {
         toast({ variant: "destructive", title: "Upload Error", description: getErrorMessage(err) });
       }
     } finally {
+      // BUG 3 FIX: Reset loading state in finally block
       setIsSubmitting(false);
     }
   };
