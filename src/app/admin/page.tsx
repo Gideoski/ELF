@@ -35,7 +35,7 @@ import {
   UploadCloud,
   X
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -49,8 +49,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 const ADMIN_EMAIL = 'nimsaamsaelf@gmail.com';
 
@@ -59,7 +57,6 @@ export default function AdminPage() {
   const firestore = useFirestore();
   const storage = useStorage();
   const { user, loading: authLoading } = useUser();
-  const { toast } = useToast();
   
   const docFileInputRef = useRef<HTMLInputElement>(null);
   const galleryFileInputRef = useRef<HTMLInputElement>(null);
@@ -121,16 +118,14 @@ export default function AdminPage() {
   const addDocument = async () => {
     if (!firestore || !docTitle) return;
     
-    // Show immediate feedback synchronously
+    // 1. Show immediate feedback synchronously
     toast({ title: "Publishing...", description: "Please wait while we save your resource." });
     setIsSubmittingDoc(true);
 
     try {
-      const title = docTitle;
-      const uploadedAt = new Date().toISOString();
-
       let finalUrl = docUrl;
 
+      // 2. Await Storage Upload if mode is file
       if (archiveMode === 'file' && docFile && storage) {
         const storagePath = `documents/${Date.now()}_${docFile.name}`;
         const storageRef = ref(storage, storagePath);
@@ -140,13 +135,14 @@ export default function AdminPage() {
 
       if (!finalUrl) throw new Error("A valid URL or file is required.");
 
-      // Await Firestore save to ensure persistence
+      // 3. Await Firestore Save
       await addDoc(collection(firestore, 'documents'), {
-        title,
+        title: docTitle,
         fileUrl: finalUrl,
-        uploadedAt
+        uploadedAt: new Date().toISOString()
       });
 
+      // 4. Toast Success and Reset
       toast({ title: "Success", description: "Resource published successfully." });
       setDocTitle('');
       setDocUrl('');
@@ -154,13 +150,9 @@ export default function AdminPage() {
       if (docFileInputRef.current) docFileInputRef.current.value = "";
 
     } catch (err: any) {
-      console.error("Document upload error:", err);
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: 'documents',
-        operation: 'create',
-      }));
       toast({ variant: "destructive", title: "Error", description: getErrorMessage(err) });
     } finally {
+      // 5. Finalize loading state
       setIsSubmittingDoc(false);
     }
   };
@@ -168,40 +160,35 @@ export default function AdminPage() {
   const addGalleryImage = async () => {
     if (!firestore || !storage || !galleryFile) return;
     
-    // Show immediate feedback synchronously
+    // 1. Show immediate feedback synchronously
     toast({ title: "Uploading...", description: "Please wait while your photo is added to the gallery." });
     setIsSubmittingGallery(true);
 
     try {
-      const caption = galleryCaption;
-      const createdAt = new Date().toISOString();
-
       const storagePath = `gallery/${Date.now()}_${galleryFile.name}`;
       const storageRef = ref(storage, storagePath);
       
+      // 2. Await Storage Upload
       const uploadResult = await uploadBytes(storageRef, galleryFile);
       const imageUrl = await getDownloadURL(uploadResult.ref);
 
-      // Await Firestore save to ensure persistence
+      // 3. Await Firestore Save
       await addDoc(collection(firestore, 'gallery'), {
-        title: caption || "",
+        title: galleryCaption || "",
         imageUrl: imageUrl,
-        createdAt
+        createdAt: new Date().toISOString()
       });
 
+      // 4. Toast Success and Reset
       toast({ title: "Gallery Updated", description: "Your photo is now live." });
       setGalleryCaption('');
       setGalleryFile(null);
       if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
 
     } catch (err: any) {
-      console.error("Gallery upload error:", err);
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: 'gallery',
-        operation: 'create',
-      }));
       toast({ variant: "destructive", title: "Gallery Upload Failed", description: getErrorMessage(err) });
     } finally {
+      // 5. Finalize loading state
       setIsSubmittingGallery(false);
     }
   };
