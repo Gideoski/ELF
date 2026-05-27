@@ -208,7 +208,7 @@ export default function AdminPage() {
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-1">
                 <Label className="text-xs font-bold uppercase tracking-widest text-elf-light">Email</Label>
-                <input 
+                <Input 
                   type="email" 
                   value={email || ''} 
                   onChange={(e) => setEmail(e.target.value)} 
@@ -220,7 +220,7 @@ export default function AdminPage() {
               <div className="space-y-1">
                 <Label className="text-xs font-bold uppercase tracking-widest text-elf-light">Password</Label>
                 <div className="relative">
-                  <input 
+                  <Input 
                     type={showPassword ? "text" : "password"} 
                     value={password || ''} 
                     onChange={(e) => setPassword(e.target.value)} 
