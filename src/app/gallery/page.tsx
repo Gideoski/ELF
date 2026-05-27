@@ -17,7 +17,7 @@ export default function Gallery() {
   const { data: dbImages, loading } = useCollection(galleryQuery);
 
   useEffect(() => {
-    // Robust IntersectionObserver implementation
+    // We run the observer logic whenever images change or finish loading
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -36,7 +36,7 @@ export default function Gallery() {
   return (
     <div className="bg-elf-green-dark min-h-screen pt-32 pb-24 text-white">
       <div className="max-w-7xl mx-auto px-6">
-        <div className="flex flex-col md:flex-row items-end justify-between gap-8 mb-16 animate-on-view opacity-0 translate-y-4 transition-all duration-700">
+        <div className="flex flex-col md:flex-row items-end justify-between gap-8 mb-16 animate-on-view opacity-100 transition-all duration-700">
           <div>
             <h1 className="text-5xl md:text-7xl font-headline mb-4">Moments That Matter 🫶🏾</h1>
             <p className="text-white/60 text-lg max-w-xl">Capturing the intensity, the joy, and the growth of Nigeria's emerging medical leaders.</p>
@@ -74,7 +74,7 @@ export default function Gallery() {
           </div>
         )}
 
-        <div className="mt-20 text-center animate-on-view opacity-0 translate-y-4 transition-all duration-700">
+        <div className="mt-20 text-center animate-on-view opacity-100 transition-all duration-700">
           <p className="text-white/40 italic mb-8">View the complete archive on our official Google Drive</p>
           <Button asChild variant="outline" className="bg-transparent border-elf-gold text-elf-gold hover:bg-elf-gold hover:text-elf-green-dark h-14 px-10 rounded-full">
             <a href="https://drive.google.com/drive/folders/10qeiKr0kqtX_iRZK-u60V4dRBGZ9kA8b" target="_blank" rel="noopener noreferrer">

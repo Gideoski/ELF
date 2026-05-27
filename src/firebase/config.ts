@@ -1,18 +1,10 @@
 'use client';
 
-/**
- * Firebase configuration object.
- * 
- * To get your correct API Key:
- * 1. Go to the Firebase Console (https://console.firebase.google.com/)
- * 2. Click the Gear Icon (Project Settings)
- * 3. Look for "Web API Key" in the General tab.
- */
 export const firebaseConfig = {
   apiKey: "AIzaSyDrJWUKerEr5pR0jCOcShDvdDnBe1rNqu0",
-  authDomain: "nextn-640c4.firebaseapp.com",
-  projectId: "nextn-640c4",
-  storageBucket: "nextn-640c4.firebasestorage.app",
-  messagingSenderId: "1234567890",
-  appId: "1:1234567890:web:abcdef123456"
+  authDomain: "studio-1365409974-4e95e.firebaseapp.com",
+  projectId: "studio-1365409974-4e95e",
+  storageBucket: "studio-1365409974-4e95e.firebasestorage.app",
+  messagingSenderId: "843624084467",
+  appId: "1:843624084467:web:656196b22eb7df10479886"
 };

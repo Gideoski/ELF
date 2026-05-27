@@ -29,7 +29,8 @@ import {
   KeyRound,
   UploadCloud,
   X,
-  ExternalLink
+  ExternalLink,
+  AlertCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
@@ -47,6 +48,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const ADMIN_EMAIL = 'nimsaamsaelf@gmail.com';
+const MAX_FILE_SIZE = 700 * 1024; // 700KB (to fit within Firestore 1MB limit after Base64 encoding)
 
 export default function AdminPage() {
   const auth = useAuth();
@@ -120,24 +122,38 @@ export default function AdminPage() {
     setIsSubmittingDoc(true);
 
     try {
-      let finalUrl = docUrl;
-
       if (archiveMode === 'file' && docFile) {
-        finalUrl = await new Promise<string>((resolve, reject) => {
+        if (docFile.size > MAX_FILE_SIZE) {
+          toast({ 
+            variant: "destructive", 
+            title: "File Too Large", 
+            description: "PDFs uploaded directly must be under 700KB. Please use the 'External Link' option for larger files." 
+          });
+          setIsSubmittingDoc(false);
+          return;
+        }
+
+        const finalUrl = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onloadend = () => resolve(reader.result as string);
           reader.onerror = reject;
           reader.readAsDataURL(docFile);
         });
+
+        await addDoc(collection(firestore, 'documents'), {
+          title: docTitle,
+          fileUrl: finalUrl,
+          uploadedAt: new Date().toISOString()
+        });
+      } else if (archiveMode === 'link') {
+        if (!docUrl) throw new Error("A valid URL is required.");
+        
+        await addDoc(collection(firestore, 'documents'), {
+          title: docTitle,
+          fileUrl: docUrl,
+          uploadedAt: new Date().toISOString()
+        });
       }
-
-      if (!finalUrl) throw new Error("A valid URL or file is required.");
-
-      await addDoc(collection(firestore, 'documents'), {
-        title: docTitle,
-        fileUrl: finalUrl,
-        uploadedAt: new Date().toISOString()
-      });
       
       toast({ title: "Success", description: "Resource published successfully." });
       setDocTitle('');
@@ -155,6 +171,15 @@ export default function AdminPage() {
   const addGalleryImage = async () => {
     if (!firestore || !galleryFile) return;
     
+    if (galleryFile.size > MAX_FILE_SIZE) {
+      toast({ 
+        variant: "destructive", 
+        title: "Image Too Large", 
+        description: "Images must be under 700KB. Please compress the image or reduce its resolution before uploading." 
+      });
+      return;
+    }
+
     setIsSubmittingGallery(true);
 
     try {
@@ -307,16 +332,22 @@ export default function AdminPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2">
-                      <Input 
-                        key={docInputKey}
-                        ref={docFileInputRef} 
-                        type="file" 
-                        accept="application/pdf" 
-                        onChange={(e) => setDocFile(e.target.files?.[0] || null)} 
-                        className="h-12 pt-2.5 rounded-xl bg-white" 
-                      />
-                      {docFile && <Button variant="ghost" size="icon" onClick={() => { setDocFile(null); setDocInputKey(k => k + 1); }} className="text-destructive"><X size={20} /></Button>}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Input 
+                          key={docInputKey}
+                          ref={docFileInputRef} 
+                          type="file" 
+                          accept="application/pdf" 
+                          onChange={(e) => setDocFile(e.target.files?.[0] || null)} 
+                          className="h-12 pt-2.5 rounded-xl bg-white" 
+                        />
+                        {docFile && <Button variant="ghost" size="icon" onClick={() => { setDocFile(null); setDocInputKey(k => k + 1); }} className="text-destructive"><X size={20} /></Button>}
+                      </div>
+                      <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs">
+                        <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                        <p>Limit: 700KB. For larger files, please use the <strong>External Link</strong> option above to ensure database stability.</p>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -373,6 +404,9 @@ export default function AdminPage() {
                       />
                       {galleryFile && <Button variant="ghost" size="icon" onClick={() => { setGalleryFile(null); setGalleryInputKey(k => k + 1); }} className="text-destructive"><X size={20} /></Button>}
                     </div>
+                    <p className="text-[10px] text-elf-text-light italic mt-1 flex items-center gap-1">
+                      <AlertCircle size={10} /> Max size: 700KB. Compress image if it fails to upload.
+                    </p>
                   </div>
                 </div>
                 <Button 
