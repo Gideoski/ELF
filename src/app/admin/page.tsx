@@ -65,8 +65,12 @@ export default function AdminPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+
+  // Split states for independence
+  const [isSubmittingDoc, setIsSubmittingDoc] = useState(false);
+  const [isSubmittingGallery, setIsSubmittingGallery] = useState(false);
 
   const [docTitle, setDocTitle] = useState('');
   const [docUrl, setDocUrl] = useState('');
@@ -88,14 +92,14 @@ export default function AdminPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth) return;
-    setIsSubmitting(true);
+    setIsLoggingIn(true);
     try {
       await signInWithEmailAndPassword(auth, email.toLowerCase().trim(), password);
       toast({ title: "Access Granted", description: "Welcome to the administrator portal." });
     } catch (error: any) {
       toast({ variant: "destructive", title: "Login Failed", description: getErrorMessage(error) });
     } finally {
-      setIsSubmitting(false);
+      setIsLoggingIn(false);
     }
   };
 
@@ -114,18 +118,18 @@ export default function AdminPage() {
   };
 
   /**
-   * Follows the strict 5-step sequence:
-   * 1. Set Loading true
+   * Strictly follows the 5-step async sequence:
+   * 1. Set loading to true
    * 2. await Storage upload
    * 3. await Firestore save
-   * 4. Success Toast & Form Reset
-   * 5. finally Set Loading false
+   * 4. Success Toast and Reset
+   * 5. finally Set loading to false
    */
   const addDocument = async () => {
     if (!firestore || !storage || !docTitle) return;
     
     // 1. Set Loading
-    setIsSubmitting(true);
+    setIsSubmittingDoc(true);
     
     try {
       let finalUrl = docUrl;
@@ -147,8 +151,8 @@ export default function AdminPage() {
       
       await addDoc(collection(firestore, 'documents'), payload);
       
-      // 4. Success Toast & Reset Form (Only after success)
-      toast({ title: "Published Successfully", description: `${docTitle} has been saved to the archive.` });
+      // 4. Success Toast and Form Reset
+      toast({ title: "Published Successfully", description: `${docTitle} has been saved.` });
       
       setDocTitle('');
       setDocUrl('');
@@ -162,24 +166,19 @@ export default function AdminPage() {
         description: getErrorMessage(err) 
       });
     } finally {
-      // 5. Always Stop Loading
-      setIsSubmitting(false);
+      // 5. Guaranteed loading reset
+      setIsSubmittingDoc(false);
     }
   };
 
   /**
-   * Follows the strict 5-step sequence for Gallery:
-   * 1. Set Loading true
-   * 2. await Storage upload
-   * 3. await Firestore save
-   * 4. Success Toast & Form Reset
-   * 5. finally Set Loading false
+   * Strictly follows the 5-step async sequence for Gallery:
    */
   const addGalleryImage = async () => {
     if (!firestore || !storage || !galleryFile) return;
     
     // 1. Set Loading
-    setIsSubmitting(true);
+    setIsSubmittingGallery(true);
     
     try {
       // 2. await Storage Upload
@@ -197,7 +196,7 @@ export default function AdminPage() {
 
       await addDoc(collection(firestore, 'gallery'), payload);
 
-      // 4. Success Toast & Reset Form (Only after success)
+      // 4. Success Toast and Form Reset
       toast({ title: "Saved Successfully", description: "The photo has been added to the gallery." });
       
       setGalleryCaption('');
@@ -211,8 +210,8 @@ export default function AdminPage() {
         description: getErrorMessage(err) 
       });
     } finally {
-      // 5. Always Stop Loading
-      setIsSubmitting(false);
+      // 5. Guaranteed loading reset
+      setIsSubmittingGallery(false);
     }
   };
 
@@ -253,8 +252,8 @@ export default function AdminPage() {
                   </button>
                 </div>
               </div>
-              <Button type="submit" disabled={isSubmitting} className="w-full bg-elf-gold text-elf-green-dark h-12 rounded-full font-bold mt-4">
-                {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : 'Sign In'}
+              <Button type="submit" disabled={isLoggingIn} className="w-full bg-elf-gold text-elf-green-dark h-12 rounded-full font-bold mt-4">
+                {isLoggingIn ? <Loader2 className="animate-spin" size={20} /> : 'Sign In'}
               </Button>
               <div className="text-center pt-2">
                 <button type="button" onClick={handleForgotPassword} disabled={isResetting} className="text-sm text-elf-text-light hover:underline inline-flex items-center gap-1">
@@ -320,8 +319,8 @@ export default function AdminPage() {
                     </div>
                   )}
                 </div>
-                <Button onClick={addDocument} disabled={isSubmitting || !docTitle || (archiveMode === 'file' && !docFile) || (archiveMode === 'link' && !docUrl)} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold">
-                  {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : 'Publish to Archive'}
+                <Button onClick={addDocument} disabled={isSubmittingDoc || !docTitle || (archiveMode === 'file' && !docFile) || (archiveMode === 'link' && !docUrl)} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold">
+                  {isSubmittingDoc ? <Loader2 className="animate-spin mr-2" size={18} /> : 'Publish to Archive'}
                 </Button>
               </CardContent>
             </Card>
@@ -364,8 +363,8 @@ export default function AdminPage() {
                     </div>
                   </div>
                 </div>
-                <Button onClick={addGalleryImage} disabled={isSubmitting || !galleryFile} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold">
-                  {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : 'Publish to Gallery'}
+                <Button onClick={addGalleryImage} disabled={isSubmittingGallery || !galleryFile} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold">
+                  {isSubmittingGallery ? <Loader2 className="animate-spin mr-2" size={18} /> : 'Publish to Gallery'}
                 </Button>
               </CardContent>
             </Card>
