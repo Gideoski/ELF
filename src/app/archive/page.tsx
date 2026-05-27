@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useMemo } from 'react';
@@ -23,7 +22,7 @@ export default function Archive() {
   const filteredDocs = useMemo(() => {
     if (!documents) return [];
     return documents.filter(doc => 
-      doc.title.toLowerCase().includes(search.toLowerCase())
+      (doc.title || '').toLowerCase().includes((search || '').toLowerCase())
     );
   }, [documents, search]);
 
@@ -44,7 +43,7 @@ export default function Archive() {
           <Input 
             placeholder="Search documents..." 
             className="pl-12 h-14 rounded-full border-elf-gold/20 focus:ring-elf-gold bg-white"
-            value={search}
+            value={search || ''}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>

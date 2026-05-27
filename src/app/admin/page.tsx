@@ -87,7 +87,7 @@ export default function AdminPage() {
     if (!auth) return;
     setIsLoggingIn(true);
     try {
-      await signInWithEmailAndPassword(auth, email.toLowerCase().trim(), password);
+      await signInWithEmailAndPassword(auth, (email || '').toLowerCase().trim(), password || '');
       toast({ title: "Access Granted", description: "Welcome to the administrator portal." });
     } catch (error: any) {
       toast({ variant: "destructive", title: "Login Failed", description: getErrorMessage(error) });
@@ -98,7 +98,7 @@ export default function AdminPage() {
 
   const handleForgotPassword = async () => {
     if (!auth) return;
-    const targetEmail = email.toLowerCase().trim() || ADMIN_EMAIL;
+    const targetEmail = (email || '').toLowerCase().trim() || ADMIN_EMAIL;
     setIsResetting(true);
     try {
       await sendPasswordResetEmail(auth, targetEmail);
@@ -212,7 +212,7 @@ export default function AdminPage() {
                 <Label className="text-xs font-bold uppercase tracking-widest text-elf-light">Email</Label>
                 <input 
                   type="email" 
-                  value={email} 
+                  value={email || ''} 
                   onChange={(e) => setEmail(e.target.value)} 
                   required 
                   className="w-full h-12 rounded-xl border px-3" 
@@ -224,7 +224,7 @@ export default function AdminPage() {
                 <div className="relative">
                   <input 
                     type={showPassword ? "text" : "password"} 
-                    value={password} 
+                    value={password || ''} 
                     onChange={(e) => setPassword(e.target.value)} 
                     required 
                     className="w-full h-12 rounded-xl border px-3 pr-12" 
@@ -280,7 +280,7 @@ export default function AdminPage() {
                 <div className="space-y-4">
                   <div className="space-y-1">
                     <Label>Resource Title</Label>
-                    <Input placeholder="Enter title..." value={docTitle} onChange={(e) => setDocTitle(e.target.value)} className="rounded-xl" />
+                    <Input placeholder="Enter title..." value={docTitle || ''} onChange={(e) => setDocTitle(e.target.value)} className="rounded-xl" />
                   </div>
                   <RadioGroup value={archiveMode} onValueChange={(val: 'link' | 'file') => {setArchiveMode(val); setDocFile(null); setDocUrl('');}} className="flex gap-6 pb-2">
                     <div className="flex items-center space-x-2">
@@ -295,7 +295,7 @@ export default function AdminPage() {
                   
                   {archiveMode === 'link' ? (
                     <div className="space-y-3">
-                      <Input placeholder="https://..." value={docUrl} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl" />
+                      <Input placeholder="https://..." value={docUrl || ''} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl" />
                       <div className="bg-elf-gold/10 border border-elf-gold/20 p-4 rounded-xl text-xs space-y-2 text-elf-green-dark">
                         <p className="font-bold flex items-center gap-2">
                           <FileText size={12} className="text-elf-gold" /> How to get a valid link:
@@ -353,7 +353,7 @@ export default function AdminPage() {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-1">
                     <Label>Caption</Label>
-                    <Input placeholder="Description..." value={galleryCaption} onChange={(e) => setGalleryCaption(e.target.value)} className="rounded-xl" />
+                    <Input placeholder="Description..." value={galleryCaption || ''} onChange={(e) => setGalleryCaption(e.target.value)} className="rounded-xl" />
                   </div>
                   <div className="space-y-1">
                     <Label>Select Image</Label>
