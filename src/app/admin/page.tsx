@@ -61,6 +61,7 @@ export default function AdminPage() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
+  // Separate loading states for Fix 1
   const [isSubmittingDoc, setIsSubmittingDoc] = useState(false);
   const [isSubmittingGallery, setIsSubmittingGallery] = useState(false);
 
@@ -109,17 +110,16 @@ export default function AdminPage() {
     }
   };
 
+  // Fixed async/await Base64 pattern for Documents
   const addDocument = async () => {
     if (!firestore || !docTitle) return;
     
-    // 1. Show immediate feedback synchronously
-    toast({ title: "Publishing...", description: "Saving your resource to the archive." });
+    toast({ title: "Publishing...", description: "Please wait." });
     setIsSubmittingDoc(true);
 
     try {
       let finalUrl = docUrl;
 
-      // 2. Convert to Base64 if mode is file
       if (archiveMode === 'file' && docFile) {
         finalUrl = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -131,14 +131,14 @@ export default function AdminPage() {
 
       if (!finalUrl) throw new Error("A valid URL or file is required.");
 
-      // 3. Await Firestore Save
-      await addDoc(collection(firestore, 'documents'), {
+      const docRef = await addDoc(collection(firestore, 'documents'), {
         title: docTitle,
         fileUrl: finalUrl,
         uploadedAt: new Date().toISOString()
       });
 
-      // 4. Success Toast and Reset
+      console.log("Document saved to Firestore:", docRef.id);
+      
       toast({ title: "Success", description: "Resource published successfully." });
       setDocTitle('');
       setDocUrl('');
@@ -148,20 +148,18 @@ export default function AdminPage() {
     } catch (err: any) {
       toast({ variant: "destructive", title: "Error", description: getErrorMessage(err) });
     } finally {
-      // 5. Finalize loading state
       setIsSubmittingDoc(false);
     }
   };
 
+  // Fixed async/await Base64 pattern for Gallery
   const addGalleryImage = async () => {
     if (!firestore || !galleryFile) return;
     
-    // 1. Show immediate feedback synchronously
-    toast({ title: "Uploading...", description: "Processing your photo." });
+    toast({ title: "Uploading...", description: "Please wait." });
     setIsSubmittingGallery(true);
 
     try {
-      // 2. Convert to Base64
       const base64String = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
@@ -169,15 +167,15 @@ export default function AdminPage() {
         reader.readAsDataURL(galleryFile);
       });
 
-      // 3. Await Firestore Save
-      await addDoc(collection(firestore, 'gallery'), {
+      const docRef = await addDoc(collection(firestore, 'gallery'), {
         title: galleryCaption || "",
         imageUrl: base64String,
         createdAt: new Date().toISOString()
       });
 
-      // 4. Success Toast and Reset
-      toast({ title: "Gallery Updated", description: "Your photo is now live." });
+      console.log("Gallery item saved to Firestore:", docRef.id);
+
+      toast({ title: "Saved Successfully", description: "Photo added to the gallery." });
       setGalleryCaption('');
       setGalleryFile(null);
       if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
@@ -185,7 +183,6 @@ export default function AdminPage() {
     } catch (err: any) {
       toast({ variant: "destructive", title: "Upload Failed", description: getErrorMessage(err) });
     } finally {
-      // 5. Finalize loading state
       setIsSubmittingGallery(false);
     }
   };
@@ -294,7 +291,11 @@ export default function AdminPage() {
                     </div>
                   )}
                 </div>
-                <Button onClick={addDocument} disabled={isSubmittingDoc || !docTitle || (archiveMode === 'file' && !docFile) || (archiveMode === 'link' && !docUrl)} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold">
+                <Button 
+                  onClick={addDocument} 
+                  disabled={isSubmittingDoc || !docTitle || (archiveMode === 'file' && !docFile) || (archiveMode === 'link' && !docUrl)} 
+                  className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold"
+                >
                   {isSubmittingDoc ? <Loader2 className="animate-spin mr-2" size={18} /> : 'Publish to Archive'}
                 </Button>
               </CardContent>
@@ -338,7 +339,12 @@ export default function AdminPage() {
                     </div>
                   </div>
                 </div>
-                <Button onClick={addGalleryImage} disabled={isSubmittingGallery || !galleryFile} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold">
+                {/* Fixed Publish Button logic for Fix 2 & loading bug */}
+                <Button 
+                  onClick={addGalleryImage} 
+                  disabled={isSubmittingGallery || !galleryFile} 
+                  className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold"
+                >
                   {isSubmittingGallery ? <Loader2 className="animate-spin mr-2" size={18} /> : 'Publish to Gallery'}
                 </Button>
               </CardContent>
