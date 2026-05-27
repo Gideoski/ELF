@@ -49,6 +49,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const ADMIN_EMAIL = 'nimsaamsaelf@gmail.com';
 
@@ -117,10 +119,6 @@ export default function AdminPage() {
     }
   };
 
-  /**
-   * Refactored to use a non-blocking background pattern.
-   * UI resets immediately, Firestore save happens after Storage resolves.
-   */
   const addDocument = () => {
     if (!firestore || !storage || !docTitle) return;
     
@@ -132,10 +130,8 @@ export default function AdminPage() {
       const storagePath = `documents/${Date.now()}_${docFile.name}`;
       const storageRef = ref(storage, storagePath);
       
-      // 1. Start upload - non-blocking
       const uploadTask = uploadBytes(storageRef, docFile);
       
-      // 2. Immediate UI Reset
       toast({ title: "Publishing...", description: "Your file is being uploaded in the background." });
       setDocTitle('');
       setDocUrl('');
@@ -143,22 +139,27 @@ export default function AdminPage() {
       if (docFileInputRef.current) docFileInputRef.current.value = "";
       setIsSubmittingDoc(false);
 
-      // 3. Background Persistence
       uploadTask
         .then(result => getDownloadURL(result.ref))
         .then(url => {
+           console.log("Background Save: Document URL retrieved:", url);
            addDoc(collection(firestore, 'documents'), {
              title,
              fileUrl: url,
              uploadedAt
+           }).catch(err => {
+             errorEmitter.emit('permission-error', new FirestorePermissionError({
+               path: 'documents',
+               operation: 'create',
+               requestResourceData: { title, fileUrl: url }
+             }));
            });
            toast({ title: "Success", description: "Resource published successfully." });
         })
         .catch(err => {
-          toast({ variant: "destructive", title: "Background Upload Failed", description: getErrorMessage(err) });
+          toast({ variant: "destructive", title: "Upload Failed", description: getErrorMessage(err) });
         });
     } else if (archiveMode === 'link' && docUrl) {
-       // Direct Firestore save for links (still non-blocking for UI)
        addDoc(collection(firestore, 'documents'), {
          title,
          fileUrl: docUrl,
@@ -168,19 +169,19 @@ export default function AdminPage() {
           toast({ title: "Success", description: "Link published successfully." });
        })
        .catch(err => {
-         toast({ variant: "destructive", title: "Failed to save link", description: getErrorMessage(err) });
+         errorEmitter.emit('permission-error', new FirestorePermissionError({
+           path: 'documents',
+           operation: 'create',
+           requestResourceData: { title, fileUrl: docUrl }
+         }));
        });
 
-       // Immediate UI Reset
        setDocTitle('');
        setDocUrl('');
        setIsSubmittingDoc(false);
     }
   };
 
-  /**
-   * Refactored Gallery upload to use the non-blocking pattern.
-   */
   const addGalleryImage = () => {
     if (!firestore || !storage || !galleryFile) return;
     
@@ -191,28 +192,34 @@ export default function AdminPage() {
     const storagePath = `gallery/${Date.now()}_${galleryFile.name}`;
     const storageRef = ref(storage, storagePath);
     
-    // 1. Start upload - non-blocking
     const uploadTask = uploadBytes(storageRef, galleryFile);
     
-    // 2. Immediate UI Reset
     toast({ title: "Uploading...", description: "Your photo is being added to the gallery." });
     setGalleryCaption('');
     setGalleryFile(null);
     if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
     setIsSubmittingGallery(false);
 
-    // 3. Background Persistence
     uploadTask
       .then(result => getDownloadURL(result.ref))
       .then(url => {
+        console.log("Background Save: Gallery Image URL retrieved:", url);
         addDoc(collection(firestore, 'gallery'), {
           title: caption || "",
           imageUrl: url,
           createdAt
+        }).catch(err => {
+          console.error("Background Save Error (Firestore):", err);
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: 'gallery',
+            operation: 'create',
+            requestResourceData: { title: caption, imageUrl: url }
+          }));
         });
         toast({ title: "Gallery Updated", description: "Your photo is now live." });
       })
       .catch(err => {
+        console.error("Background Upload Error (Storage):", err);
         toast({ variant: "destructive", title: "Gallery Upload Failed", description: getErrorMessage(err) });
       });
   };
@@ -374,7 +381,7 @@ export default function AdminPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {galleryItems?.map(g => (
                 <div key={g.id} className="bg-white rounded-2xl overflow-hidden border relative group aspect-square">
-                  <img src={g.imageUrl} className="w-full h-full object-cover" alt="" />
+                  <img src={g.imageUrl} className="w-full h-full object-cover" alt="" data-ai-hint="gallery photo" />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <Button variant="destructive" size="icon" onClick={() => setItemToDelete({ col: 'gallery', id: g.id, title: 'Photo' })} className="h-10 w-10 rounded-full"><Trash2 size={18} /></Button>
                   </div>

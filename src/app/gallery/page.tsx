@@ -49,6 +49,7 @@ export default function Gallery() {
                   src={img.imageUrl} 
                   alt={img.title || "Gallery image"} 
                   className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-110"
+                  data-ai-hint="medical forum"
                 />
                 {img.title && (
                   <div className="absolute inset-0 bg-elf-green-dark/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-8 bg-gradient-to-t from-elf-green-dark/80 to-transparent">
