@@ -68,7 +68,7 @@ export default function AdminPage() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
-  // Split states for independence
+  // Separate submission states
   const [isSubmittingDoc, setIsSubmittingDoc] = useState(false);
   const [isSubmittingGallery, setIsSubmittingGallery] = useState(false);
 
@@ -128,13 +128,11 @@ export default function AdminPage() {
   const addDocument = async () => {
     if (!firestore || !storage || !docTitle) return;
     
-    // 1. Set Loading
     setIsSubmittingDoc(true);
-    
     try {
       let finalUrl = docUrl;
       
-      // 2. await Storage Upload
+      // Step 2: Await Storage Upload
       if (archiveMode === 'file' && docFile) {
         const storagePath = `documents/${Date.now()}_${docFile.name}`;
         const storageRef = ref(storage, storagePath);
@@ -142,7 +140,7 @@ export default function AdminPage() {
         finalUrl = await getDownloadURL(uploadResult.ref);
       }
 
-      // 3. await Firestore Save
+      // Step 3: Await Firestore Save
       const payload = {
         title: docTitle,
         fileUrl: finalUrl,
@@ -151,8 +149,8 @@ export default function AdminPage() {
       
       await addDoc(collection(firestore, 'documents'), payload);
       
-      // 4. Success Toast and Form Reset
-      toast({ title: "Published Successfully", description: `${docTitle} has been saved.` });
+      // Step 4: Success Toast and Reset
+      toast({ title: "Published Successfully", description: `${docTitle} has been saved to the archive.` });
       
       setDocTitle('');
       setDocUrl('');
@@ -166,28 +164,26 @@ export default function AdminPage() {
         description: getErrorMessage(err) 
       });
     } finally {
-      // 5. Guaranteed loading reset
+      // Step 5: Stop Loading
       setIsSubmittingDoc(false);
     }
   };
 
   /**
-   * Strictly follows the 5-step async sequence for Gallery:
+   * Strictly follows the 5-step async sequence for Gallery
    */
   const addGalleryImage = async () => {
     if (!firestore || !storage || !galleryFile) return;
     
-    // 1. Set Loading
     setIsSubmittingGallery(true);
-    
     try {
-      // 2. await Storage Upload
+      // Step 2: Await Storage Upload
       const storagePath = `gallery/${Date.now()}_${galleryFile.name}`;
       const storageRef = ref(storage, storagePath);
       const uploadResult = await uploadBytes(storageRef, galleryFile);
       const imageUrl = await getDownloadURL(uploadResult.ref);
       
-      // 3. await Firestore Save
+      // Step 3: Await Firestore Save
       const payload = {
         title: galleryCaption || "",
         imageUrl: imageUrl,
@@ -196,7 +192,7 @@ export default function AdminPage() {
 
       await addDoc(collection(firestore, 'gallery'), payload);
 
-      // 4. Success Toast and Form Reset
+      // Step 4: Success Toast and Reset
       toast({ title: "Saved Successfully", description: "The photo has been added to the gallery." });
       
       setGalleryCaption('');
@@ -210,7 +206,7 @@ export default function AdminPage() {
         description: getErrorMessage(err) 
       });
     } finally {
-      // 5. Guaranteed loading reset
+      // Step 5: Stop Loading
       setIsSubmittingGallery(false);
     }
   };
@@ -240,11 +236,11 @@ export default function AdminPage() {
           <CardContent className="pt-8 px-8 pb-10 space-y-6">
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-1">
-                <Label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Email</Label>
+                <Label className="text-xs font-bold uppercase tracking-widest text-elf-light">Email</Label>
                 <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="rounded-xl h-12" placeholder="admin@example.com" />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs font-bold uppercase tracking-widest text-elf-text-light">Password</Label>
+                <Label className="text-xs font-bold uppercase tracking-widest text-elf-light">Password</Label>
                 <div className="relative">
                   <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required className="rounded-xl h-12 pr-12" placeholder="••••••••" />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-elf-text-light">
