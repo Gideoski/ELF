@@ -68,7 +68,7 @@ export default function AdminPage() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
-  // Separate submission states
+  // Split submission states for independent loading
   const [isSubmittingDoc, setIsSubmittingDoc] = useState(false);
   const [isSubmittingGallery, setIsSubmittingGallery] = useState(false);
 
@@ -118,97 +118,103 @@ export default function AdminPage() {
   };
 
   /**
-   * Strictly follows the 5-step async sequence:
-   * 1. Set loading to true
-   * 2. await Storage upload
-   * 3. await Firestore save
-   * 4. Success Toast and Reset
-   * 5. finally Set loading to false
+   * Refactored to use a non-blocking background pattern.
+   * UI resets immediately, Firestore save happens after Storage resolves.
    */
-  const addDocument = async () => {
+  const addDocument = () => {
     if (!firestore || !storage || !docTitle) return;
     
     setIsSubmittingDoc(true);
-    try {
-      let finalUrl = docUrl;
-      
-      // Step 2: Await Storage Upload
-      if (archiveMode === 'file' && docFile) {
-        const storagePath = `documents/${Date.now()}_${docFile.name}`;
-        const storageRef = ref(storage, storagePath);
-        const uploadResult = await uploadBytes(storageRef, docFile);
-        finalUrl = await getDownloadURL(uploadResult.ref);
-      }
+    const title = docTitle;
+    const uploadedAt = new Date().toISOString();
 
-      // Step 3: Await Firestore Save
-      const payload = {
-        title: docTitle,
-        fileUrl: finalUrl,
-        uploadedAt: new Date().toISOString()
-      };
+    if (archiveMode === 'file' && docFile) {
+      const storagePath = `documents/${Date.now()}_${docFile.name}`;
+      const storageRef = ref(storage, storagePath);
       
-      await addDoc(collection(firestore, 'documents'), payload);
+      // 1. Start upload - non-blocking
+      const uploadTask = uploadBytes(storageRef, docFile);
       
-      // Step 4: Success Toast and Reset
-      toast({ title: "Published Successfully", description: `${docTitle} has been saved to the archive.` });
-      
+      // 2. Immediate UI Reset
+      toast({ title: "Publishing...", description: "Your file is being uploaded in the background." });
       setDocTitle('');
       setDocUrl('');
       setDocFile(null);
       if (docFileInputRef.current) docFileInputRef.current.value = "";
-      
-    } catch (err: any) {
-      toast({ 
-        variant: "destructive", 
-        title: "Upload Failed", 
-        description: getErrorMessage(err) 
-      });
-    } finally {
-      // Step 5: Stop Loading
       setIsSubmittingDoc(false);
+
+      // 3. Background Persistence
+      uploadTask
+        .then(result => getDownloadURL(result.ref))
+        .then(url => {
+           addDoc(collection(firestore, 'documents'), {
+             title,
+             fileUrl: url,
+             uploadedAt
+           });
+           toast({ title: "Success", description: "Resource published successfully." });
+        })
+        .catch(err => {
+          toast({ variant: "destructive", title: "Background Upload Failed", description: getErrorMessage(err) });
+        });
+    } else if (archiveMode === 'link' && docUrl) {
+       // Direct Firestore save for links (still non-blocking for UI)
+       addDoc(collection(firestore, 'documents'), {
+         title,
+         fileUrl: docUrl,
+         uploadedAt
+       })
+       .then(() => {
+          toast({ title: "Success", description: "Link published successfully." });
+       })
+       .catch(err => {
+         toast({ variant: "destructive", title: "Failed to save link", description: getErrorMessage(err) });
+       });
+
+       // Immediate UI Reset
+       setDocTitle('');
+       setDocUrl('');
+       setIsSubmittingDoc(false);
     }
   };
 
   /**
-   * Strictly follows the 5-step async sequence for Gallery
+   * Refactored Gallery upload to use the non-blocking pattern.
    */
-  const addGalleryImage = async () => {
+  const addGalleryImage = () => {
     if (!firestore || !storage || !galleryFile) return;
     
     setIsSubmittingGallery(true);
-    try {
-      // Step 2: Await Storage Upload
-      const storagePath = `gallery/${Date.now()}_${galleryFile.name}`;
-      const storageRef = ref(storage, storagePath);
-      const uploadResult = await uploadBytes(storageRef, galleryFile);
-      const imageUrl = await getDownloadURL(uploadResult.ref);
-      
-      // Step 3: Await Firestore Save
-      const payload = {
-        title: galleryCaption || "",
-        imageUrl: imageUrl,
-        createdAt: new Date().toISOString()
-      };
+    const caption = galleryCaption;
+    const createdAt = new Date().toISOString();
 
-      await addDoc(collection(firestore, 'gallery'), payload);
+    const storagePath = `gallery/${Date.now()}_${galleryFile.name}`;
+    const storageRef = ref(storage, storagePath);
+    
+    // 1. Start upload - non-blocking
+    const uploadTask = uploadBytes(storageRef, galleryFile);
+    
+    // 2. Immediate UI Reset
+    toast({ title: "Uploading...", description: "Your photo is being added to the gallery." });
+    setGalleryCaption('');
+    setGalleryFile(null);
+    if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
+    setIsSubmittingGallery(false);
 
-      // Step 4: Success Toast and Reset
-      toast({ title: "Saved Successfully", description: "The photo has been added to the gallery." });
-      
-      setGalleryCaption('');
-      setGalleryFile(null);
-      if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
-      
-    } catch (err: any) {
-      toast({ 
-        variant: "destructive", 
-        title: "Upload Failed", 
-        description: getErrorMessage(err) 
+    // 3. Background Persistence
+    uploadTask
+      .then(result => getDownloadURL(result.ref))
+      .then(url => {
+        addDoc(collection(firestore, 'gallery'), {
+          title: caption || "",
+          imageUrl: url,
+          createdAt
+        });
+        toast({ title: "Gallery Updated", description: "Your photo is now live." });
+      })
+      .catch(err => {
+        toast({ variant: "destructive", title: "Gallery Upload Failed", description: getErrorMessage(err) });
       });
-    } finally {
-      // Step 5: Stop Loading
-      setIsSubmittingGallery(false);
-    }
   };
 
   const confirmDelete = async (col: string, id: string) => {
