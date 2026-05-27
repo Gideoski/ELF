@@ -294,7 +294,20 @@ export default function AdminPage() {
                   </RadioGroup>
                   
                   {archiveMode === 'link' ? (
-                    <Input placeholder="https://..." value={docUrl} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl" />
+                    <div className="space-y-3">
+                      <Input placeholder="https://..." value={docUrl} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl" />
+                      <div className="bg-elf-gold/10 border border-elf-gold/20 p-4 rounded-xl text-xs space-y-2 text-elf-green-dark">
+                        <p className="font-bold flex items-center gap-2">
+                          <FileText size={12} className="text-elf-gold" /> How to get a valid link:
+                        </p>
+                        <ul className="list-decimal list-inside space-y-1 ml-1 text-elf-text-mid">
+                          <li>Upload your document to Google Drive, OneDrive, or Dropbox.</li>
+                          <li>Right-click the file and select "Share".</li>
+                          <li>Ensure access is set to "Anyone with the link can view".</li>
+                          <li>Copy the "Sharing Link" and paste it in the field above.</li>
+                        </ul>
+                      </div>
+                    </div>
                   ) : (
                     <div className="flex items-center gap-2">
                       <Input ref={docFileInputRef} type="file" accept="application/pdf" onChange={(e) => setDocFile(e.target.files?.[0] || null)} className="h-12 pt-2.5 rounded-xl bg-white" />
