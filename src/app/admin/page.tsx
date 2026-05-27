@@ -74,7 +74,6 @@ export default function AdminPage() {
   const [galleryCaption, setGalleryCaption] = useState('');
   const [galleryFile, setGalleryFile] = useState<File | null>(null);
 
-  // Key states to force remount of file inputs
   const [docInputKey, setDocInputKey] = useState(0);
   const [galleryInputKey, setGalleryInputKey] = useState(0);
 
@@ -134,13 +133,11 @@ export default function AdminPage() {
 
       if (!finalUrl) throw new Error("A valid URL or file is required.");
 
-      const docRef = await addDoc(collection(firestore, 'documents'), {
+      await addDoc(collection(firestore, 'documents'), {
         title: docTitle,
         fileUrl: finalUrl,
         uploadedAt: new Date().toISOString()
       });
-
-      console.log("Document saved to Firestore:", docRef.id);
       
       toast({ title: "Success", description: "Resource published successfully." });
       setDocTitle('');
@@ -167,13 +164,11 @@ export default function AdminPage() {
         reader.readAsDataURL(galleryFile);
       });
 
-      const docRef = await addDoc(collection(firestore, 'gallery'), {
+      await addDoc(collection(firestore, 'gallery'), {
         title: galleryCaption || "",
         imageUrl: base64String,
         createdAt: new Date().toISOString()
       });
-
-      console.log("Photo saved to Firestore:", docRef.id);
 
       toast({ title: "Saved Successfully", description: "Photo added to the gallery." });
       setGalleryCaption('');
@@ -343,7 +338,7 @@ export default function AdminPage() {
                     <div className="w-10 h-10 bg-elf-gold/10 rounded-xl flex items-center justify-center text-elf-gold"><FileText size={20} /></div>
                     <div>
                       <p className="font-bold text-elf-green-dark">{d.title}</p>
-                      <p className="text-[10px] text-elf-text-light uppercase">{new Date(d.uploadedAt).toLocaleDateString()}</p>
+                      <p className="text-[10px] text-elf-text-light uppercase">{d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString() : 'Unknown date'}</p>
                     </div>
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => setItemToDelete({ col: 'documents', id: d.id, title: d.title })} className="text-destructive"><Trash2 size={18} /></Button>
@@ -407,7 +402,7 @@ export default function AdminPage() {
           <AlertDialogContent className="rounded-3xl">
             <AlertDialogHeader>
               <AlertDialogTitle>Confirm Removal</AlertDialogTitle>
-              <AlertDialogDescription>Delete "{itemToDelete?.title}" permanently?</AlertDialogDescription>
+              <AlertDialogDescription>Delete "{itemToDelete?.title || 'this item'}" permanently?</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
