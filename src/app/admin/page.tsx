@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useRef } from 'react';
-import { useAuth, useUser, useFirestore, useStorage, useCollection } from '@/firebase';
+import { useAuth, useUser, useFirestore, useCollection } from '@/firebase';
 import { 
   signInWithEmailAndPassword, 
   signOut,
@@ -15,11 +15,6 @@ import {
   deleteDoc,
   addDoc,
 } from 'firebase/firestore';
-import {
-  ref,
-  uploadBytes,
-  getDownloadURL
-} from 'firebase/storage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -55,7 +50,6 @@ const ADMIN_EMAIL = 'nimsaamsaelf@gmail.com';
 export default function AdminPage() {
   const auth = useAuth();
   const firestore = useFirestore();
-  const storage = useStorage();
   const { user, loading: authLoading } = useUser();
   
   const docFileInputRef = useRef<HTMLInputElement>(null);
@@ -119,18 +113,20 @@ export default function AdminPage() {
     if (!firestore || !docTitle) return;
     
     // 1. Show immediate feedback synchronously
-    toast({ title: "Publishing...", description: "Please wait while we save your resource." });
+    toast({ title: "Publishing...", description: "Saving your resource to the archive." });
     setIsSubmittingDoc(true);
 
     try {
       let finalUrl = docUrl;
 
-      // 2. Await Storage Upload if mode is file
-      if (archiveMode === 'file' && docFile && storage) {
-        const storagePath = `documents/${Date.now()}_${docFile.name}`;
-        const storageRef = ref(storage, storagePath);
-        const uploadResult = await uploadBytes(storageRef, docFile);
-        finalUrl = await getDownloadURL(uploadResult.ref);
+      // 2. Convert to Base64 if mode is file
+      if (archiveMode === 'file' && docFile) {
+        finalUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(docFile);
+        });
       }
 
       if (!finalUrl) throw new Error("A valid URL or file is required.");
@@ -142,7 +138,7 @@ export default function AdminPage() {
         uploadedAt: new Date().toISOString()
       });
 
-      // 4. Toast Success and Reset
+      // 4. Success Toast and Reset
       toast({ title: "Success", description: "Resource published successfully." });
       setDocTitle('');
       setDocUrl('');
@@ -158,35 +154,36 @@ export default function AdminPage() {
   };
 
   const addGalleryImage = async () => {
-    if (!firestore || !storage || !galleryFile) return;
+    if (!firestore || !galleryFile) return;
     
     // 1. Show immediate feedback synchronously
-    toast({ title: "Uploading...", description: "Please wait while your photo is added to the gallery." });
+    toast({ title: "Uploading...", description: "Processing your photo." });
     setIsSubmittingGallery(true);
 
     try {
-      const storagePath = `gallery/${Date.now()}_${galleryFile.name}`;
-      const storageRef = ref(storage, storagePath);
-      
-      // 2. Await Storage Upload
-      const uploadResult = await uploadBytes(storageRef, galleryFile);
-      const imageUrl = await getDownloadURL(uploadResult.ref);
+      // 2. Convert to Base64
+      const base64String = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(galleryFile);
+      });
 
       // 3. Await Firestore Save
       await addDoc(collection(firestore, 'gallery'), {
         title: galleryCaption || "",
-        imageUrl: imageUrl,
+        imageUrl: base64String,
         createdAt: new Date().toISOString()
       });
 
-      // 4. Toast Success and Reset
+      // 4. Success Toast and Reset
       toast({ title: "Gallery Updated", description: "Your photo is now live." });
       setGalleryCaption('');
       setGalleryFile(null);
       if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
 
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Gallery Upload Failed", description: getErrorMessage(err) });
+      toast({ variant: "destructive", title: "Upload Failed", description: getErrorMessage(err) });
     } finally {
       // 5. Finalize loading state
       setIsSubmittingGallery(false);
