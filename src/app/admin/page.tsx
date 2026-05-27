@@ -70,7 +70,6 @@ export default function AdminPage() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
-  // Split submission states for independent loading
   const [isSubmittingDoc, setIsSubmittingDoc] = useState(false);
   const [isSubmittingGallery, setIsSubmittingGallery] = useState(false);
 
@@ -119,109 +118,92 @@ export default function AdminPage() {
     }
   };
 
-  const addDocument = () => {
-    if (!firestore || !storage || !docTitle) return;
+  const addDocument = async () => {
+    if (!firestore || !docTitle) return;
     
+    // Show immediate feedback synchronously
+    toast({ title: "Publishing...", description: "Please wait while we save your resource." });
     setIsSubmittingDoc(true);
-    const title = docTitle;
-    const uploadedAt = new Date().toISOString();
 
-    if (archiveMode === 'file' && docFile) {
-      const storagePath = `documents/${Date.now()}_${docFile.name}`;
-      const storageRef = ref(storage, storagePath);
-      
-      const uploadTask = uploadBytes(storageRef, docFile);
-      
-      toast({ title: "Publishing...", description: "Your file is being uploaded in the background." });
+    try {
+      const title = docTitle;
+      const uploadedAt = new Date().toISOString();
+
+      let finalUrl = docUrl;
+
+      if (archiveMode === 'file' && docFile && storage) {
+        const storagePath = `documents/${Date.now()}_${docFile.name}`;
+        const storageRef = ref(storage, storagePath);
+        const uploadResult = await uploadBytes(storageRef, docFile);
+        finalUrl = await getDownloadURL(uploadResult.ref);
+      }
+
+      if (!finalUrl) throw new Error("A valid URL or file is required.");
+
+      // Await Firestore save to ensure persistence
+      await addDoc(collection(firestore, 'documents'), {
+        title,
+        fileUrl: finalUrl,
+        uploadedAt
+      });
+
+      toast({ title: "Success", description: "Resource published successfully." });
       setDocTitle('');
       setDocUrl('');
       setDocFile(null);
       if (docFileInputRef.current) docFileInputRef.current.value = "";
+
+    } catch (err: any) {
+      console.error("Document upload error:", err);
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: 'documents',
+        operation: 'create',
+      }));
+      toast({ variant: "destructive", title: "Error", description: getErrorMessage(err) });
+    } finally {
       setIsSubmittingDoc(false);
-
-      uploadTask
-        .then(result => getDownloadURL(result.ref))
-        .then(url => {
-           console.log("Background Save: Document URL retrieved:", url);
-           addDoc(collection(firestore, 'documents'), {
-             title,
-             fileUrl: url,
-             uploadedAt
-           }).catch(err => {
-             errorEmitter.emit('permission-error', new FirestorePermissionError({
-               path: 'documents',
-               operation: 'create',
-               requestResourceData: { title, fileUrl: url }
-             }));
-           });
-           toast({ title: "Success", description: "Resource published successfully." });
-        })
-        .catch(err => {
-          toast({ variant: "destructive", title: "Upload Failed", description: getErrorMessage(err) });
-        });
-    } else if (archiveMode === 'link' && docUrl) {
-       addDoc(collection(firestore, 'documents'), {
-         title,
-         fileUrl: docUrl,
-         uploadedAt
-       })
-       .then(() => {
-          toast({ title: "Success", description: "Link published successfully." });
-       })
-       .catch(err => {
-         errorEmitter.emit('permission-error', new FirestorePermissionError({
-           path: 'documents',
-           operation: 'create',
-           requestResourceData: { title, fileUrl: docUrl }
-         }));
-       });
-
-       setDocTitle('');
-       setDocUrl('');
-       setIsSubmittingDoc(false);
     }
   };
 
-  const addGalleryImage = () => {
+  const addGalleryImage = async () => {
     if (!firestore || !storage || !galleryFile) return;
     
+    // Show immediate feedback synchronously
+    toast({ title: "Uploading...", description: "Please wait while your photo is added to the gallery." });
     setIsSubmittingGallery(true);
-    const caption = galleryCaption;
-    const createdAt = new Date().toISOString();
 
-    const storagePath = `gallery/${Date.now()}_${galleryFile.name}`;
-    const storageRef = ref(storage, storagePath);
-    
-    const uploadTask = uploadBytes(storageRef, galleryFile);
-    
-    toast({ title: "Uploading...", description: "Your photo is being added to the gallery." });
-    setGalleryCaption('');
-    setGalleryFile(null);
-    if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
-    setIsSubmittingGallery(false);
+    try {
+      const caption = galleryCaption;
+      const createdAt = new Date().toISOString();
 
-    uploadTask
-      .then(result => getDownloadURL(result.ref))
-      .then(url => {
-        console.log("Background Save: Gallery Image URL retrieved:", url);
-        addDoc(collection(firestore, 'gallery'), {
-          title: caption || "",
-          imageUrl: url,
-          createdAt
-        }).catch(err => {
-          console.error("Background Save Error (Firestore):", err);
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: 'gallery',
-            operation: 'create',
-            requestResourceData: { title: caption, imageUrl: url }
-          }));
-        });
-        toast({ title: "Gallery Updated", description: "Your photo is now live." });
-      })
-      .catch(err => {
-        console.error("Background Upload Error (Storage):", err);
-        toast({ variant: "destructive", title: "Gallery Upload Failed", description: getErrorMessage(err) });
+      const storagePath = `gallery/${Date.now()}_${galleryFile.name}`;
+      const storageRef = ref(storage, storagePath);
+      
+      const uploadResult = await uploadBytes(storageRef, galleryFile);
+      const imageUrl = await getDownloadURL(uploadResult.ref);
+
+      // Await Firestore save to ensure persistence
+      await addDoc(collection(firestore, 'gallery'), {
+        title: caption || "",
+        imageUrl: imageUrl,
+        createdAt
       });
+
+      toast({ title: "Gallery Updated", description: "Your photo is now live." });
+      setGalleryCaption('');
+      setGalleryFile(null);
+      if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
+
+    } catch (err: any) {
+      console.error("Gallery upload error:", err);
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: 'gallery',
+        operation: 'create',
+      }));
+      toast({ variant: "destructive", title: "Gallery Upload Failed", description: getErrorMessage(err) });
+    } finally {
+      setIsSubmittingGallery(false);
+    }
   };
 
   const confirmDelete = async (col: string, id: string) => {
