@@ -114,12 +114,12 @@ export default function AdminPage() {
   };
 
   /**
-   * Follows the 5-step sequence:
-   * 1. Loading true
-   * 2. Await Storage
-   * 3. Await Firestore
-   * 4. Success toast & Form Reset
-   * 5. Finally Loading false
+   * Follows the strict 5-step sequence:
+   * 1. Set Loading true
+   * 2. await Storage upload
+   * 3. await Firestore save
+   * 4. Success Toast & Form Reset
+   * 5. finally Set Loading false
    */
   const addDocument = async () => {
     if (!firestore || !storage || !docTitle) return;
@@ -130,7 +130,7 @@ export default function AdminPage() {
     try {
       let finalUrl = docUrl;
       
-      // 2. Await Storage Upload
+      // 2. await Storage Upload
       if (archiveMode === 'file' && docFile) {
         const storagePath = `documents/${Date.now()}_${docFile.name}`;
         const storageRef = ref(storage, storagePath);
@@ -138,7 +138,7 @@ export default function AdminPage() {
         finalUrl = await getDownloadURL(uploadResult.ref);
       }
 
-      // 3. Await Firestore Save
+      // 3. await Firestore Save
       const payload = {
         title: docTitle,
         fileUrl: finalUrl,
@@ -147,7 +147,7 @@ export default function AdminPage() {
       
       await addDoc(collection(firestore, 'documents'), payload);
       
-      // 4. Success Toast & Reset Form
+      // 4. Success Toast & Reset Form (Only after success)
       toast({ title: "Published Successfully", description: `${docTitle} has been saved to the archive.` });
       
       setDocTitle('');
@@ -168,12 +168,12 @@ export default function AdminPage() {
   };
 
   /**
-   * Follows the 5-step sequence for Gallery:
-   * 1. Loading true
-   * 2. Await Storage
-   * 3. Await Firestore
-   * 4. Success toast & Form Reset
-   * 5. Finally Loading false
+   * Follows the strict 5-step sequence for Gallery:
+   * 1. Set Loading true
+   * 2. await Storage upload
+   * 3. await Firestore save
+   * 4. Success Toast & Form Reset
+   * 5. finally Set Loading false
    */
   const addGalleryImage = async () => {
     if (!firestore || !storage || !galleryFile) return;
@@ -182,13 +182,13 @@ export default function AdminPage() {
     setIsSubmitting(true);
     
     try {
-      // 2. Await Storage Upload
+      // 2. await Storage Upload
       const storagePath = `gallery/${Date.now()}_${galleryFile.name}`;
       const storageRef = ref(storage, storagePath);
       const uploadResult = await uploadBytes(storageRef, galleryFile);
       const imageUrl = await getDownloadURL(uploadResult.ref);
       
-      // 3. Await Firestore Save
+      // 3. await Firestore Save
       const payload = {
         title: galleryCaption || "",
         imageUrl: imageUrl,
@@ -197,7 +197,7 @@ export default function AdminPage() {
 
       await addDoc(collection(firestore, 'gallery'), payload);
 
-      // 4. Success Toast & Reset Form
+      // 4. Success Toast & Reset Form (Only after success)
       toast({ title: "Saved Successfully", description: "The photo has been added to the gallery." });
       
       setGalleryCaption('');
