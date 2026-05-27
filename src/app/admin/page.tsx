@@ -28,7 +28,8 @@ import {
   Loader2, 
   KeyRound,
   UploadCloud,
-  X
+  X,
+  ExternalLink
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
@@ -117,7 +118,6 @@ export default function AdminPage() {
   const addDocument = async () => {
     if (!firestore || !docTitle) return;
     
-    toast({ title: "Publishing...", description: "Please wait." });
     setIsSubmittingDoc(true);
 
     try {
@@ -158,7 +158,6 @@ export default function AdminPage() {
   const addGalleryImage = async () => {
     if (!firestore || !galleryFile) return;
     
-    toast({ title: "Publishing...", description: "Please wait." });
     setIsSubmittingGallery(true);
 
     try {
@@ -174,7 +173,7 @@ export default function AdminPage() {
         createdAt: new Date().toISOString()
       });
 
-      console.log("Saved to Firestore:", docRef.id);
+      console.log("Photo saved to Firestore:", docRef.id);
 
       toast({ title: "Saved Successfully", description: "Photo added to the gallery." });
       setGalleryCaption('');
@@ -302,13 +301,13 @@ export default function AdminPage() {
                       <Input placeholder="https://..." value={docUrl || ''} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl" />
                       <div className="bg-elf-gold/10 border border-elf-gold/20 p-4 rounded-xl text-xs space-y-2 text-elf-green-dark">
                         <p className="font-bold flex items-center gap-2">
-                          <FileText size={12} className="text-elf-gold" /> How to get a valid link:
+                          <ExternalLink size={12} className="text-elf-gold" /> How to get a valid sharing link:
                         </p>
                         <ul className="list-decimal list-inside space-y-1 ml-1 text-elf-text-mid">
                           <li>Upload your document to Google Drive, OneDrive, or Dropbox.</li>
-                          <li>Right-click the file and select "Share".</li>
+                          <li>Right-click the file and select "Share" or "Get link".</li>
                           <li>Ensure access is set to "Anyone with the link can view".</li>
-                          <li>Copy the "Sharing Link" and paste it in the field above.</li>
+                          <li>Copy the link and paste it in the field above.</li>
                         </ul>
                       </div>
                     </div>
@@ -337,7 +336,7 @@ export default function AdminPage() {
             </Card>
             
             <div className="grid gap-3">
-              <h3 className="font-headline text-2xl text-elf-green-dark italic">Current Archives</h3>
+              <h3 className="font-headline text-2xl text-elf-green-dark italic">Current Archives ({documents?.length || 0})</h3>
               {documents?.map(d => (
                 <div key={d.id} className="bg-white p-5 rounded-2xl border flex justify-between items-center shadow-sm">
                   <div className="flex items-center gap-4">
