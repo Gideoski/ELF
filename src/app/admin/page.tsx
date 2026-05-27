@@ -30,7 +30,7 @@ import {
   UploadCloud,
   X
 } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -51,6 +51,7 @@ export default function AdminPage() {
   const auth = useAuth();
   const firestore = useFirestore();
   const { user, loading: authLoading } = useUser();
+  const { toast } = useToast();
   
   const docFileInputRef = useRef<HTMLInputElement>(null);
   const galleryFileInputRef = useRef<HTMLInputElement>(null);
@@ -110,7 +111,6 @@ export default function AdminPage() {
     }
   };
 
-  // Fixed async/await Base64 pattern for Documents
   const addDocument = async () => {
     if (!firestore || !docTitle) return;
     
@@ -152,7 +152,6 @@ export default function AdminPage() {
     }
   };
 
-  // Fixed async/await Base64 pattern for Gallery
   const addGalleryImage = async () => {
     if (!firestore || !galleryFile) return;
     
@@ -339,7 +338,6 @@ export default function AdminPage() {
                     </div>
                   </div>
                 </div>
-                {/* Fixed Publish Button logic for Fix 2 & loading bug */}
                 <Button 
                   onClick={addGalleryImage} 
                   disabled={isSubmittingGallery || !galleryFile} 
