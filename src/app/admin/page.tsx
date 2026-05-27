@@ -73,6 +73,10 @@ export default function AdminPage() {
   const [galleryCaption, setGalleryCaption] = useState('');
   const [galleryFile, setGalleryFile] = useState<File | null>(null);
 
+  // Key states to force remount of file inputs
+  const [docInputKey, setDocInputKey] = useState(0);
+  const [galleryInputKey, setGalleryInputKey] = useState(0);
+
   const [isSignOutDialogOpen, setIsSignOutDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ col: string, id: string, title?: string } | null>(null);
 
@@ -142,7 +146,7 @@ export default function AdminPage() {
       setDocTitle('');
       setDocUrl('');
       setDocFile(null);
-      if (docFileInputRef.current) docFileInputRef.current.value = "";
+      setDocInputKey(k => k + 1);
 
     } catch (err: any) {
       toast({ variant: "destructive", title: "Error", description: getErrorMessage(err) });
@@ -175,7 +179,7 @@ export default function AdminPage() {
       toast({ title: "Saved Successfully", description: "Photo added to the gallery." });
       setGalleryCaption('');
       setGalleryFile(null);
-      if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
+      setGalleryInputKey(k => k + 1);
 
     } catch (err: any) {
       toast({ variant: "destructive", title: "Upload Failed", description: getErrorMessage(err) });
@@ -310,8 +314,15 @@ export default function AdminPage() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <Input ref={docFileInputRef} type="file" accept="application/pdf" onChange={(e) => setDocFile(e.target.files?.[0] || null)} className="h-12 pt-2.5 rounded-xl bg-white" />
-                      {docFile && <Button variant="ghost" size="icon" onClick={() => { setDocFile(null); if (docFileInputRef.current) docFileInputRef.current.value = ""; }} className="text-destructive"><X size={20} /></Button>}
+                      <Input 
+                        key={docInputKey}
+                        ref={docFileInputRef} 
+                        type="file" 
+                        accept="application/pdf" 
+                        onChange={(e) => setDocFile(e.target.files?.[0] || null)} 
+                        className="h-12 pt-2.5 rounded-xl bg-white" 
+                      />
+                      {docFile && <Button variant="ghost" size="icon" onClick={() => { setDocFile(null); setDocInputKey(k => k + 1); }} className="text-destructive"><X size={20} /></Button>}
                     </div>
                   )}
                 </div>
@@ -358,8 +369,15 @@ export default function AdminPage() {
                   <div className="space-y-1">
                     <Label>Select Image</Label>
                     <div className="flex items-center gap-2">
-                      <Input ref={galleryFileInputRef} type="file" accept="image/*" onChange={(e) => setGalleryFile(e.target.files?.[0] || null)} className="h-12 pt-2.5 rounded-xl bg-white" />
-                      {galleryFile && <Button variant="ghost" size="icon" onClick={() => { setGalleryFile(null); if (galleryFileInputRef.current) galleryFileInputRef.current.value = ""; }} className="text-destructive"><X size={20} /></Button>}
+                      <Input 
+                        key={galleryInputKey}
+                        ref={galleryFileInputRef} 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => setGalleryFile(e.target.files?.[0] || null)} 
+                        className="h-12 pt-2.5 rounded-xl bg-white" 
+                      />
+                      {galleryFile && <Button variant="ghost" size="icon" onClick={() => { setGalleryFile(null); setGalleryInputKey(k => k + 1); }} className="text-destructive"><X size={20} /></Button>}
                     </div>
                   </div>
                 </div>
