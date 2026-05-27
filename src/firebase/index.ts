@@ -6,6 +6,10 @@ import { getAuth, Auth } from 'firebase/auth';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { firebaseConfig } from './config';
 
+/**
+ * Initializes Firebase services and returns instances for app, firestore, auth, and storage.
+ * Ensures that only one instance of the Firebase app is created.
+ */
 export function initializeFirebase(): {
   app: FirebaseApp;
   firestore: Firestore;

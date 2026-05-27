@@ -62,7 +62,6 @@ export default function AdminPage() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
-  // Separate loading states for Fix 1
   const [isSubmittingDoc, setIsSubmittingDoc] = useState(false);
   const [isSubmittingGallery, setIsSubmittingGallery] = useState(false);
 
@@ -155,14 +154,13 @@ export default function AdminPage() {
   const addGalleryImage = async () => {
     if (!firestore || !galleryFile) return;
     
-    toast({ title: "Uploading...", description: "Please wait." });
+    toast({ title: "Publishing...", description: "Please wait." });
     setIsSubmittingGallery(true);
 
     try {
-      const base64String = await new Promise<string>((resolve, reject) => {
+      const base64String = await new Promise<string>((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
         reader.readAsDataURL(galleryFile);
       });
 
@@ -172,7 +170,7 @@ export default function AdminPage() {
         createdAt: new Date().toISOString()
       });
 
-      console.log("Gallery item saved to Firestore:", docRef.id);
+      console.log("Saved to Firestore:", docRef.id);
 
       toast({ title: "Saved Successfully", description: "Photo added to the gallery." });
       setGalleryCaption('');
@@ -212,12 +210,26 @@ export default function AdminPage() {
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-1">
                 <Label className="text-xs font-bold uppercase tracking-widest text-elf-light">Email</Label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="rounded-xl h-12" placeholder="admin@example.com" />
+                <input 
+                  type="email" 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)} 
+                  required 
+                  className="w-full h-12 rounded-xl border px-3" 
+                  placeholder="admin@example.com" 
+                />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs font-bold uppercase tracking-widest text-elf-light">Password</Label>
                 <div className="relative">
-                  <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required className="rounded-xl h-12 pr-12" placeholder="••••••••" />
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    required 
+                    className="w-full h-12 rounded-xl border px-3 pr-12" 
+                    placeholder="••••••••" 
+                  />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-elf-text-light">
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -351,7 +363,7 @@ export default function AdminPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {galleryItems?.map(g => (
                 <div key={g.id} className="bg-white rounded-2xl overflow-hidden border relative group aspect-square">
-                  <img src={g.imageUrl} className="w-full h-full object-cover" alt="" data-ai-hint="gallery photo" />
+                  <img src={g.imageUrl} className="w-full h-full object-cover" alt="" />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <Button variant="destructive" size="icon" onClick={() => setItemToDelete({ col: 'gallery', id: g.id, title: 'Photo' })} className="h-10 w-10 rounded-full"><Trash2 size={18} /></Button>
                   </div>
