@@ -25,6 +25,7 @@ const navLinks = [
   { name: 'Archive', href: '/archive' },
   { name: 'Community', href: '/community' },
   { name: 'Gallery', href: '/gallery' },
+  { name: 'CHIASMA 1.0', href: '/chiasma-registration' },
 ];
 
 export function Navbar() {

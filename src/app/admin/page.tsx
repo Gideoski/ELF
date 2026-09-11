@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo, useRef } from 'react';
@@ -30,7 +31,10 @@ import {
   UploadCloud,
   X,
   ExternalLink,
-  AlertCircle
+  AlertCircle,
+  Users,
+  Download,
+  Table as TableIcon
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
@@ -46,9 +50,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const ADMIN_EMAIL = 'nimsaamsaelf@gmail.com';
-const MAX_FILE_SIZE = 700 * 1024; // 700KB (to fit within Firestore 1MB limit after Base64 encoding)
+const MAX_FILE_SIZE = 700 * 1024; // 700KB
 
 export default function AdminPage() {
   const auth = useAuth();
@@ -84,9 +96,11 @@ export default function AdminPage() {
 
   const docsQuery = useMemo(() => firestore ? query(collection(firestore, 'documents'), orderBy('uploadedAt', 'desc')) : null, [firestore]);
   const galleryQuery = useMemo(() => firestore ? query(collection(firestore, 'gallery'), orderBy('createdAt', 'desc')) : null, [firestore]);
+  const regQuery = useMemo(() => firestore ? query(collection(firestore, 'registrations'), orderBy('submittedAt', 'desc')) : null, [firestore]);
   
   const { data: documents } = useCollection(docsQuery);
   const { data: galleryItems } = useCollection(galleryQuery);
+  const { data: registrations } = useCollection(regQuery);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -219,6 +233,30 @@ export default function AdminPage() {
     }
   };
 
+  const exportRegistrations = () => {
+    if (!registrations || registrations.length === 0) return;
+
+    const headers = ["Full Name", "Level", "Department", "College", "Location", "Submission Date"];
+    const rows = registrations.map(r => [
+      `"${r.fullName}"`,
+      `"${r.level}"`,
+      `"${r.department}"`,
+      `"${r.college}"`,
+      `"${r.location}"`,
+      `"${new Date(r.submittedAt).toLocaleString()}"`
+    ]);
+
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `CHIASMA_Registrations_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (authLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-elf-gold" size={48} /></div>;
 
   if (!user || user.email !== ADMIN_EMAIL) {
@@ -279,18 +317,75 @@ export default function AdminPage() {
         <div className="flex justify-between items-center mb-12">
           <div>
             <h1 className="text-4xl font-headline text-elf-green-dark font-bold italic">Dashboard</h1>
-            <p className="text-elf-text-mid">Manage Resources & Gallery</p>
+            <p className="text-elf-text-mid">Manage Resources, Gallery & Registrations</p>
           </div>
           <Button variant="outline" className="rounded-full border-elf-gold text-elf-gold" onClick={() => setIsSignOutDialogOpen(true)}>
             <LogOut size={16} className="mr-2" /> Logout
           </Button>
         </div>
 
-        <Tabs defaultValue="archive" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-10 h-14 bg-white border p-1 rounded-full">
+        <Tabs defaultValue="registrations" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-10 h-14 bg-white border p-1 rounded-full">
+            <TabsTrigger value="registrations" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold">Registrations</TabsTrigger>
             <TabsTrigger value="archive" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold">Resources</TabsTrigger>
             <TabsTrigger value="gallery" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold">Gallery</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="registrations" className="space-y-8">
+            <div className="flex justify-between items-center">
+              <h3 className="font-headline text-2xl text-elf-green-dark italic">Event Registrations ({registrations?.length || 0})</h3>
+              <Button onClick={exportRegistrations} variant="outline" className="rounded-full border-elf-gold text-elf-gold hover:bg-elf-gold hover:text-white">
+                <TableIcon size={16} className="mr-2" /> Export to Excel
+              </Button>
+            </div>
+
+            <Card className="rounded-2xl overflow-hidden shadow-sm border-none">
+              <Table>
+                <TableHeader className="bg-white">
+                  <TableRow>
+                    <TableHead>Full Name</TableHead>
+                    <TableHead>Details</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Receipt</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="bg-white/50">
+                  {registrations?.map(r => (
+                    <TableRow key={r.id}>
+                      <TableCell className="font-bold text-elf-green-dark">{r.fullName}</TableCell>
+                      <TableCell>
+                        <div className="text-xs">
+                          <p>{r.level}L | {r.department}</p>
+                          <p className="text-elf-text-light">{r.college}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm">{r.location}</TableCell>
+                      <TableCell>
+                        <Button asChild variant="ghost" size="sm" className="text-elf-gold hover:text-elf-gold-bright p-0">
+                          <a href={r.receiptUrl} target="_blank" rel="noopener noreferrer">
+                            <Eye size={16} className="mr-1" /> View
+                          </a>
+                        </Button>
+                      </TableCell>
+                      <TableCell className="text-[10px] text-elf-text-light">{new Date(r.submittedAt).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" onClick={() => setItemToDelete({ col: 'registrations', id: r.id, title: `Registration from ${r.fullName}` })} className="text-destructive">
+                          <Trash2 size={16} />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {(!registrations || registrations.length === 0) && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-12 text-elf-text-light italic">No registrations found.</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="archive" className="space-y-8">
             <Card className="rounded-2xl overflow-hidden shadow-sm">
@@ -346,7 +441,7 @@ export default function AdminPage() {
                       </div>
                       <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs">
                         <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                        <p>Limit: 700KB. For larger files, please use the <strong>External Link</strong> option above to ensure database stability.</p>
+                        <p>Limit: 700KB. For larger files, please use the <strong>External Link</strong> option above.</p>
                       </div>
                     </div>
                   )}
@@ -405,7 +500,7 @@ export default function AdminPage() {
                       {galleryFile && <Button variant="ghost" size="icon" onClick={() => { setGalleryFile(null); setGalleryInputKey(k => k + 1); }} className="text-destructive"><X size={20} /></Button>}
                     </div>
                     <p className="text-[10px] text-elf-text-light italic mt-1 flex items-center gap-1">
-                      <AlertCircle size={10} /> Max size: 700KB. Compress image if it fails to upload.
+                      <AlertCircle size={10} /> Max size: 700KB.
                     </p>
                   </div>
                 </div>

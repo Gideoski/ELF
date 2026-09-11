@@ -35,6 +35,21 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["imageUrl", "createdAt"]
+    },
+    "Registration": {
+      "title": "CHIASMA 1.0 Registration",
+      "description": "Registration details for the CHIASMA 1.0 event.",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string" },
+        "level": { "type": "string" },
+        "department": { "type": "string" },
+        "college": { "type": "string" },
+        "location": { "type": "string" },
+        "receiptUrl": { "type": "string" },
+        "submittedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["fullName", "level", "department", "college", "location", "receiptUrl", "submittedAt"]
     }
   },
   "auth": {
@@ -52,6 +67,10 @@
     "/gallery/{imageId}": {
       "schema": "GalleryImage",
       "description": "Stores metadata for gallery images."
+    },
+    "/registrations/{regId}": {
+      "schema": "Registration",
+      "description": "Stores event registrations."
     }
   }
 }
