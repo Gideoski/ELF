@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useRef } from 'react';
@@ -138,15 +137,15 @@ export default function ChiasmaRegistration() {
               <div className="space-y-4">
                 <div>
                   <p className="text-xs uppercase tracking-widest text-white/40 mb-1">Bank Name</p>
-                  <p className="font-bold text-lg">Wema Bank</p>
+                  <p className="font-bold text-lg">OPay</p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-widest text-white/40 mb-1">Account Number</p>
-                  <p className="font-bold text-2xl text-elf-gold tracking-wider">0262104523</p>
+                  <p className="font-bold text-2xl text-elf-gold tracking-wider">7025970551</p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-widest text-white/40 mb-1">Account Name</p>
-                  <p className="font-bold text-lg">AMSA NiMSA-ELF</p>
+                  <p className="font-bold text-lg">Olojo-Kosoko Dora</p>
                 </div>
               </div>
               
