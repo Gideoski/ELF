@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo, useRef } from 'react';
@@ -32,8 +31,6 @@ import {
   X,
   ExternalLink,
   AlertCircle,
-  Users,
-  Download,
   Table as TableIcon
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -50,6 +47,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -93,6 +96,7 @@ export default function AdminPage() {
 
   const [isSignOutDialogOpen, setIsSignOutDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ col: string, id: string, title?: string } | null>(null);
+  const [previewReceipt, setPreviewReceipt] = useState<string | null>(null);
 
   const docsQuery = useMemo(() => firestore ? query(collection(firestore, 'documents'), orderBy('uploadedAt', 'desc')) : null, [firestore]);
   const galleryQuery = useMemo(() => firestore ? query(collection(firestore, 'gallery'), orderBy('createdAt', 'desc')) : null, [firestore]);
@@ -363,10 +367,13 @@ export default function AdminPage() {
                       </TableCell>
                       <TableCell className="text-sm">{r.location}</TableCell>
                       <TableCell>
-                        <Button asChild variant="ghost" size="sm" className="text-elf-gold hover:text-elf-gold-bright p-0">
-                          <a href={r.receiptUrl} target="_blank" rel="noopener noreferrer">
-                            <Eye size={16} className="mr-1" /> View
-                          </a>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-elf-gold hover:text-elf-gold-bright p-0"
+                          onClick={() => setPreviewReceipt(r.receiptUrl)}
+                        >
+                          <Eye size={16} className="mr-1" /> Preview
                         </Button>
                       </TableCell>
                       <TableCell className="text-[10px] text-elf-text-light">{new Date(r.submittedAt).toLocaleDateString()}</TableCell>
@@ -549,6 +556,28 @@ export default function AdminPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <Dialog open={!!previewReceipt} onOpenChange={(open) => !open && setPreviewReceipt(null)}>
+          <DialogContent className="max-w-3xl rounded-3xl overflow-hidden p-0 border-none bg-elf-green-dark">
+            <DialogHeader className="p-8 pb-4">
+              <DialogTitle className="text-3xl font-headline italic text-elf-gold">Proof of Payment</DialogTitle>
+            </DialogHeader>
+            <div className="p-8 flex justify-center bg-white/5 min-h-[400px]">
+              {previewReceipt && (
+                <img 
+                  src={previewReceipt} 
+                  alt="Payment Receipt" 
+                  className="max-h-[65vh] w-auto object-contain rounded-2xl shadow-2xl border-4 border-white/10" 
+                />
+              )}
+            </div>
+            <div className="p-6 bg-elf-gold/10 flex justify-end gap-4">
+              <Button onClick={() => setPreviewReceipt(null)} className="bg-elf-gold text-elf-green-dark rounded-full font-bold px-8 h-12 hover:bg-elf-gold-bright">
+                Close Preview
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
