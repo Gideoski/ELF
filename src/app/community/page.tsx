@@ -124,9 +124,6 @@ export default function Community() {
           <h1 className="text-5xl md:text-7xl font-headline text-elf-green-dark leading-tight">
             Meet the Executive Team
           </h1>
-          <p className="text-elf-text-mid max-w-xl mx-auto mt-4 text-sm md:text-base">
-            Swipe left/right or use the arrows to see the emerging healthcare leaders driving the vision forward.
-          </p>
         </div>
 
         <div className="relative px-8 md:px-12">
