@@ -122,7 +122,7 @@ export default function Community() {
             Our Team
           </span>
           <h1 className="text-5xl md:text-7xl font-headline text-elf-green-dark leading-tight">
-            Meet the Executive Team
+            Meet the Executive Team 2025/2026
           </h1>
         </div>
 
