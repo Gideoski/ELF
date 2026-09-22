@@ -120,18 +120,27 @@ export default function ChiasmaRegistration() {
         style={{ backgroundImage: 'url("/images/CHIASMA flyer.jpeg")' }}
       />
       
-      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80 backdrop-blur-[2px] pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/50 to-black/85 backdrop-blur-[1px] pointer-events-none" />
       
-      <div className="max-w-4xl mx-auto relative z-10">
-        <div className="text-center mb-12">
+      <div className="max-w-5xl mx-auto relative z-10">
+        <div className="text-center mb-8">
           <h1 className="text-6xl md:text-8xl font-headline text-white mb-4 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]">
             CHIASMA <span className="italic text-elf-gold">1.0</span>
           </h1>
           <p className="text-elf-gold font-headline italic text-2xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Event Registration</p>
         </div>
 
+        {/* Full Flyer Display */}
+        <div className="max-w-2xl mx-auto mb-16 rounded-3xl overflow-hidden shadow-2xl border border-white/20 animate-fade-in-up">
+          <img 
+            src="/images/CHIASMA flyer.jpeg" 
+            alt="CHIASMA 1.0 Flyer" 
+            className="w-full h-auto object-cover"
+          />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          <Card className="lg:col-span-2 bg-elf-green-dark/80 border border-white/20 backdrop-blur-xl text-white rounded-3xl overflow-hidden h-fit shadow-2xl">
+          <Card className="lg:col-span-2 bg-elf-green-dark/60 border border-white/20 backdrop-blur-xl text-white rounded-3xl overflow-hidden h-fit shadow-2xl">
             <CardHeader className="bg-elf-gold/20 border-b border-white/10">
               <CardTitle className="text-elf-gold flex items-center gap-2">
                 <CreditCard size={20} /> Payment Details
@@ -167,7 +176,7 @@ export default function ChiasmaRegistration() {
             </CardContent>
           </Card>
 
-          <Card className="lg:col-span-3 rounded-3xl shadow-2xl border border-white/20 bg-black/40 backdrop-blur-xl text-white">
+          <Card className="lg:col-span-3 rounded-3xl shadow-2xl border border-white/20 bg-white/5 backdrop-blur-xl text-white">
             <CardContent className="p-8 md:p-12">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
