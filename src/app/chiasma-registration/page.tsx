@@ -114,55 +114,56 @@ export default function ChiasmaRegistration() {
   }
 
   return (
-    <div className="min-h-screen pt-32 pb-24 px-6 relative overflow-hidden bg-elf-green-dark">
-      {/* Background flyer image container with dual overlay mix for maximum layout contrast */}
+    <div className="min-h-screen pt-32 pb-24 px-6 relative overflow-hidden bg-black">
+      {/* Background flyer image container - Increased visibility */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-500 scale-105 pointer-events-none"
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-500 scale-100 pointer-events-none"
         style={{ backgroundImage: 'url("/images/CHIASMA flyer.jpeg")' }}
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-elf-green-dark/95 via-elf-green-dark/90 to-elf-green-dark/95 backdrop-blur-[4px] pointer-events-none" />
-      <div className="absolute inset-0 elf-diagonal-pattern opacity-10 pointer-events-none" />
+      
+      {/* Reduced overlay opacity and blur for better background visibility */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70 backdrop-blur-[2px] pointer-events-none" />
       
       <div className="max-w-4xl mx-auto relative z-10">
         <div className="text-center mb-12">
-          <h1 className="text-5xl md:text-7xl font-headline text-white mb-4 drop-shadow-md">
+          <h1 className="text-6xl md:text-8xl font-headline text-white mb-4 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]">
             CHIASMA <span className="italic text-elf-gold">1.0</span>
           </h1>
-          <p className="text-elf-gold/90 font-headline italic text-xl drop-shadow-sm">Event Registration</p>
+          <p className="text-elf-gold font-headline italic text-2xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Event Registration</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
           {/* Payment Info */}
-          <Card className="lg:col-span-2 bg-elf-green-dark/60 border border-white/20 backdrop-blur-md text-white rounded-3xl overflow-hidden h-fit shadow-2xl">
-            <CardHeader className="bg-elf-gold/10 border-b border-white/10">
+          <Card className="lg:col-span-2 bg-elf-green-dark/80 border border-white/30 backdrop-blur-xl text-white rounded-3xl overflow-hidden h-fit shadow-2xl">
+            <CardHeader className="bg-elf-gold/20 border-b border-white/10">
               <CardTitle className="text-elf-gold flex items-center gap-2">
                 <CreditCard size={20} /> Payment Details
               </CardTitle>
-              <CardDescription className="text-white/80">Please complete payment before registering.</CardDescription>
+              <CardDescription className="text-white/90">Please complete payment before registering.</CardDescription>
             </CardHeader>
             <CardContent className="p-8 space-y-6">
               <div className="space-y-4">
-                <div className="bg-elf-gold/20 p-4 rounded-2xl border border-elf-gold/40 mb-2">
+                <div className="bg-elf-gold/30 p-4 rounded-2xl border border-elf-gold/40 mb-2">
                   <p className="text-xs uppercase tracking-widest text-elf-gold mb-1 flex items-center gap-1 font-bold">
                     <Banknote size={12} /> Registration Fee
                   </p>
                   <p className="font-headline text-3xl font-bold text-white">₦1,000</p>
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-widest text-white/50 mb-1 font-semibold">Bank Name</p>
+                  <p className="text-xs uppercase tracking-widest text-white/70 mb-1 font-semibold">Bank Name</p>
                   <p className="font-bold text-lg text-white">OPay</p>
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-widest text-white/50 mb-1 font-semibold">Account Number</p>
+                  <p className="text-xs uppercase tracking-widest text-white/70 mb-1 font-semibold">Account Number</p>
                   <p className="font-bold text-2xl text-elf-gold tracking-wider">7025970551</p>
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-widest text-white/50 mb-1 font-semibold">Account Name</p>
+                  <p className="text-xs uppercase tracking-widest text-white/70 mb-1 font-semibold">Account Name</p>
                   <p className="font-bold text-lg text-white">Olojo-Kosoko Dora</p>
                 </div>
               </div>
               
-              <div className="pt-6 border-t border-white/10 flex items-start gap-3 text-sm text-white/70 italic">
+              <div className="pt-6 border-t border-white/10 flex items-start gap-3 text-sm text-white/80 italic">
                 <AlertCircle size={16} className="shrink-0 mt-1 text-elf-gold" />
                 <p>Ensure you take a screenshot or photo of your payment receipt to upload with this form.</p>
               </div>
@@ -170,7 +171,7 @@ export default function ChiasmaRegistration() {
           </Card>
 
           {/* Registration Form */}
-          <Card className="lg:col-span-3 rounded-3xl shadow-2xl border border-white/10 bg-white/95 backdrop-blur-md">
+          <Card className="lg:col-span-3 rounded-3xl shadow-2xl border border-white/20 bg-white/95 backdrop-blur-md">
             <CardContent className="p-8 md:p-12">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
@@ -279,7 +280,7 @@ export default function ChiasmaRegistration() {
                 <Button 
                   type="submit" 
                   disabled={loading || !receiptFile} 
-                  className="w-full bg-elf-gold text-elf-green-dark hover:bg-elf-gold-bright h-14 rounded-full font-bold text-lg shadow-xl"
+                  className="w-full bg-elf-gold text-elf-green-dark hover:bg-elf-gold-bright h-14 rounded-full font-bold text-lg shadow-2xl"
                 >
                   {loading ? <Loader2 className="animate-spin mr-2" /> : <Upload className="mr-2" />}
                   Submit Registration
