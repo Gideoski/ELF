@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "User": {
@@ -42,14 +41,15 @@
       "type": "object",
       "properties": {
         "fullName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "gender": { "type": "string", "enum": ["Male", "Female"] },
         "level": { "type": "string" },
         "department": { "type": "string" },
         "college": { "type": "string" },
-        "location": { "type": "string" },
         "receiptUrl": { "type": "string" },
         "submittedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["fullName", "level", "department", "college", "location", "receiptUrl", "submittedAt"]
+      "required": ["fullName", "email", "gender", "level", "department", "college", "receiptUrl", "submittedAt"]
     }
   },
   "auth": {

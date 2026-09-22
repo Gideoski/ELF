@@ -240,13 +240,14 @@ export default function AdminPage() {
   const exportRegistrations = () => {
     if (!registrations || registrations.length === 0) return;
 
-    const headers = ["Full Name", "Level", "Department", "College", "Location", "Submission Date"];
+    const headers = ["Full Name", "Email", "Gender", "Level", "Department", "College", "Submission Date"];
     const rows = registrations.map(r => [
       `"${r.fullName}"`,
+      `"${r.email || ''}"`,
+      `"${r.gender || ''}"`,
       `"${r.level}"`,
       `"${r.department}"`,
       `"${r.college}"`,
-      `"${r.location}"`,
       `"${new Date(r.submittedAt).toLocaleString()}"`
     ]);
 
@@ -348,8 +349,8 @@ export default function AdminPage() {
                 <TableHeader className="bg-white">
                   <TableRow>
                     <TableHead>Full Name</TableHead>
-                    <TableHead>Details</TableHead>
-                    <TableHead>Location</TableHead>
+                    <TableHead>Email/Gender</TableHead>
+                    <TableHead>Department</TableHead>
                     <TableHead>Receipt</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead></TableHead>
@@ -361,11 +362,16 @@ export default function AdminPage() {
                       <TableCell className="font-bold text-elf-green-dark">{r.fullName}</TableCell>
                       <TableCell>
                         <div className="text-xs">
+                          <p className="font-medium">{r.email}</p>
+                          <p className="text-elf-text-light uppercase tracking-tighter">{r.gender}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-xs">
                           <p>{r.level}L | {r.department}</p>
                           <p className="text-elf-text-light">{r.college}</p>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm">{r.location}</TableCell>
                       <TableCell>
                         <Button 
                           variant="ghost" 

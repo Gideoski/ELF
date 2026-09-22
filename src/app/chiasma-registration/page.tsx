@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, CheckCircle2, AlertCircle, CreditCard } from 'lucide-react';
+import { Loader2, Upload, CheckCircle2, AlertCircle, CreditCard, Banknote } from 'lucide-react';
 import { getErrorMessage } from '@/lib/error-mapping';
 
 const MAX_FILE_SIZE = 700 * 1024; // 700KB
@@ -23,10 +23,11 @@ export default function ChiasmaRegistration() {
   const [success, setSuccess] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
+    email: '',
+    gender: '',
     level: '',
     department: '',
     college: '',
-    location: '',
   });
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
@@ -36,8 +37,8 @@ export default function ChiasmaRegistration() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleLevelChange = (value: string) => {
-    setFormData(prev => ({ ...prev, level: value }));
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -135,6 +136,12 @@ export default function ChiasmaRegistration() {
             </CardHeader>
             <CardContent className="p-8 space-y-6">
               <div className="space-y-4">
+                <div className="bg-elf-gold/20 p-4 rounded-2xl border border-elf-gold/30 mb-2">
+                  <p className="text-xs uppercase tracking-widest text-elf-gold mb-1 flex items-center gap-1">
+                    <Banknote size={12} /> Registration Fee
+                  </p>
+                  <p className="font-headline text-3xl font-bold text-white">₦1,000</p>
+                </div>
                 <div>
                   <p className="text-xs uppercase tracking-widest text-white/40 mb-1">Bank Name</p>
                   <p className="font-bold text-lg">OPay</p>
@@ -173,10 +180,36 @@ export default function ChiasmaRegistration() {
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  <Input 
+                    id="email" 
+                    name="email" 
+                    type="email"
+                    placeholder="name@example.com" 
+                    required 
+                    value={formData.email} 
+                    onChange={handleInputChange}
+                    className="rounded-xl"
+                  />
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
+                    <Label htmlFor="gender">Gender</Label>
+                    <Select onValueChange={(v) => handleSelectChange('gender', v)} required>
+                      <SelectTrigger className="rounded-xl">
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="level">Level</Label>
-                    <Select onValueChange={handleLevelChange} required>
+                    <Select onValueChange={(v) => handleSelectChange('level', v)} required>
                       <SelectTrigger className="rounded-xl">
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
@@ -190,6 +223,9 @@ export default function ChiasmaRegistration() {
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="department">Department</Label>
                     <Input 
@@ -202,32 +238,18 @@ export default function ChiasmaRegistration() {
                       className="rounded-xl"
                     />
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="college">College</Label>
-                  <Input 
-                    id="college" 
-                    name="college" 
-                    placeholder="e.g. MHS" 
-                    required 
-                    value={formData.college} 
-                    onChange={handleInputChange}
-                    className="rounded-xl"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location / Hostel</Label>
-                  <Input 
-                    id="location" 
-                    name="location" 
-                    placeholder="e.g. Male Hall 1" 
-                    required 
-                    value={formData.location} 
-                    onChange={handleInputChange}
-                    className="rounded-xl"
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="college">College</Label>
+                    <Input 
+                      id="college" 
+                      name="college" 
+                      placeholder="e.g. MHS" 
+                      required 
+                      value={formData.college} 
+                      onChange={handleInputChange}
+                      className="rounded-xl"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
