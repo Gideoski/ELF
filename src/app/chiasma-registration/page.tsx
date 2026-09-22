@@ -115,14 +115,12 @@ export default function ChiasmaRegistration() {
 
   return (
     <div className="min-h-screen pt-32 pb-24 px-6 relative overflow-hidden bg-black">
-      {/* Background flyer image container - Increased visibility */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-500 scale-100 pointer-events-none"
         style={{ backgroundImage: 'url("/images/CHIASMA flyer.jpeg")' }}
       />
       
-      {/* Reduced overlay opacity and blur for better background visibility */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70 backdrop-blur-[2px] pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80 backdrop-blur-[2px] pointer-events-none" />
       
       <div className="max-w-4xl mx-auto relative z-10">
         <div className="text-center mb-12">
@@ -133,8 +131,7 @@ export default function ChiasmaRegistration() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          {/* Payment Info */}
-          <Card className="lg:col-span-2 bg-elf-green-dark/80 border border-white/30 backdrop-blur-xl text-white rounded-3xl overflow-hidden h-fit shadow-2xl">
+          <Card className="lg:col-span-2 bg-elf-green-dark/80 border border-white/20 backdrop-blur-xl text-white rounded-3xl overflow-hidden h-fit shadow-2xl">
             <CardHeader className="bg-elf-gold/20 border-b border-white/10">
               <CardTitle className="text-elf-gold flex items-center gap-2">
                 <CreditCard size={20} /> Payment Details
@@ -170,12 +167,11 @@ export default function ChiasmaRegistration() {
             </CardContent>
           </Card>
 
-          {/* Registration Form */}
-          <Card className="lg:col-span-3 rounded-3xl shadow-2xl border border-white/20 bg-white/95 backdrop-blur-md">
+          <Card className="lg:col-span-3 rounded-3xl shadow-2xl border border-white/20 bg-black/40 backdrop-blur-xl text-white">
             <CardContent className="p-8 md:p-12">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="fullName" className="text-elf-green-dark font-bold">Full Name</Label>
+                  <Label htmlFor="fullName" className="text-elf-gold font-bold">Full Name</Label>
                   <Input 
                     id="fullName" 
                     name="fullName" 
@@ -183,12 +179,12 @@ export default function ChiasmaRegistration() {
                     required 
                     value={formData.fullName} 
                     onChange={handleInputChange}
-                    className="rounded-xl border-elf-green-dark/20 focus:ring-elf-gold bg-white text-elf-green-dark"
+                    className="rounded-xl border-white/20 focus:ring-elf-gold bg-white/10 text-white placeholder:text-white/40"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-elf-green-dark font-bold">Email Address</Label>
+                  <Label htmlFor="email" className="text-elf-gold font-bold">Email Address</Label>
                   <Input 
                     id="email" 
                     name="email" 
@@ -197,36 +193,36 @@ export default function ChiasmaRegistration() {
                     required 
                     value={formData.email} 
                     onChange={handleInputChange}
-                    className="rounded-xl border-elf-green-dark/20 focus:ring-elf-gold bg-white text-elf-green-dark"
+                    className="rounded-xl border-white/20 focus:ring-elf-gold bg-white/10 text-white placeholder:text-white/40"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="gender" className="text-elf-green-dark font-bold">Gender</Label>
+                    <Label htmlFor="gender" className="text-elf-gold font-bold">Gender</Label>
                     <Select onValueChange={(v) => handleSelectChange('gender', v)} required>
-                      <SelectTrigger className="rounded-xl border-elf-green-dark/20 bg-white text-elf-green-dark">
+                      <SelectTrigger className="rounded-xl border-white/20 bg-white/10 text-white">
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Male">Male</SelectItem>
-                        <SelectItem value="Female">Female</SelectItem>
+                      <SelectContent className="bg-elf-green-dark border-white/20 text-white">
+                        <SelectItem value="Male" className="focus:bg-white/10 focus:text-white">Male</SelectItem>
+                        <SelectItem value="Female" className="focus:bg-white/10 focus:text-white">Female</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="level" className="text-elf-green-dark font-bold">Level</Label>
+                    <Label htmlFor="level" className="text-elf-gold font-bold">Level</Label>
                     <Select onValueChange={(v) => handleSelectChange('level', v)} required>
-                      <SelectTrigger className="rounded-xl border-elf-green-dark/20 bg-white text-elf-green-dark">
+                      <SelectTrigger className="rounded-xl border-white/20 bg-white/10 text-white">
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="100">100 Level</SelectItem>
-                        <SelectItem value="200">200 Level</SelectItem>
-                        <SelectItem value="300">300 Level</SelectItem>
-                        <SelectItem value="400">400 Level</SelectItem>
-                        <SelectItem value="500">500 Level</SelectItem>
-                        <SelectItem value="600">600 Level</SelectItem>
+                      <SelectContent className="bg-elf-green-dark border-white/20 text-white">
+                        <SelectItem value="100" className="focus:bg-white/10 focus:text-white">100 Level</SelectItem>
+                        <SelectItem value="200" className="focus:bg-white/10 focus:text-white">200 Level</SelectItem>
+                        <SelectItem value="300" className="focus:bg-white/10 focus:text-white">300 Level</SelectItem>
+                        <SelectItem value="400" className="focus:bg-white/10 focus:text-white">400 Level</SelectItem>
+                        <SelectItem value="500" className="focus:bg-white/10 focus:text-white">500 Level</SelectItem>
+                        <SelectItem value="600" className="focus:bg-white/10 focus:text-white">600 Level</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -234,7 +230,7 @@ export default function ChiasmaRegistration() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="department" className="text-elf-green-dark font-bold">Department</Label>
+                    <Label htmlFor="department" className="text-elf-gold font-bold">Department</Label>
                     <Input 
                       id="department" 
                       name="department" 
@@ -242,11 +238,11 @@ export default function ChiasmaRegistration() {
                       required 
                       value={formData.department} 
                       onChange={handleInputChange}
-                      className="rounded-xl border-elf-green-dark/20 focus:ring-elf-gold bg-white text-elf-green-dark"
+                      className="rounded-xl border-white/20 focus:ring-elf-gold bg-white/10 text-white placeholder:text-white/40"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="college" className="text-elf-green-dark font-bold">College</Label>
+                    <Label htmlFor="college" className="text-elf-gold font-bold">College</Label>
                     <Input 
                       id="college" 
                       name="college" 
@@ -254,13 +250,13 @@ export default function ChiasmaRegistration() {
                       required 
                       value={formData.college} 
                       onChange={handleInputChange}
-                      className="rounded-xl border-elf-green-dark/20 focus:ring-elf-gold bg-white text-elf-green-dark"
+                      className="rounded-xl border-white/20 focus:ring-elf-gold bg-white/10 text-white placeholder:text-white/40"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="receipt" className="text-elf-green-dark font-bold">Proof of Payment (Receipt)</Label>
+                  <Label htmlFor="receipt" className="text-elf-gold font-bold">Proof of Payment (Receipt)</Label>
                   <div className="flex items-center gap-3">
                     <Input 
                       key={fileInputKey}
@@ -269,10 +265,10 @@ export default function ChiasmaRegistration() {
                       accept="image/*" 
                       required 
                       onChange={handleFileChange}
-                      className="rounded-xl h-12 pt-2.5 cursor-pointer border-elf-green-dark/20 bg-white text-elf-green-dark"
+                      className="rounded-xl h-12 pt-2.5 cursor-pointer border-white/20 bg-white/10 text-white file:text-white"
                     />
                   </div>
-                  <p className="text-[10px] text-elf-text-light italic flex items-center gap-1 font-medium">
+                  <p className="text-[10px] text-white/60 italic flex items-center gap-1 font-medium">
                     <AlertCircle size={10} /> Max size: 700KB. 
                   </p>
                 </div>
