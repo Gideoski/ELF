@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
@@ -34,7 +33,8 @@ import {
   ExternalLink,
   AlertCircle,
   Table as TableIcon,
-  AlertTriangle
+  AlertTriangle,
+  RefreshCw
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
@@ -101,10 +101,11 @@ export default function AdminPage() {
   const [itemToDelete, setItemToDelete] = useState<{ col: string, id: string, title?: string } | null>(null);
   const [previewReceipt, setPreviewReceipt] = useState<string | null>(null);
 
-  // Queries with limits to prevent payload timeouts
+  // Optimized queries to prevent indexing issues and large payload timeouts
   const docsQuery = useMemo(() => firestore ? query(collection(firestore, 'documents'), orderBy('uploadedAt', 'desc'), limit(50)) : null, [firestore]);
   const galleryQuery = useMemo(() => firestore ? query(collection(firestore, 'gallery'), orderBy('createdAt', 'desc'), limit(50)) : null, [firestore]);
-  const regQuery = useMemo(() => firestore ? query(collection(firestore, 'registrations'), orderBy('submittedAt', 'desc'), limit(30)) : null, [firestore]);
+  // Removed orderBy temporarily to rule out index requirements that might block loading
+  const regQuery = useMemo(() => firestore ? query(collection(firestore, 'registrations'), limit(30)) : null, [firestore]);
   
   const { data: documents, loading: docsLoading } = useCollection(docsQuery);
   const { data: galleryItems, loading: galleryLoading } = useCollection(galleryQuery);
@@ -252,7 +253,7 @@ export default function AdminPage() {
       `"${r.level}"`,
       `"${r.department}"`,
       `"${r.college}"`,
-      `"${new Date(r.submittedAt).toLocaleString()}"`
+      `"${r.submittedAt ? new Date(r.submittedAt).toLocaleString() : 'N/A'}"`
     ]);
 
     const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
@@ -343,9 +344,19 @@ export default function AdminPage() {
           <TabsContent value="registrations" className="space-y-8">
             <div className="flex justify-between items-center">
               <h3 className="font-headline text-2xl text-elf-green-dark italic">Event Registrations ({registrations?.length || 0})</h3>
-              <Button onClick={exportRegistrations} variant="outline" className="rounded-full border-elf-gold text-elf-gold hover:bg-elf-gold hover:text-white" disabled={regsLoading || !registrations?.length}>
-                <TableIcon size={16} className="mr-2" /> Export to Excel
-              </Button>
+              <div className="flex gap-3">
+                <Button 
+                  onClick={() => window.location.reload()} 
+                  variant="ghost" 
+                  size="icon" 
+                  className="rounded-full text-elf-text-light hover:text-elf-gold"
+                >
+                  <RefreshCw size={18} />
+                </Button>
+                <Button onClick={exportRegistrations} variant="outline" className="rounded-full border-elf-gold text-elf-gold hover:bg-elf-gold hover:text-white" disabled={regsLoading || !registrations?.length}>
+                  <TableIcon size={16} className="mr-2" /> Export to CSV
+                </Button>
+              </div>
             </div>
 
             <Card className="rounded-2xl overflow-hidden shadow-sm border-none">
@@ -366,15 +377,20 @@ export default function AdminPage() {
                       <TableCell colSpan={6} className="text-center py-20">
                         <Loader2 className="animate-spin text-elf-gold mx-auto" size={32} />
                         <p className="text-xs text-elf-text-light mt-4 italic uppercase tracking-widest">Loading Registration Data...</p>
+                        <p className="text-[10px] text-elf-text-light/60 mt-2">(This may take a moment if photos are large)</p>
                       </TableCell>
                     </TableRow>
                   ) : regsError ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-20 text-destructive">
                         <AlertTriangle className="mx-auto mb-4" size={32} />
-                        <p className="font-bold">Error loading data</p>
-                        <p className="text-xs mt-2">{regsError.message}</p>
-                        <p className="text-[10px] mt-4 opacity-70">Check your browser console for index creation links.</p>
+                        <p className="font-bold">Error loading registration data</p>
+                        <p className="text-xs mt-2 max-w-md mx-auto">{regsError.message}</p>
+                        {regsError.code === 'failed-precondition' && (
+                          <p className="text-[10px] mt-4 opacity-70 p-4 bg-destructive/10 rounded-xl">
+                            A composite index might be missing. Check the Browser Console (F12) for a link to create it.
+                          </p>
+                        )}
                       </TableCell>
                     </TableRow>
                   ) : registrations?.map(r => (
@@ -402,7 +418,9 @@ export default function AdminPage() {
                           <Eye size={16} className="mr-1" /> Preview
                         </Button>
                       </TableCell>
-                      <TableCell className="text-[10px] text-elf-text-light">{new Date(r.submittedAt).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-[10px] text-elf-text-light">
+                        {r.submittedAt ? new Date(r.submittedAt).toLocaleDateString() : 'N/A'}
+                      </TableCell>
                       <TableCell>
                         <Button variant="ghost" size="icon" onClick={() => setItemToDelete({ col: 'registrations', id: r.id, title: `Registration from ${r.fullName}` })} className="text-destructive">
                           <Trash2 size={16} />
@@ -420,6 +438,7 @@ export default function AdminPage() {
             </Card>
           </TabsContent>
 
+          {/* Archive and Gallery Tabs remain unchanged */}
           <TabsContent value="archive" className="space-y-8">
             <Card className="rounded-2xl overflow-hidden shadow-sm">
               <CardHeader className="bg-white border-b p-6">
@@ -564,6 +583,7 @@ export default function AdminPage() {
           </TabsContent>
         </Tabs>
 
+        {/* Dialogs and Alerts */}
         <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
           <AlertDialogContent className="rounded-3xl">
             <AlertDialogHeader>
