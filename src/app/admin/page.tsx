@@ -1,6 +1,7 @@
+
 "use client";
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useAuth, useUser, useFirestore, useCollection } from '@/firebase';
 import { 
   signInWithEmailAndPassword, 
@@ -63,7 +64,7 @@ import {
 } from "@/components/ui/table";
 
 const ADMIN_EMAIL = 'nimsaamsaelf@gmail.com';
-const MAX_FILE_SIZE = 700 * 1024; // 700KB
+const MAX_FILE_SIZE = 700 * 1024; // 700KB for Base64 safety
 
 export default function AdminPage() {
   const auth = useAuth();
@@ -102,9 +103,9 @@ export default function AdminPage() {
   const galleryQuery = useMemo(() => firestore ? query(collection(firestore, 'gallery'), orderBy('createdAt', 'desc')) : null, [firestore]);
   const regQuery = useMemo(() => firestore ? query(collection(firestore, 'registrations'), orderBy('submittedAt', 'desc')) : null, [firestore]);
   
-  const { data: documents } = useCollection(docsQuery);
-  const { data: galleryItems } = useCollection(galleryQuery);
-  const { data: registrations } = useCollection(regQuery);
+  const { data: documents, loading: docsLoading } = useCollection(docsQuery);
+  const { data: galleryItems, loading: galleryLoading } = useCollection(galleryQuery);
+  const { data: registrations, loading: regsLoading } = useCollection(regQuery);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,7 +194,7 @@ export default function AdminPage() {
       toast({ 
         variant: "destructive", 
         title: "Image Too Large", 
-        description: "Images must be under 700KB. Please compress the image or reduce its resolution before uploading." 
+        description: "Images must be under 700KB to fit database limits. Please compress your photo first." 
       });
       return;
     }
@@ -339,7 +340,7 @@ export default function AdminPage() {
           <TabsContent value="registrations" className="space-y-8">
             <div className="flex justify-between items-center">
               <h3 className="font-headline text-2xl text-elf-green-dark italic">Event Registrations ({registrations?.length || 0})</h3>
-              <Button onClick={exportRegistrations} variant="outline" className="rounded-full border-elf-gold text-elf-gold hover:bg-elf-gold hover:text-white">
+              <Button onClick={exportRegistrations} variant="outline" className="rounded-full border-elf-gold text-elf-gold hover:bg-elf-gold hover:text-white" disabled={regsLoading || !registrations?.length}>
                 <TableIcon size={16} className="mr-2" /> Export to Excel
               </Button>
             </div>
@@ -357,7 +358,14 @@ export default function AdminPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody className="bg-white/50">
-                  {registrations?.map(r => (
+                  {regsLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-20">
+                        <Loader2 className="animate-spin text-elf-gold mx-auto" size={32} />
+                        <p className="text-xs text-elf-text-light mt-4 italic uppercase tracking-widest">Loading Registration Data...</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : registrations?.map(r => (
                     <TableRow key={r.id}>
                       <TableCell className="font-bold text-elf-green-dark">{r.fullName}</TableCell>
                       <TableCell>
@@ -390,7 +398,7 @@ export default function AdminPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {(!registrations || registrations.length === 0) && (
+                  {!regsLoading && (!registrations || registrations.length === 0) && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-12 text-elf-text-light italic">No registrations found.</TableCell>
                     </TableRow>
@@ -429,13 +437,13 @@ export default function AdminPage() {
                       <Input placeholder="https://..." value={docUrl || ''} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl" />
                       <div className="bg-elf-gold/10 border border-elf-gold/20 p-4 rounded-xl text-xs space-y-2 text-elf-green-dark">
                         <p className="font-bold flex items-center gap-2">
-                          <ExternalLink size={12} className="text-elf-gold" /> How to get a valid sharing link:
+                          <ExternalLink size={12} className="text-elf-gold" /> How to use sharing links:
                         </p>
                         <ul className="list-decimal list-inside space-y-1 ml-1 text-elf-text-mid">
-                          <li>Upload your document to Google Drive, OneDrive, or Dropbox.</li>
-                          <li>Right-click the file and select "Share" or "Get link".</li>
-                          <li>Ensure access is set to "Anyone with the link can view".</li>
-                          <li>Copy the link and paste it in the field above.</li>
+                          <li>Upload to Google Drive or OneDrive.</li>
+                          <li>Right-click the file and select "Share".</li>
+                          <li>Set access to "Anyone with the link can view".</li>
+                          <li>Copy the link and paste it above.</li>
                         </ul>
                       </div>
                     </div>
@@ -452,9 +460,9 @@ export default function AdminPage() {
                         />
                         {docFile && <Button variant="ghost" size="icon" onClick={() => { setDocFile(null); setDocInputKey(k => k + 1); }} className="text-destructive"><X size={20} /></Button>}
                       </div>
-                      <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs">
-                        <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                        <p>Limit: 700KB. For larger files, please use the <strong>External Link</strong> option above.</p>
+                      <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-[10px] leading-relaxed">
+                        <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                        <p>Limit: 700KB. Files are stored as encoded text strings; keeping them small ensures database stability. For larger guides, use <strong>External Link</strong>.</p>
                       </div>
                     </div>
                   )}
@@ -471,7 +479,9 @@ export default function AdminPage() {
             
             <div className="grid gap-3">
               <h3 className="font-headline text-2xl text-elf-green-dark italic">Current Archives ({documents?.length || 0})</h3>
-              {documents?.map(d => (
+              {docsLoading ? (
+                <div className="flex justify-center py-12"><Loader2 className="animate-spin text-elf-gold" /></div>
+              ) : documents?.map(d => (
                 <div key={d.id} className="bg-white p-5 rounded-2xl border flex justify-between items-center shadow-sm">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-elf-gold/10 rounded-xl flex items-center justify-center text-elf-gold"><FileText size={20} /></div>
@@ -512,8 +522,8 @@ export default function AdminPage() {
                       />
                       {galleryFile && <Button variant="ghost" size="icon" onClick={() => { setGalleryFile(null); setGalleryInputKey(k => k + 1); }} className="text-destructive"><X size={20} /></Button>}
                     </div>
-                    <p className="text-[10px] text-elf-text-light italic mt-1 flex items-center gap-1">
-                      <AlertCircle size={10} /> Max size: 700KB.
+                    <p className="text-[10px] text-elf-text-light italic mt-1 flex items-center gap-1 font-medium">
+                      <AlertCircle size={10} /> Max size: 700KB. Encoded photos must stay within database limits.
                     </p>
                   </div>
                 </div>
@@ -528,8 +538,10 @@ export default function AdminPage() {
             </Card>
 
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {galleryItems?.map(g => (
-                <div key={g.id} className="bg-white rounded-2xl overflow-hidden border relative group aspect-square">
+              {galleryLoading ? (
+                 <div className="col-span-full flex justify-center py-12"><Loader2 className="animate-spin text-elf-gold" /></div>
+              ) : galleryItems?.map(g => (
+                <div key={g.id} className="bg-white rounded-2xl overflow-hidden border relative group aspect-square shadow-sm">
                   <img src={g.imageUrl} className="w-full h-full object-cover" alt="" />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <Button variant="destructive" size="icon" onClick={() => setItemToDelete({ col: 'gallery', id: g.id, title: 'Photo' })} className="h-10 w-10 rounded-full"><Trash2 size={18} /></Button>
