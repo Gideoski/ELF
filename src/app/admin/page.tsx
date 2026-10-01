@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useAuth, useUser, useFirestore, useCollection } from '@/firebase';
 import { 
   signInWithEmailAndPassword, 
@@ -15,7 +14,6 @@ import {
   orderBy, 
   deleteDoc,
   addDoc,
-  limit,
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,8 +31,7 @@ import {
   X,
   ExternalLink,
   AlertCircle,
-  Table as TableIcon,
-  RefreshCw
+  Table as TableIcon
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
@@ -66,7 +63,7 @@ import {
 } from "@/components/ui/table";
 
 const ADMIN_EMAIL = 'nimsaamsaelf@gmail.com';
-const MAX_FILE_SIZE = 700 * 1024; // 700KB for Base64 safety
+const MAX_FILE_SIZE = 700 * 1024; // 700KB limit for Base64 stability
 
 export default function AdminPage() {
   const auth = useAuth();
@@ -104,7 +101,7 @@ export default function AdminPage() {
 
   const docsQuery = useMemo(() => firestore ? query(collection(firestore, 'documents'), orderBy('uploadedAt', 'desc')) : null, [firestore]);
   const galleryQuery = useMemo(() => firestore ? query(collection(firestore, 'gallery'), orderBy('createdAt', 'desc')) : null, [firestore]);
-  const regQuery = useMemo(() => firestore ? query(collection(firestore, 'registrations'), orderBy('submittedAt', 'desc'), limit(20)) : null, [firestore, refreshKey]);
+  const regQuery = useMemo(() => firestore ? query(collection(firestore, 'registrations'), orderBy('submittedAt', 'desc')) : null, [firestore]);
   
   const { data: documents, loading: docsLoading } = useCollection(docsQuery);
   const { data: galleryItems, loading: galleryLoading } = useCollection(galleryQuery);
@@ -115,8 +112,8 @@ export default function AdminPage() {
     if (!auth) return;
     setIsLoggingIn(true);
     try {
-      await signInWithEmailAndPassword(auth, (email || '').toLowerCase().trim(), password || '');
-      toast({ title: "Access Granted", description: "Welcome to the administrator portal." });
+      await signInWithEmailAndPassword(auth, email.toLowerCase().trim(), password);
+      toast({ title: "Access Granted", description: "Welcome back, Admin." });
     } catch (error: any) {
       toast({ variant: "destructive", title: "Login Failed", description: getErrorMessage(error) });
     } finally {
@@ -126,11 +123,11 @@ export default function AdminPage() {
 
   const handleForgotPassword = async () => {
     if (!auth) return;
-    const targetEmail = (email || '').toLowerCase().trim() || ADMIN_EMAIL;
+    const targetEmail = email.toLowerCase().trim() || ADMIN_EMAIL;
     setIsResetting(true);
     try {
       await sendPasswordResetEmail(auth, targetEmail);
-      toast({ title: "Reset Email Sent", description: "Please check your inbox." });
+      toast({ title: "Reset Email Sent", description: "Check your inbox for password reset instructions." });
     } catch (error: any) {
       toast({ variant: "destructive", title: "Error", description: getErrorMessage(error) });
     } finally {
@@ -142,18 +139,24 @@ export default function AdminPage() {
     if (!firestore || !docTitle) return;
     setIsSubmittingDoc(true);
     try {
+      let finalUrl = docUrl;
       if (archiveMode === 'file' && docFile) {
         if (docFile.size > MAX_FILE_SIZE) {
-          toast({ variant: "destructive", title: "File Too Large", description: "PDFs must be under 700KB." });
+          toast({ 
+            variant: "destructive", 
+            title: "File Too Large", 
+            description: "PDFs uploaded directly must be under 700KB. Please use the 'External Link' option for larger files." 
+          });
           setIsSubmittingDoc(false);
           return;
         }
+
         const finalUrl = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = reject;
           reader.readAsDataURL(docFile);
         });
+
         await addDoc(collection(firestore, 'documents'), {
           title: docTitle,
           fileUrl: finalUrl,
@@ -161,17 +164,20 @@ export default function AdminPage() {
         });
       } else if (archiveMode === 'link') {
         if (!docUrl) throw new Error("A valid URL is required.");
+        
         await addDoc(collection(firestore, 'documents'), {
           title: docTitle,
           fileUrl: docUrl,
           uploadedAt: new Date().toISOString()
         });
       }
+      
       toast({ title: "Success", description: "Resource published successfully." });
       setDocTitle('');
       setDocUrl('');
       setDocFile(null);
       setDocInputKey(k => k + 1);
+
     } catch (err: any) {
       toast({ variant: "destructive", title: "Error", description: getErrorMessage(err) });
     } finally {
@@ -182,7 +188,11 @@ export default function AdminPage() {
   const addGalleryImage = async () => {
     if (!firestore || !galleryFile) return;
     if (galleryFile.size > MAX_FILE_SIZE) {
-      toast({ variant: "destructive", title: "Image Too Large", description: "Images must be under 700KB." });
+      toast({ 
+        variant: "destructive", 
+        title: "Image Too Large", 
+        description: "Images must be under 700KB to fit database limits. Please compress your photo first." 
+      });
       return;
     }
     setIsSubmittingGallery(true);
@@ -197,10 +207,12 @@ export default function AdminPage() {
         imageUrl: base64String,
         createdAt: new Date().toISOString()
       });
+
       toast({ title: "Saved Successfully", description: "Photo added to the gallery." });
       setGalleryCaption('');
       setGalleryFile(null);
       setGalleryInputKey(k => k + 1);
+
     } catch (err: any) {
       toast({ variant: "destructive", title: "Upload Failed", description: getErrorMessage(err) });
     } finally {
@@ -216,64 +228,79 @@ export default function AdminPage() {
       setItemToDelete(null);
     } catch (err: any) {
       toast({ variant: "destructive", title: "Error", description: getErrorMessage(err) });
-      setItemToDelete(null);
     }
   };
+
+  const filteredRegistrations = useMemo(() => {
+    if (!registrations) return [];
+    return registrations.filter(r => 
+      r.fullName?.toLowerCase().includes(regSearch.toLowerCase()) || 
+      r.email?.toLowerCase().includes(regSearch.toLowerCase())
+    );
+  }, [registrations, regSearch]);
 
   const exportRegistrations = () => {
     if (!registrations || registrations.length === 0) return;
     const headers = ["Full Name", "Email", "Gender", "Level", "Department", "College", "Submission Date"];
     const rows = registrations.map(r => [
-      `"${r.fullName}"`,
-      `"${r.email || ''}"`,
-      `"${r.gender || ''}"`,
-      `"${r.level}"`,
-      `"${r.department}"`,
-      `"${r.college}"`,
-      `"${new Date(r.submittedAt).toLocaleString()}"`
+      `"${r.fullName}"`, `"${r.email || ''}"`, `"${r.gender || ''}"`,
+      `"${r.level}"`, `"${r.department}"`, `"${r.college}"`,
+      `"${r.submittedAt ? new Date(r.submittedAt).toLocaleString() : 'N/A'}"`
     ]);
     const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `CHIASMA_Registrations_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
+    link.href = url;
+    link.download = `CHIASMA_Registrations_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
-    document.body.removeChild(link);
   };
 
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-elf-gold" size={48} /></div>;
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-elf-cream"><Loader2 className="animate-spin text-elf-gold" size={48} /></div>;
 
   if (!user || user.email !== ADMIN_EMAIL) {
     return (
-      <div className="min-h-screen bg-elf-green-dark flex flex-col items-center justify-center p-6 pt-32 pb-20">
-        <Card className="w-full max-w-md bg-white rounded-3xl overflow-hidden border-none shadow-2xl">
-          <CardHeader className="text-center pb-6 pt-10">
-            <CardTitle className="text-3xl font-headline italic text-elf-green-dark">Admin Portal</CardTitle>
-            <p className="text-xs text-elf-text-light uppercase tracking-widest mt-2">Restricted Access</p>
+      <div className="min-h-screen bg-elf-green-dark flex flex-col items-center justify-center p-6">
+        <Card className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl">
+          <CardHeader className="text-center pt-10">
+            <CardTitle className="text-3xl font-headline italic text-elf-green-dark">Admin Access</CardTitle>
+            <p className="text-xs text-elf-text-light uppercase tracking-widest mt-2">NiMSA-AMSA ELF Portal</p>
           </CardHeader>
-          <CardContent className="pt-8 px-8 pb-10 space-y-6">
+          <CardContent className="p-8 space-y-6">
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-1">
                 <Label className="text-xs font-bold uppercase tracking-widest text-elf-light">Email</Label>
-                <Input type="email" value={email || ''} onChange={(e) => setEmail(e.target.value)} required className="w-full h-12 rounded-xl border px-3" placeholder="admin@example.com" />
+                <Input 
+                  type="email" 
+                  value={email || ''} 
+                  onChange={(e) => setEmail(e.target.value)} 
+                  required 
+                  className="w-full h-12 rounded-xl border px-3" 
+                  placeholder="admin@example.com" 
+                />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs font-bold uppercase tracking-widest text-elf-light">Password</Label>
+                <Label className="text-xs font-bold uppercase text-elf-light">Password</Label>
                 <div className="relative">
-                  <Input type={showPassword ? "text" : "password"} value={password || ''} onChange={(e) => setPassword(e.target.value)} required className="w-full h-12 rounded-xl border px-3 pr-12" placeholder="••••••••" />
+                  <Input 
+                    type={showPassword ? "text" : "password"} 
+                    value={password || ''} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    required 
+                    className="w-full h-12 rounded-xl border px-3 pr-12" 
+                    placeholder="••••••••" 
+                  />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-elf-text-light">
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
-              <Button type="submit" disabled={isLoggingIn} className="w-full bg-elf-gold text-elf-green-dark h-12 rounded-full font-bold mt-4">
+              <Button type="submit" disabled={isLoggingIn} className="w-full bg-elf-gold text-elf-green-dark h-12 rounded-full font-bold">
                 {isLoggingIn ? <Loader2 className="animate-spin" size={20} /> : 'Sign In'}
               </Button>
-              <div className="text-center pt-2">
-                <button type="button" onClick={handleForgotPassword} disabled={isResetting} className="text-sm text-elf-text-light hover:underline inline-flex items-center gap-1">
-                  {isResetting ? <Loader2 className="animate-spin" size={12} /> : <KeyRound size={12} />} Forgot Password?
+              <div className="text-center">
+                <button type="button" onClick={handleForgotPassword} disabled={isResetting} className="text-xs text-elf-text-light hover:underline inline-flex items-center gap-1">
+                  {isResetting ? <Loader2 className="animate-spin" size={10} /> : <KeyRound size={10} />} Forgot Password?
                 </button>
               </div>
             </form>
@@ -285,11 +312,11 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-elf-cream pt-32 pb-24 px-6">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-12">
           <div>
             <h1 className="text-4xl font-headline text-elf-green-dark font-bold italic">Dashboard</h1>
-            <p className="text-elf-text-mid">Manage Resources, Gallery & Registrations</p>
+            <p className="text-elf-text-mid">Connected to Firestore Database</p>
           </div>
           <Button variant="outline" className="rounded-full border-elf-gold text-elf-gold" onClick={() => setIsSignOutDialogOpen(true)}>
             <LogOut size={16} className="mr-2" /> Logout
@@ -305,15 +332,10 @@ export default function AdminPage() {
 
           <TabsContent value="registrations" className="space-y-8">
             <div className="flex justify-between items-center">
-              <h3 className="font-headline text-2xl text-elf-green-dark italic">Event Registrations (Latest 20)</h3>
-              <div className="flex gap-2">
-                <Button variant="outline" size="icon" className="rounded-full border-elf-gold text-elf-gold" onClick={() => setRefreshKey(k => k + 1)}>
-                  <RefreshCw size={16} className={regsLoading ? "animate-spin" : ""} />
-                </Button>
-                <Button onClick={exportRegistrations} variant="outline" className="rounded-full border-elf-gold text-elf-gold" disabled={regsLoading || !registrations?.length}>
-                  <TableIcon size={16} className="mr-2" /> Export CSV
-                </Button>
-              </div>
+              <h3 className="font-headline text-2xl text-elf-green-dark italic">Event Registrations ({registrations?.length || 0})</h3>
+              <Button onClick={exportRegistrations} variant="outline" className="rounded-full border-elf-gold text-elf-gold hover:bg-elf-gold hover:text-white" disabled={regsLoading || !registrations?.length}>
+                <TableIcon size={16} className="mr-2" /> Export to Excel
+              </Button>
             </div>
 
             {regsError && (
@@ -327,7 +349,8 @@ export default function AdminPage() {
                 <TableHeader className="bg-white">
                   <TableRow>
                     <TableHead>Full Name</TableHead>
-                    <TableHead>Contact / Details</TableHead>
+                    <TableHead>Email/Gender</TableHead>
+                    <TableHead>Department</TableHead>
                     <TableHead>Receipt</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead></TableHead>
@@ -336,90 +359,119 @@ export default function AdminPage() {
                 <TableBody className="bg-white/50">
                   {regsLoading ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-20">
+                      <TableCell colSpan={6} className="text-center py-20">
                         <Loader2 className="animate-spin text-elf-gold mx-auto" size={32} />
-                        <p className="text-xs text-elf-text-light mt-4 italic">Downloading records (includes images)...</p>
+                        <p className="text-xs text-elf-text-light mt-4 italic uppercase tracking-widest">Loading Registration Data...</p>
                       </TableCell>
                     </TableRow>
                   ) : registrations?.map(r => (
                     <TableRow key={r.id}>
-                      <TableCell className="font-bold text-elf-green-dark">{r.fullName}</TableCell>
+                      <TableCell className="font-bold text-elf-green-dark">{r.fullName}<div className="text-[10px] font-normal text-elf-text-mid">{r.email}</div></TableCell>
+                      <TableCell className="text-xs">{r.level}L | {r.department}<div className="text-[10px] text-elf-text-light">{r.college}</div></TableCell>
                       <TableCell>
-                        <div className="text-xs space-y-1">
+                        <div className="text-xs">
                           <p className="font-medium">{r.email}</p>
-                          <p className="text-elf-text-light uppercase tracking-tighter">{r.gender} · {r.level}L {r.department}</p>
+                          <p className="text-elf-text-light uppercase tracking-tighter">{r.gender}</p>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm" className="text-elf-gold" onClick={() => setPreviewReceipt(r.receiptUrl)}>
-                          <Eye size={16} className="mr-1" /> View
+                        <div className="text-xs">
+                          <p>{r.level}L | {r.department}</p>
+                          <p className="text-elf-text-light">{r.college}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-elf-gold hover:text-elf-gold-bright p-0"
+                          onClick={() => setPreviewReceipt(r.receiptUrl)}
+                        >
+                          <Eye size={16} className="mr-1" /> Preview
                         </Button>
                       </TableCell>
-                      <TableCell className="text-[10px] text-elf-text-light">{new Date(r.submittedAt).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-[10px] text-elf-text-light">{r.submittedAt ? new Date(r.submittedAt).toLocaleDateString() : 'N/A'}</TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => setItemToDelete({ col: 'registrations', id: r.id, title: `Registration from ${r.fullName}` })} className="text-destructive">
-                          <Trash2 size={16} />
-                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setItemToDelete({ col: 'registrations', id: r.id, title: `Application: ${r.fullName}` })} className="text-destructive"><Trash2 size={16} /></Button>
                       </TableCell>
                     </TableRow>
                   ))}
-                  {!regsLoading && registrations?.length === 0 && (
-                    <TableRow><TableCell colSpan={5} className="text-center py-12 text-elf-text-light">No records found.</TableCell></TableRow>
+                  {!regsLoading && (!registrations || registrations.length === 0) && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-12 text-elf-text-light italic">No registrations found.</TableCell>
+                    </TableRow>
                   )}
                 </TableBody>
               </Table>
             </Card>
           </TabsContent>
 
-          {/* ... existing archive and gallery content ... */}
           <TabsContent value="archive" className="space-y-8">
-            <Card className="rounded-2xl overflow-hidden shadow-sm">
-              <CardHeader className="bg-white border-b p-6">
-                <CardTitle className="text-lg font-headline italic flex items-center gap-2">
-                  <UploadCloud size={20} className="text-elf-gold" /> Add New Resource
-                </CardTitle>
-              </CardHeader>
+            <Card className="rounded-2xl border-none shadow-sm">
+              <CardHeader className="bg-white border-b p-6"><CardTitle className="text-lg font-headline italic flex items-center gap-2"><UploadCloud size={20} className="text-elf-gold" /> Upload Resource</CardTitle></CardHeader>
               <CardContent className="p-8 space-y-6 bg-white/50">
                 <div className="space-y-4">
-                  <div className="space-y-1">
-                    <Label>Resource Title</Label>
-                    <Input placeholder="Enter title..." value={docTitle || ''} onChange={(e) => setDocTitle(e.target.value)} className="rounded-xl" />
-                  </div>
-                  <RadioGroup value={archiveMode} onValueChange={(val: 'link' | 'file') => {setArchiveMode(val); setDocFile(null); setDocUrl('');}} className="flex gap-6 pb-2">
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="file" id="f" />
-                      <Label htmlFor="f">Upload PDF</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="link" id="l" />
-                      <Label htmlFor="l">External Link</Label>
-                    </div>
+                  <div className="space-y-1"><Label>Title</Label><Input placeholder="Academic Guide..." value={docTitle} onChange={(e) => setDocTitle(e.target.value)} className="rounded-xl" /></div>
+                  <RadioGroup value={archiveMode} onValueChange={(val: 'link' | 'file') => setArchiveMode(val)} className="flex gap-6 pb-2">
+                    <div className="flex items-center space-x-2"><RadioGroupItem value="file" id="f" /><Label htmlFor="f">PDF File</Label></div>
+                    <div className="flex items-center space-x-2"><RadioGroupItem value="link" id="l" /><Label htmlFor="l">Link</Label></div>
                   </RadioGroup>
-                  
                   {archiveMode === 'link' ? (
                     <div className="space-y-3">
                       <Input placeholder="https://..." value={docUrl || ''} onChange={(e) => setDocUrl(e.target.value)} className="rounded-xl" />
+                      <div className="bg-elf-gold/10 border border-elf-gold/20 p-4 rounded-xl text-xs space-y-2 text-elf-green-dark">
+                        <p className="font-bold flex items-center gap-2">
+                          <ExternalLink size={12} className="text-elf-gold" /> How to use sharing links:
+                        </p>
+                        <ul className="list-decimal list-inside space-y-1 ml-1 text-elf-text-mid">
+                          <li>Upload to Google Drive or OneDrive.</li>
+                          <li>Right-click the file and select "Share".</li>
+                          <li>Set access to "Anyone with the link can view".</li>
+                          <li>Copy the link and paste it above.</li>
+                        </ul>
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <Input key={docInputKey} ref={docFileInputRef} type="file" accept="application/pdf" onChange={(e) => setDocFile(e.target.files?.[0] || null)} className="h-12 pt-2.5 rounded-xl bg-white" />
+                      <div className="flex items-center gap-2">
+                        <Input 
+                          key={docInputKey}
+                          ref={docFileInputRef} 
+                          type="file" 
+                          accept="application/pdf" 
+                          onChange={(e) => setDocFile(e.target.files?.[0] || null)} 
+                          className="h-12 pt-2.5 rounded-xl bg-white" 
+                        />
+                        {docFile && <Button variant="ghost" size="icon" onClick={() => { setDocFile(null); setDocInputKey(k => k + 1); }} className="text-destructive"><X size={20} /></Button>}
+                      </div>
+                      <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-[10px] leading-relaxed">
+                        <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                        <p>Limit: 700KB. Files are stored as encoded text strings; keeping them small ensures database stability. For larger guides, use <strong>External Link</strong>.</p>
+                      </div>
                     </div>
                   )}
                 </div>
-                <Button onClick={addDocument} disabled={isSubmittingDoc || !docTitle || (archiveMode === 'file' && !docFile) || (archiveMode === 'link' && !docUrl)} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold">
+                <Button 
+                  onClick={addDocument} 
+                  disabled={isSubmittingDoc || !docTitle || (archiveMode === 'file' && !docFile) || (archiveMode === 'link' && !docUrl)} 
+                  className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold"
+                >
                   {isSubmittingDoc ? <Loader2 className="animate-spin mr-2" size={18} /> : 'Publish to Archive'}
                 </Button>
               </CardContent>
             </Card>
             
             <div className="grid gap-3">
-              {documents?.map(d => (
+              <h3 className="font-headline text-2xl text-elf-green-dark italic">Current Archives ({documents?.length || 0})</h3>
+              {docsLoading ? (
+                <div className="flex justify-center py-12"><Loader2 className="animate-spin text-elf-gold" /></div>
+              ) : documents?.map(d => (
                 <div key={d.id} className="bg-white p-5 rounded-2xl border flex justify-between items-center shadow-sm">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-elf-gold/10 rounded-xl flex items-center justify-center text-elf-gold"><FileText size={20} /></div>
                     <div>
                       <p className="font-bold text-elf-green-dark">{d.title}</p>
-                      <p className="text-[10px] text-elf-text-light uppercase">{d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString() : 'Unknown'}</p>
+                      <p className="text-[10px] text-elf-text-light uppercase">{d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString() : 'Unknown date'}</p>
                     </div>
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => setItemToDelete({ col: 'documents', id: d.id, title: d.title })} className="text-destructive"><Trash2 size={18} /></Button>
@@ -428,13 +480,10 @@ export default function AdminPage() {
             </div>
           </TabsContent>
 
+          {/* Gallery Tab */}
           <TabsContent value="gallery" className="space-y-8">
-            <Card className="rounded-2xl overflow-hidden shadow-sm">
-              <CardHeader className="bg-white border-b p-6">
-                <CardTitle className="text-lg font-headline italic flex items-center gap-2">
-                  <UploadCloud size={20} className="text-elf-gold" /> Add Photo
-                </CardTitle>
-              </CardHeader>
+            <Card className="rounded-2xl border-none shadow-sm">
+              <CardHeader className="bg-white border-b p-6"><CardTitle className="text-lg font-headline italic flex items-center gap-2"><UploadCloud size={20} className="text-elf-gold" /> Add Photo</CardTitle></CardHeader>
               <CardContent className="p-8 space-y-6 bg-white/50">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-1">
@@ -443,21 +492,40 @@ export default function AdminPage() {
                   </div>
                   <div className="space-y-1">
                     <Label>Select Image</Label>
-                    <Input key={galleryInputKey} ref={galleryFileInputRef} type="file" accept="image/*" onChange={(e) => setGalleryFile(e.target.files?.[0] || null)} className="h-12 pt-2.5 rounded-xl bg-white" />
+                    <div className="flex items-center gap-2">
+                      <Input 
+                        key={galleryInputKey}
+                        ref={galleryFileInputRef} 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => setGalleryFile(e.target.files?.[0] || null)} 
+                        className="h-12 pt-2.5 rounded-xl bg-white" 
+                      />
+                      {galleryFile && <Button variant="ghost" size="icon" onClick={() => { setGalleryFile(null); setGalleryInputKey(k => k + 1); }} className="text-destructive"><X size={20} /></Button>}
+                    </div>
+                    <p className="text-[10px] text-elf-text-light italic mt-1 flex items-center gap-1 font-medium">
+                      <AlertCircle size={10} /> Max size: 700KB. Encoded photos must stay within database limits.
+                    </p>
                   </div>
                 </div>
-                <Button onClick={addGalleryImage} disabled={isSubmittingGallery || !galleryFile} className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold">
+                <Button 
+                  onClick={addGalleryImage} 
+                  disabled={isSubmittingGallery || !galleryFile} 
+                  className="w-full bg-elf-gold text-elf-green-dark rounded-full h-12 font-bold"
+                >
                   {isSubmittingGallery ? <Loader2 className="animate-spin mr-2" size={18} /> : 'Publish to Gallery'}
                 </Button>
               </CardContent>
             </Card>
 
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {galleryItems?.map(g => (
+              {galleryLoading ? (
+                 <div className="col-span-full flex justify-center py-12"><Loader2 className="animate-spin text-elf-gold" /></div>
+              ) : galleryItems?.map(g => (
                 <div key={g.id} className="bg-white rounded-2xl overflow-hidden border relative group aspect-square shadow-sm">
                   <img src={g.imageUrl} className="w-full h-full object-cover" alt="" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Button variant="destructive" size="icon" onClick={() => setItemToDelete({ col: 'gallery', id: g.id, title: 'Photo' })} className="h-10 w-10 rounded-full"><Trash2 size={18} /></Button>
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                    <Button variant="destructive" size="icon" onClick={() => setItemToDelete({ col: 'gallery', id: g.id, title: 'Gallery Photo' })}><Trash2 size={16} /></Button>
                   </div>
                 </div>
               ))}
@@ -465,10 +533,12 @@ export default function AdminPage() {
           </TabsContent>
         </Tabs>
 
-        {/* Dialogs */}
         <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
           <AlertDialogContent className="rounded-3xl">
-            <AlertDialogHeader><AlertDialogTitle>Confirm Removal</AlertDialogTitle><AlertDialogDescription>Delete "{itemToDelete?.title || 'this item'}" permanently?</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Removal</AlertDialogTitle>
+              <AlertDialogDescription>Delete "{itemToDelete?.title || 'this item'}" permanently?</AlertDialogDescription>
+            </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={() => itemToDelete && confirmDelete(itemToDelete.col, itemToDelete.id)} className="bg-destructive hover:bg-destructive/90 rounded-full px-8">Delete</AlertDialogAction>
@@ -478,21 +548,30 @@ export default function AdminPage() {
 
         <AlertDialog open={isSignOutDialogOpen} onOpenChange={setIsSignOutDialogOpen}>
           <AlertDialogContent className="rounded-3xl">
-            <AlertDialogHeader><AlertDialogTitle>Logout?</AlertDialogTitle><AlertDialogDescription>End your session?</AlertDialogDescription></AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={() => auth && signOut(auth)} className="rounded-full px-8">Logout</AlertDialogAction>
-            </AlertDialogFooter>
+            <AlertDialogHeader><AlertDialogTitle>Logout</AlertDialogTitle><AlertDialogDescription>Are you sure you want to end your session?</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogFooter><AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel><AlertDialogAction onClick={() => auth && signOut(auth)} className="rounded-full px-8">Logout</AlertDialogAction></AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
         <Dialog open={!!previewReceipt} onOpenChange={(open) => !open && setPreviewReceipt(null)}>
           <DialogContent className="max-w-3xl rounded-3xl overflow-hidden p-0 border-none bg-elf-green-dark">
-            <DialogHeader className="p-8 pb-4"><DialogTitle className="text-3xl font-headline italic text-elf-gold">Proof of Payment</DialogTitle></DialogHeader>
+            <DialogHeader className="p-8 pb-4">
+              <DialogTitle className="text-3xl font-headline italic text-elf-gold">Proof of Payment</DialogTitle>
+            </DialogHeader>
             <div className="p-8 flex justify-center bg-white/5 min-h-[400px]">
-              {previewReceipt && <img src={previewReceipt} alt="Receipt" className="max-h-[65vh] w-auto object-contain rounded-2xl shadow-2xl border-4 border-white/10" />}
+              {previewReceipt && (
+                <img 
+                  src={previewReceipt} 
+                  alt="Payment Receipt" 
+                  className="max-h-[65vh] w-auto object-contain rounded-2xl shadow-2xl border-4 border-white/10" 
+                />
+              )}
             </div>
-            <div className="p-6 bg-elf-gold/10 flex justify-end"><Button onClick={() => setPreviewReceipt(null)} className="bg-elf-gold text-elf-green-dark rounded-full font-bold px-8 h-12">Close</Button></div>
+            <div className="p-6 bg-elf-gold/10 flex justify-end gap-4">
+              <Button onClick={() => setPreviewReceipt(null)} className="bg-elf-gold text-elf-green-dark rounded-full font-bold px-8 h-12 hover:bg-elf-gold-bright">
+                Close Preview
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
