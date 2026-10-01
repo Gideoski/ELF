@@ -17,6 +17,7 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [error, setError] = useState<FirestoreError | null>(null);
 
   useEffect(() => {
+    // Reset state if query is null
     if (!query) {
       setData(null);
       setLoading(false);
@@ -31,21 +32,21 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
       query,
       (snapshot: QuerySnapshot<T>) => {
         const docs = snapshot.docs.map((doc) => ({
-          ...doc.data(),
+          ...(doc.data() as any),
           id: doc.id,
         }));
         setData(docs);
         setLoading(false);
         setError(null);
       },
-      (err) => {
-        console.error("Firestore useCollection Error:", err);
+      (err: FirestoreError) => {
+        // Detailed error logging for developers
+        console.error("Firestore useCollection Hook Error:", err);
         
-        const path = (query as any)._query?.path?.segments?.join('/') || 'unknown-collection';
-        
+        // Emit rich error for permission issues
         if (err.code === 'permission-denied') {
           const permissionError = new FirestorePermissionError({
-            path,
+            path: 'collection', // SDK query objects don't always expose path easily
             operation: 'list',
           });
           errorEmitter.emit('permission-error', permissionError);
