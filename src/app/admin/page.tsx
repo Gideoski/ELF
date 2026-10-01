@@ -15,6 +15,7 @@ import {
   orderBy, 
   deleteDoc,
   addDoc,
+  limit
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,7 +33,8 @@ import {
   X,
   ExternalLink,
   AlertCircle,
-  Table as TableIcon
+  Table as TableIcon,
+  AlertTriangle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
@@ -99,13 +101,14 @@ export default function AdminPage() {
   const [itemToDelete, setItemToDelete] = useState<{ col: string, id: string, title?: string } | null>(null);
   const [previewReceipt, setPreviewReceipt] = useState<string | null>(null);
 
-  const docsQuery = useMemo(() => firestore ? query(collection(firestore, 'documents'), orderBy('uploadedAt', 'desc')) : null, [firestore]);
-  const galleryQuery = useMemo(() => firestore ? query(collection(firestore, 'gallery'), orderBy('createdAt', 'desc')) : null, [firestore]);
-  const regQuery = useMemo(() => firestore ? query(collection(firestore, 'registrations'), orderBy('submittedAt', 'desc')) : null, [firestore]);
+  // Queries with limits to prevent payload timeouts
+  const docsQuery = useMemo(() => firestore ? query(collection(firestore, 'documents'), orderBy('uploadedAt', 'desc'), limit(50)) : null, [firestore]);
+  const galleryQuery = useMemo(() => firestore ? query(collection(firestore, 'gallery'), orderBy('createdAt', 'desc'), limit(50)) : null, [firestore]);
+  const regQuery = useMemo(() => firestore ? query(collection(firestore, 'registrations'), orderBy('submittedAt', 'desc'), limit(30)) : null, [firestore]);
   
   const { data: documents, loading: docsLoading } = useCollection(docsQuery);
   const { data: galleryItems, loading: galleryLoading } = useCollection(galleryQuery);
-  const { data: registrations, loading: regsLoading } = useCollection(regQuery);
+  const { data: registrations, loading: regsLoading, error: regsError } = useCollection(regQuery);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -365,6 +368,15 @@ export default function AdminPage() {
                         <p className="text-xs text-elf-text-light mt-4 italic uppercase tracking-widest">Loading Registration Data...</p>
                       </TableCell>
                     </TableRow>
+                  ) : regsError ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-20 text-destructive">
+                        <AlertTriangle className="mx-auto mb-4" size={32} />
+                        <p className="font-bold">Error loading data</p>
+                        <p className="text-xs mt-2">{regsError.message}</p>
+                        <p className="text-[10px] mt-4 opacity-70">Check your browser console for index creation links.</p>
+                      </TableCell>
+                    </TableRow>
                   ) : registrations?.map(r => (
                     <TableRow key={r.id}>
                       <TableCell className="font-bold text-elf-green-dark">{r.fullName}</TableCell>
@@ -398,7 +410,7 @@ export default function AdminPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {!regsLoading && (!registrations || registrations.length === 0) && (
+                  {!regsLoading && !regsError && (!registrations || registrations.length === 0) && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-12 text-elf-text-light italic">No registrations found.</TableCell>
                     </TableRow>
