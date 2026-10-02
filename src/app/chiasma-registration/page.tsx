@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useFirestore, useStorage } from '@/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Upload, CheckCircle2, AlertCircle, CreditCard } from 'lucide-react';
@@ -64,13 +64,13 @@ export default function ChiasmaRegistration() {
 
     setLoading(true);
     try {
-      // 1. Upload file to Firebase Storage for professional performance
+      // 1. Upload file to Firebase Storage (The "Proper" way for speed)
       const storagePath = `receipts/${Date.now()}_${receiptFile.name.replace(/\s+/g, '_')}`;
       const storageRef = ref(storage, storagePath);
       const uploadResult = await uploadBytes(storageRef, receiptFile);
       const downloadUrl = await getDownloadURL(uploadResult.ref);
 
-      // 2. Save lightweight metadata and URL to Firestore
+      // 2. Save only the metadata and the LINK to Firestore
       await addDoc(collection(firestore, 'registrations'), {
         ...formData,
         receiptUrl: downloadUrl,
@@ -123,7 +123,7 @@ export default function ChiasmaRegistration() {
           <p className="text-elf-gold font-headline italic text-2xl">Event Registration</p>
         </div>
 
-        <div className="max-w-2xl mx-auto mb-16 rounded-3xl overflow-hidden shadow-2xl border border-white/20 animate-fade-in-up">
+        <div className="max-w-2xl mx-auto mb-16 rounded-3xl overflow-hidden shadow-2xl border border-white/20">
           <img src="/images/CHIASMA flyer.jpeg" alt="CHIASMA 1.0 Flyer" className="w-full h-auto" />
         </div>
 
@@ -182,17 +182,15 @@ export default function ChiasmaRegistration() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="receipt" className="text-elf-gold font-bold">Proof of Payment (Receipt)</Label>
-                  <div className="flex items-center gap-3">
-                    <Input 
-                      key={fileInputKey}
-                      id="receipt" 
-                      type="file" 
-                      accept="image/*" 
-                      required 
-                      onChange={handleFileChange}
-                      className="rounded-xl h-12 pt-2.5 cursor-pointer border-white/20 bg-white/10 text-white file:text-white"
-                    />
-                  </div>
+                  <Input 
+                    key={fileInputKey}
+                    id="receipt" 
+                    type="file" 
+                    accept="image/*" 
+                    required 
+                    onChange={handleFileChange}
+                    className="rounded-xl h-12 pt-2.5 cursor-pointer border-white/20 bg-white/10 text-white file:text-white"
+                  />
                   <p className="text-[10px] text-white/60 italic flex items-center gap-1 font-medium">
                     <AlertCircle size={10} /> Max size: 5MB. 
                   </p>
