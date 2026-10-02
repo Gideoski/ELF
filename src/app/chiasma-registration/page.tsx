@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useFirestore, useStorage } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { collection, addDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,11 +12,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Upload, CheckCircle2, AlertCircle, CreditCard } from 'lucide-react';
 import { getErrorMessage } from '@/lib/error-mapping';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB limit for Base64 stability
 
 export default function ChiasmaRegistration() {
   const firestore = useFirestore();
-  const storage = useStorage();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -48,7 +46,7 @@ export default function ChiasmaRegistration() {
         toast({
           variant: "destructive",
           title: "File too large",
-          description: "Please upload a receipt image smaller than 5MB.",
+          description: "Please upload a receipt image smaller than 2MB for faster processing.",
         });
         setReceiptFile(null);
         setFileInputKey(k => k + 1);
@@ -58,22 +56,26 @@ export default function ChiasmaRegistration() {
     }
   };
 
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firestore || !storage || !receiptFile) return;
+    if (!firestore || !receiptFile) return;
 
     setLoading(true);
     try {
-      // 1. Upload file to Firebase Storage
-      const storagePath = `receipts/${Date.now()}_${receiptFile.name.replace(/\s+/g, '_')}`;
-      const storageRef = ref(storage, storagePath);
-      const uploadResult = await uploadBytes(storageRef, receiptFile);
-      const downloadUrl = await getDownloadURL(uploadResult.ref);
+      const base64Receipt = await fileToBase64(receiptFile);
 
-      // 2. Save metadata and URL to Firestore
       await addDoc(collection(firestore, 'registrations'), {
         ...formData,
-        receiptUrl: downloadUrl,
+        receiptUrl: base64Receipt,
         submittedAt: new Date().toISOString(),
         eventName: 'CHIASMA 1.0'
       });
@@ -192,7 +194,7 @@ export default function ChiasmaRegistration() {
                     className="rounded-xl h-12 pt-2.5 cursor-pointer border-white/20 bg-white/10 text-white file:text-white"
                   />
                   <p className="text-[10px] text-white/60 italic flex items-center gap-1 font-medium">
-                    <AlertCircle size={10} /> Max size: 5MB. 
+                    <AlertCircle size={10} /> Max size: 2MB. 
                   </p>
                 </div>
                 <Button type="submit" disabled={loading || !receiptFile} className="w-full bg-elf-gold text-elf-green-dark hover:bg-elf-gold-bright h-14 rounded-full font-bold text-lg">

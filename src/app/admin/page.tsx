@@ -10,8 +10,6 @@ import {
 import { 
   doc, 
   collection, 
-  query, 
-  orderBy, 
   deleteDoc,
   addDoc
 } from 'firebase/firestore';
@@ -28,7 +26,6 @@ import {
   Loader2, 
   KeyRound,
   UploadCloud,
-  X,
   AlertCircle,
   Table as TableIcon,
   Search,
@@ -95,17 +92,27 @@ export default function AdminPage() {
   const [itemToDelete, setItemToDelete] = useState<{ col: string, id: string, title?: string } | null>(null);
   const [previewReceipt, setPreviewReceipt] = useState<string | null>(null);
 
-  // Queries
-  const docsQuery = useMemo(() => firestore ? query(collection(firestore, 'documents'), orderBy('uploadedAt', 'desc')) : null, [firestore]);
-  const galleryQuery = useMemo(() => firestore ? query(collection(firestore, 'gallery'), orderBy('createdAt', 'desc')) : null, [firestore]);
+  // Queries - Simple collection reference to avoid index issues
+  const docsQuery = useMemo(() => firestore ? collection(firestore, 'documents') : null, [firestore]);
+  const galleryQuery = useMemo(() => firestore ? collection(firestore, 'gallery') : null, [firestore]);
   const regQuery = useMemo(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'registrations'), orderBy('submittedAt', 'desc'));
+    return collection(firestore, 'registrations');
   }, [firestore, refreshKey]);
   
-  const { data: documents, loading: docsLoading } = useCollection(docsQuery);
-  const { data: galleryItems, loading: galleryLoading } = useCollection(galleryQuery);
-  const { data: registrations, loading: regsLoading, error: regsError } = useCollection(regQuery);
+  const { data: documentsData, loading: docsLoading } = useCollection(docsQuery);
+  const { data: galleryItemsData, loading: galleryLoading } = useCollection(galleryQuery);
+  const { data: registrationsData, loading: regsLoading, error: regsError } = useCollection(regQuery);
+
+  // In-memory sorting for robustness
+  const registrations = useMemo(() => {
+    if (!registrationsData) return [];
+    return [...registrationsData].sort((a, b) => {
+      const dateA = new Date(a.submittedAt || 0).getTime();
+      const dateB = new Date(b.submittedAt || 0).getTime();
+      return dateB - dateA;
+    });
+  }, [registrationsData]);
 
   const filteredRegistrations = useMemo(() => {
     if (!registrations) return [];
@@ -287,7 +294,7 @@ export default function AdminPage() {
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Notice</AlertTitle>
                 <AlertDescription>
-                  Sorting requires a Firestore Index. Check console for details.
+                  There was an error loading registrations. Please try refreshing.
                 </AlertDescription>
               </Alert>
             )}
@@ -375,7 +382,7 @@ export default function AdminPage() {
             <div className="grid gap-3">
               {docsLoading ? (
                 <div className="flex justify-center py-12"><Loader2 className="animate-spin text-elf-gold" /></div>
-              ) : documents?.map(d => (
+              ) : (documentsData || [])?.map(d => (
                 <div key={d.id} className="bg-white p-5 rounded-2xl border flex justify-between items-center shadow-sm">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-elf-gold/10 rounded-xl flex items-center justify-center text-elf-gold"><FileText size={20} /></div>
@@ -460,11 +467,7 @@ export default function AdminPage() {
             </DialogHeader>
             <div className="p-8 flex justify-center bg-white/5">
               {previewReceipt && (
-                previewReceipt.startsWith('data:') ? (
-                  <img src={previewReceipt} alt="Receipt" className="max-h-[70vh] w-auto object-contain rounded-2xl shadow-2xl" />
-                ) : (
-                  <img src={previewReceipt} alt="Receipt" className="max-h-[70vh] w-auto object-contain rounded-2xl shadow-2xl" />
-                )
+                <img src={previewReceipt} alt="Receipt" className="max-h-[70vh] w-auto object-contain rounded-2xl shadow-2xl" />
               )}
             </div>
             <div className="p-6 bg-elf-gold/10 flex justify-end">
