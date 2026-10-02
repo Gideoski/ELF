@@ -29,7 +29,8 @@ import {
   AlertCircle,
   Table as TableIcon,
   Search,
-  RefreshCw
+  RefreshCw,
+  Image as ImageIcon
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/error-mapping';
@@ -92,9 +93,11 @@ export default function AdminPage() {
   const [itemToDelete, setItemToDelete] = useState<{ col: string, id: string, title?: string } | null>(null);
   const [previewReceipt, setPreviewReceipt] = useState<string | null>(null);
 
-  // Queries - Simple collection reference to avoid index issues
-  const docsQuery = useMemo(() => firestore ? collection(firestore, 'documents') : null, [firestore]);
-  const galleryQuery = useMemo(() => firestore ? collection(firestore, 'gallery') : null, [firestore]);
+  // Queries - We fetch all records to ensure "every record shows up"
+  // We avoid server-side sorting (orderBy) to prevent indexing delays, 
+  // sorting in-memory instead for maximum speed and reliability.
+  const docsQuery = useMemo(() => firestore ? collection(firestore, 'documents') : null, [firestore, refreshKey]);
+  const galleryQuery = useMemo(() => firestore ? collection(firestore, 'gallery') : null, [firestore, refreshKey]);
   const regQuery = useMemo(() => {
     if (!firestore) return null;
     return collection(firestore, 'registrations');
@@ -104,7 +107,7 @@ export default function AdminPage() {
   const { data: galleryItemsData, loading: galleryLoading } = useCollection(galleryQuery);
   const { data: registrationsData, loading: regsLoading, error: regsError } = useCollection(regQuery);
 
-  // In-memory sorting for robustness
+  // In-memory sorting for all records
   const registrations = useMemo(() => {
     if (!registrationsData) return [];
     return [...registrationsData].sort((a, b) => {
@@ -168,6 +171,7 @@ export default function AdminPage() {
       await addDoc(collection(firestore, 'documents'), { title: docTitle, fileUrl: finalUrl, uploadedAt: new Date().toISOString() });
       toast({ title: "Success", description: "Resource published successfully." });
       setDocTitle(''); setDocUrl(''); setDocFile(null);
+      setRefreshKey(k => k + 1);
     } catch (err: any) {
       toast({ variant: "destructive", title: "Error", description: getErrorMessage(err) });
     } finally {
@@ -181,6 +185,7 @@ export default function AdminPage() {
       await deleteDoc(doc(firestore, col, id));
       toast({ title: "Removed Successfully" });
       setItemToDelete(null);
+      setRefreshKey(k => k + 1);
     } catch (err: any) {
       toast({ variant: "destructive", title: "Error", description: getErrorMessage(err) });
     }
@@ -250,18 +255,23 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-elf-cream pt-32 pb-24 px-6">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-12">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
           <div>
             <h1 className="text-4xl font-headline text-elf-green-dark font-bold italic">Dashboard</h1>
-            <p className="text-elf-text-mid">Instant Loading Active (All Records)</p>
+            <p className="text-elf-text-mid text-sm">Showing all {filteredRegistrations.length} registrations</p>
           </div>
-          <Button variant="outline" className="rounded-full border-elf-gold text-elf-gold" onClick={() => auth && signOut(auth)}>
-            <LogOut size={16} className="mr-2" /> Logout
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="sm" onClick={() => setRefreshKey(k => k + 1)} className="rounded-full border-elf-gold text-elf-gold hover:bg-elf-gold/10">
+              <RefreshCw size={16} className="mr-2" /> Refresh Data
+            </Button>
+            <Button variant="outline" className="rounded-full border-elf-gold text-elf-gold" onClick={() => auth && signOut(auth)}>
+              <LogOut size={16} className="mr-2" /> Logout
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="registrations" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-10 h-14 bg-white border p-1 rounded-full">
+          <TabsList className="grid w-full grid-cols-3 mb-10 h-14 bg-white border p-1 rounded-full shadow-sm">
             <TabsTrigger value="registrations" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold">Registrations</TabsTrigger>
             <TabsTrigger value="archive" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold">Resources</TabsTrigger>
             <TabsTrigger value="gallery" className="rounded-full data-[state=active]:bg-elf-gold data-[state=active]:text-white font-bold">Gallery</TabsTrigger>
@@ -269,22 +279,19 @@ export default function AdminPage() {
 
           <TabsContent value="registrations" className="space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <h3 className="font-headline text-2xl text-elf-green-dark italic">Event Registrations ({registrations?.length || 0})</h3>
+              <h3 className="font-headline text-2xl text-elf-green-dark italic">Event Registrations</h3>
               <div className="flex items-center gap-3 w-full md:w-auto">
-                <div className="relative flex-grow md:w-64">
+                <div className="relative flex-grow md:w-72">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-elf-text-light" size={16} />
                   <Input 
-                    placeholder="Search by name/email..." 
+                    placeholder="Search name, email or dept..." 
                     value={regSearch} 
                     onChange={(e) => setRegSearch(e.target.value)}
-                    className="pl-10 rounded-full bg-white h-10"
+                    className="pl-10 rounded-full bg-white h-10 border-elf-gold/20"
                   />
                 </div>
-                <Button variant="outline" size="icon" onClick={() => setRefreshKey(k => k + 1)} className="rounded-full border-elf-gold text-elf-gold">
-                  <RefreshCw size={16} />
-                </Button>
                 <Button onClick={exportRegistrations} variant="outline" className="rounded-full border-elf-gold text-elf-gold" disabled={regsLoading || !filteredRegistrations.length}>
-                  <TableIcon size={16} className="mr-2" /> Export CSV
+                  <TableIcon size={16} className="mr-2" /> CSV
                 </Button>
               </div>
             </div>
@@ -292,51 +299,57 @@ export default function AdminPage() {
             {regsError && (
               <Alert variant="destructive" className="rounded-2xl">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Notice</AlertTitle>
+                <AlertTitle>Database Sync Notice</AlertTitle>
                 <AlertDescription>
-                  There was an error loading registrations. Please try refreshing.
+                  Unable to reach Firestore. Please check your internet connection or admin permissions.
                 </AlertDescription>
               </Alert>
             )}
 
-            <Card className="rounded-2xl overflow-hidden shadow-sm border-none">
+            <Card className="rounded-2xl overflow-hidden shadow-sm border-none bg-white">
               <Table>
-                <TableHeader className="bg-white">
-                  <TableRow>
-                    <TableHead>Full Name</TableHead>
-                    <TableHead>Details</TableHead>
-                    <TableHead>Receipt</TableHead>
-                    <TableHead>Date</TableHead>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent bg-elf-cream/50">
+                    <TableHead className="font-bold">Full Name</TableHead>
+                    <TableHead className="font-bold">Academic Details</TableHead>
+                    <TableHead className="font-bold text-center">Receipt</TableHead>
+                    <TableHead className="font-bold">Submitted</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody className="bg-white/50">
+                <TableBody>
                   {regsLoading ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-20">
-                        <Loader2 className="animate-spin text-elf-gold mx-auto" size={32} />
+                        <div className="flex flex-col items-center gap-3">
+                          <Loader2 className="animate-spin text-elf-gold" size={40} />
+                          <p className="text-sm text-elf-text-light italic">Loading all records... this may take a moment</p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : filteredRegistrations.length > 0 ? (
                     filteredRegistrations.map(r => (
-                      <TableRow key={r.id}>
+                      <TableRow key={r.id} className="hover:bg-elf-cream/30 transition-colors">
                         <TableCell className="font-bold text-elf-green-dark">
                           {r.fullName}
                           <p className="text-[10px] text-elf-text-light font-normal">{r.email}</p>
                         </TableCell>
                         <TableCell className="text-xs">
-                          {r.level}L | {r.department}
+                          <div className="font-medium text-elf-green-dark/80">{r.level} Level · {r.gender}</div>
+                          <div className="text-elf-text-mid truncate max-w-[150px]">{r.department}</div>
                         </TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="sm" className="text-elf-gold p-0" onClick={() => setPreviewReceipt(r.receiptUrl)}>
-                            <Eye size={16} className="mr-1" /> View
+                        <TableCell className="text-center">
+                          <Button variant="ghost" size="sm" className="text-elf-gold hover:text-elf-gold hover:bg-elf-gold/10" onClick={() => setPreviewReceipt(r.receiptUrl)}>
+                            <ImageIcon size={16} className="mr-1" /> View
                           </Button>
                         </TableCell>
                         <TableCell className="text-[10px] text-elf-text-light">
                           {r.submittedAt ? new Date(r.submittedAt).toLocaleDateString() : 'N/A'}
+                          <br />
+                          {r.submittedAt ? new Date(r.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                         </TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="icon" onClick={() => setItemToDelete({ col: 'registrations', id: r.id, title: r.fullName })} className="text-destructive">
+                          <Button variant="ghost" size="icon" onClick={() => setItemToDelete({ col: 'registrations', id: r.id, title: r.fullName })} className="text-destructive hover:text-destructive hover:bg-destructive/10">
                             <Trash2 size={16} />
                           </Button>
                         </TableCell>
@@ -344,8 +357,11 @@ export default function AdminPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-20 text-elf-text-light italic">
-                        No registrations found.
+                      <TableCell colSpan={5} className="text-center py-24 text-elf-text-light italic">
+                        <div className="flex flex-col items-center gap-2">
+                          <Search size={32} className="opacity-20" />
+                          <p>No registration records found.</p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )}
@@ -434,6 +450,7 @@ export default function AdminPage() {
                       });
                       toast({ title: "Saved Successfully" });
                       setGalleryCaption(''); setGalleryFile(null); setGalleryInputKey(k => k + 1);
+                      setRefreshKey(k => k + 1);
                     } catch (err: any) {
                       toast({ variant: "destructive", title: "Error", description: getErrorMessage(err) });
                     } finally {
@@ -451,27 +468,40 @@ export default function AdminPage() {
         </Tabs>
 
         <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
-          <AlertDialogContent className="rounded-3xl">
-            <AlertDialogHeader><AlertDialogTitle>Confirm Removal</AlertDialogTitle><AlertDialogDescription>Delete "{itemToDelete?.title}" permanently?</AlertDialogDescription></AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={() => itemToDelete && confirmDelete(itemToDelete.col, itemToDelete.id)} className="bg-destructive hover:bg-destructive/90 rounded-full px-8">Delete</AlertDialogAction>
+          <AlertDialogContent className="rounded-[2rem] border-none">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-2xl font-headline italic">Confirm Removal</AlertDialogTitle>
+              <AlertDialogDescription className="text-elf-text-mid">
+                Are you sure you want to permanently delete "{itemToDelete?.title}"? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="mt-6">
+              <AlertDialogCancel className="rounded-full px-6">Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => itemToDelete && confirmDelete(itemToDelete.col, itemToDelete.id)} className="bg-destructive hover:bg-destructive/90 rounded-full px-8">Delete Permanently</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
         <Dialog open={!!previewReceipt} onOpenChange={(open) => !open && setPreviewReceipt(null)}>
-          <DialogContent className="max-w-3xl rounded-3xl overflow-hidden p-0 border-none bg-elf-green-dark">
+          <DialogContent className="max-w-3xl rounded-[2.5rem] overflow-hidden p-0 border-none bg-elf-green-dark shadow-2xl">
             <DialogHeader className="p-8 pb-4">
               <DialogTitle className="text-3xl font-headline italic text-elf-gold">Proof of Payment</DialogTitle>
             </DialogHeader>
-            <div className="p-8 flex justify-center bg-white/5">
+            <div className="p-8 flex justify-center bg-white/5 backdrop-blur-md">
               {previewReceipt && (
-                <img src={previewReceipt} alt="Receipt" className="max-h-[70vh] w-auto object-contain rounded-2xl shadow-2xl" />
+                <div className="relative group">
+                  <img 
+                    src={previewReceipt} 
+                    alt="Receipt" 
+                    className="max-h-[70vh] w-auto object-contain rounded-2xl shadow-2xl border border-white/10" 
+                  />
+                  <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/10 pointer-events-none" />
+                </div>
               )}
             </div>
-            <div className="p-6 bg-elf-gold/10 flex justify-end">
-              <Button onClick={() => setPreviewReceipt(null)} className="bg-elf-gold text-elf-green-dark rounded-full font-bold px-8 h-12">Close</Button>
+            <div className="p-6 bg-elf-gold/10 flex justify-end gap-3">
+              <Button variant="outline" className="rounded-full border-elf-gold text-elf-gold px-6" onClick={() => window.open(previewReceipt!, '_blank')}>Open Full Size</Button>
+              <Button onClick={() => setPreviewReceipt(null)} className="bg-elf-gold text-elf-green-dark hover:bg-elf-gold-bright rounded-full font-bold px-10 h-12">Close Preview</Button>
             </div>
           </DialogContent>
         </Dialog>

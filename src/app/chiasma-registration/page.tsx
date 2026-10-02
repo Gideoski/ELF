@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, CheckCircle2, AlertCircle, CreditCard } from 'lucide-react';
+import { Loader2, Upload, CheckCircle2, AlertCircle, CreditCard, Home } from 'lucide-react';
 import { getErrorMessage } from '@/lib/error-mapping';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB limit for Base64 stability
@@ -29,6 +29,9 @@ export default function ChiasmaRegistration() {
   });
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
+
+  // Registration Status Toggle
+  const isRegistrationClosed = true;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -67,6 +70,7 @@ export default function ChiasmaRegistration() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isRegistrationClosed) return;
     if (!firestore || !receiptFile) return;
 
     setLoading(true);
@@ -104,6 +108,32 @@ export default function ChiasmaRegistration() {
           <h2 className="text-4xl font-headline italic text-elf-green-dark mb-4">Registration Received!</h2>
           <p className="text-elf-text-mid mb-8">Thank you for registering for CHIASMA 1.0.</p>
           <Button asChild className="bg-elf-gold text-elf-green-dark rounded-full px-8 h-12 font-bold"><a href="/home">Return Home</a></Button>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isRegistrationClosed) {
+    return (
+      <div className="min-h-screen bg-elf-green-dark flex items-center justify-center p-6 pt-32 pb-24">
+        <div className="absolute inset-0 elf-diagonal-pattern opacity-5" />
+        <Card className="max-w-lg w-full text-center p-10 md:p-16 rounded-[2.5rem] shadow-2xl border-none bg-white relative z-10">
+          <div className="flex justify-center mb-8">
+            <div className="w-24 h-24 rounded-full bg-elf-gold/10 flex items-center justify-center text-elf-gold">
+              <AlertCircle size={56} />
+            </div>
+          </div>
+          <h2 className="text-4xl md:text-5xl font-headline italic text-elf-green-dark mb-6">Registration Closed</h2>
+          <div className="bg-elf-cream p-6 rounded-2xl border border-elf-gold/20 mb-10">
+            <p className="text-elf-green-dark text-xl font-medium leading-relaxed italic">
+              "Paid registration has closed but onsite registration available tomorrow."
+            </p>
+          </div>
+          <Button asChild className="bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark rounded-full px-12 h-14 text-lg font-bold shadow-xl transition-all hover:scale-105">
+            <a href="/home" className="flex items-center gap-2">
+              <Home size={20} /> Return to Homepage
+            </a>
+          </Button>
         </Card>
       </div>
     );
