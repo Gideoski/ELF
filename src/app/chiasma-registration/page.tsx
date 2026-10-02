@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Upload, CheckCircle2, AlertCircle, CreditCard } from 'lucide-react';
 import { getErrorMessage } from '@/lib/error-mapping';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit for Storage uploads
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit
 
 export default function ChiasmaRegistration() {
   const firestore = useFirestore();
@@ -64,13 +64,13 @@ export default function ChiasmaRegistration() {
 
     setLoading(true);
     try {
-      // 1. Upload file to Firebase Storage (The "Proper" way for speed)
+      // 1. Upload file to Firebase Storage
       const storagePath = `receipts/${Date.now()}_${receiptFile.name.replace(/\s+/g, '_')}`;
       const storageRef = ref(storage, storagePath);
       const uploadResult = await uploadBytes(storageRef, receiptFile);
       const downloadUrl = await getDownloadURL(uploadResult.ref);
 
-      // 2. Save only the metadata and the LINK to Firestore
+      // 2. Save metadata and URL to Firestore
       await addDoc(collection(firestore, 'registrations'), {
         ...formData,
         receiptUrl: downloadUrl,

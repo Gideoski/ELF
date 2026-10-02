@@ -98,8 +98,6 @@ export default function AdminPage() {
   // Queries
   const docsQuery = useMemo(() => firestore ? query(collection(firestore, 'documents'), orderBy('uploadedAt', 'desc')) : null, [firestore]);
   const galleryQuery = useMemo(() => firestore ? query(collection(firestore, 'gallery'), orderBy('createdAt', 'desc')) : null, [firestore]);
-  
-  // Registration Query - Now fetches ALL because documents are lightweight URLs
   const regQuery = useMemo(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'registrations'), orderBy('submittedAt', 'desc'));
@@ -114,9 +112,9 @@ export default function AdminPage() {
     if (!regSearch) return registrations;
     const lowerSearch = regSearch.toLowerCase();
     return registrations.filter(r => 
-      r.fullName?.toLowerCase().includes(lowerSearch) || 
-      r.email?.toLowerCase().includes(lowerSearch) ||
-      r.department?.toLowerCase().includes(lowerSearch)
+      (r.fullName || '').toLowerCase().includes(lowerSearch) || 
+      (r.email || '').toLowerCase().includes(lowerSearch) ||
+      (r.department || '').toLowerCase().includes(lowerSearch)
     );
   }, [registrations, regSearch]);
 
@@ -198,7 +196,7 @@ export default function AdminPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `CHIASMA_Registrations_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `NiMSA_ELF_Registrations_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
   };
 
@@ -248,7 +246,7 @@ export default function AdminPage() {
         <div className="flex justify-between items-center mb-12">
           <div>
             <h1 className="text-4xl font-headline text-elf-green-dark font-bold italic">Dashboard</h1>
-            <p className="text-elf-text-mid">Optimized Instant Loading Active</p>
+            <p className="text-elf-text-mid">Instant Loading Active (All Records)</p>
           </div>
           <Button variant="outline" className="rounded-full border-elf-gold text-elf-gold" onClick={() => auth && signOut(auth)}>
             <LogOut size={16} className="mr-2" /> Logout
@@ -287,9 +285,9 @@ export default function AdminPage() {
             {regsError && (
               <Alert variant="destructive" className="rounded-2xl">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Index Required</AlertTitle>
+                <AlertTitle>Notice</AlertTitle>
                 <AlertDescription>
-                  Sorting requires a Firestore Index. Check browser console for the link to create it.
+                  Sorting requires a Firestore Index. Check console for details.
                 </AlertDescription>
               </Alert>
             )}
@@ -312,36 +310,43 @@ export default function AdminPage() {
                         <Loader2 className="animate-spin text-elf-gold mx-auto" size={32} />
                       </TableCell>
                     </TableRow>
-                  ) : filteredRegistrations.map(r => (
-                    <TableRow key={r.id}>
-                      <TableCell className="font-bold text-elf-green-dark">
-                        {r.fullName}
-                        <p className="text-[10px] text-elf-text-light font-normal">{r.email}</p>
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {r.level}L | {r.department}
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="sm" className="text-elf-gold p-0" onClick={() => setPreviewReceipt(r.receiptUrl)}>
-                          <Eye size={16} className="mr-1" /> View
-                        </Button>
-                      </TableCell>
-                      <TableCell className="text-[10px] text-elf-text-light">
-                        {r.submittedAt ? new Date(r.submittedAt).toLocaleDateString() : 'N/A'}
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => setItemToDelete({ col: 'registrations', id: r.id, title: r.fullName })} className="text-destructive">
-                          <Trash2 size={16} />
-                        </Button>
+                  ) : filteredRegistrations.length > 0 ? (
+                    filteredRegistrations.map(r => (
+                      <TableRow key={r.id}>
+                        <TableCell className="font-bold text-elf-green-dark">
+                          {r.fullName}
+                          <p className="text-[10px] text-elf-text-light font-normal">{r.email}</p>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {r.level}L | {r.department}
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" className="text-elf-gold p-0" onClick={() => setPreviewReceipt(r.receiptUrl)}>
+                            <Eye size={16} className="mr-1" /> View
+                          </Button>
+                        </TableCell>
+                        <TableCell className="text-[10px] text-elf-text-light">
+                          {r.submittedAt ? new Date(r.submittedAt).toLocaleDateString() : 'N/A'}
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" onClick={() => setItemToDelete({ col: 'registrations', id: r.id, title: r.fullName })} className="text-destructive">
+                            <Trash2 size={16} />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-20 text-elf-text-light italic">
+                        No registrations found.
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </Card>
           </TabsContent>
 
-          {/* ... other tabs remain unchanged ... */}
           <TabsContent value="archive" className="space-y-8">
             <Card className="rounded-2xl border-none shadow-sm">
               <CardHeader className="bg-white border-b p-6"><CardTitle className="text-lg font-headline italic flex items-center gap-2"><UploadCloud size={20} className="text-elf-gold" /> Upload Resource</CardTitle></CardHeader>
@@ -454,7 +459,13 @@ export default function AdminPage() {
               <DialogTitle className="text-3xl font-headline italic text-elf-gold">Proof of Payment</DialogTitle>
             </DialogHeader>
             <div className="p-8 flex justify-center bg-white/5">
-              {previewReceipt && <img src={previewReceipt} alt="Receipt" className="max-h-[70vh] w-auto object-contain rounded-2xl shadow-2xl" />}
+              {previewReceipt && (
+                previewReceipt.startsWith('data:') ? (
+                  <img src={previewReceipt} alt="Receipt" className="max-h-[70vh] w-auto object-contain rounded-2xl shadow-2xl" />
+                ) : (
+                  <img src={previewReceipt} alt="Receipt" className="max-h-[70vh] w-auto object-contain rounded-2xl shadow-2xl" />
+                )
+              )}
             </div>
             <div className="p-6 bg-elf-gold/10 flex justify-end">
               <Button onClick={() => setPreviewReceipt(null)} className="bg-elf-gold text-elf-green-dark rounded-full font-bold px-8 h-12">Close</Button>
