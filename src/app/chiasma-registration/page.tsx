@@ -126,7 +126,7 @@ export default function ChiasmaRegistration() {
           <h2 className="text-4xl md:text-5xl font-headline italic text-elf-green-dark mb-6">Registration Closed</h2>
           <div className="bg-elf-cream p-6 rounded-2xl border border-elf-gold/20 mb-10">
             <p className="text-elf-green-dark text-xl font-medium leading-relaxed italic">
-              "Paid registration has closed but onsite registration available tomorrow."
+              Paid registration has closed but onsite registration available tomorrow.
             </p>
           </div>
           <Button asChild className="bg-elf-gold hover:bg-elf-gold-bright text-elf-green-dark rounded-full px-12 h-14 text-lg font-bold shadow-xl transition-all hover:scale-105">
