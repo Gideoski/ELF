@@ -48,7 +48,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/AlertDialog";
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -104,6 +104,7 @@ export default function AdminPage() {
   
   const regQuery = useMemo(() => {
     if (!firestore) return null;
+    // We limit to 100 to ensure the dashboard remains fast even with legacy Base64 data
     return query(collection(firestore, 'registrations'), orderBy('submittedAt', 'desc'), limit(100));
   }, [firestore, refreshKey]);
   
